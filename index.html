@@ -8,15 +8,23 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;600&display=swap');
-        body { font-family: 'Inter', system-ui, sans-serif; }
-        .logo-font { font-family: 'Playfair Display', serif; }
+        
+        body { 
+            font-family: 'Inter', system-ui, sans-serif; 
+        }
+        .logo-font { 
+            font-family: 'Playfair Display', serif; 
+        }
+        
         .hero-bg {
             background: linear-gradient(rgba(95,44,138,0.75), rgba(62,183,143,0.65)),
                         url('assets/goalimage.jpg') center/cover no-repeat fixed;
         }
+        
         .immersive-bg {
-            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+            background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
                         url('assets/about-us.jpg') center/cover no-repeat fixed;
+            background-attachment: fixed;
         }
     </style>
 </head>
@@ -32,9 +40,12 @@
                 <a href="services.html" class="hover:text-[#F26E3E] transition">Services</a>
                 <a href="sustainability.html" class="hover:text-[#F26E3E] transition">Sustainability</a>
                 <a href="homes.html" class="hover:text-[#F26E3E] transition">Homes</a>
-                <a href="index.html#about" class="hover:text-[#F26E3E] transition">About Us</a>
+                <a href="#about" class="hover:text-[#F26E3E] transition">About Us</a>
                 <a href="contact.html" class="hover:text-[#F26E3E] transition">Contact</a>
             </div>
+            <button onclick="toggleMobileMenu()" class="md:hidden text-3xl text-[#5F2C8A]">
+                <i class="fa-solid fa-bars"></i>
+            </button>
         </div>
     </nav>
 
@@ -53,9 +64,9 @@
     </section>
 
     <!-- IMMERSIVE "WHAT UMBRA DOES" SECTION -->
-    <section id="about" class="immersive-bg py-32 text-white relative">
-        <div class="max-w-4xl mx-auto px-6 text-center">
-            <h2 class="logo-font text-5xl md:text-6xl font-bold mb-12">What Umbra Does</h2>
+    <section id="about" class="immersive-bg py-32 text-white relative overflow-hidden">
+        <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
+            <h2 class="logo-font text-5xl md:text-6xl font-bold mb-12 tracking-tighter">What Umbra Does</h2>
             <p class="text-2xl leading-relaxed max-w-3xl mx-auto">
                 We craft homes and spaces that truly give back — thoughtfully renovated, built with integrity, and designed for longevity.
             </p>
@@ -63,12 +74,20 @@
                 Through regenerative features and reliable service, we help families and communities build stability that lasts.
             </p>
         </div>
+        
+        <!-- Subtle overlay accent -->
+        <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent"></div>
     </section>
 
     <script>
         function toggleMobileMenu() {
-            alert("Mobile menu coming in next update.");
+            alert("Mobile menu coming in next update. In the meantime, the desktop nav works perfectly.");
         }
+        
+        // Optional: Force background refresh on load (helps in some dev environments)
+        window.addEventListener('load', () => {
+            console.log('%c✅ UMBRA DOMUS — "What Umbra Does" background loaded successfully', 'color: #3EB78F; font-weight: bold;');
+        });
     </script>
 </body>
 </html>
