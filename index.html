@@ -14,6 +14,10 @@
             background: linear-gradient(rgba(95,44,138,0.75), rgba(62,183,143,0.65)),
                         url('assets/goalimage.jpg') center/cover no-repeat fixed;
         }
+        .immersive-bg {
+            background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+                        url('assets/construction.jpg') center/cover no-repeat;
+        }
     </style>
 </head>
 <body class="bg-[#F9F4EC] text-[#1F2A2F]">
@@ -31,37 +35,39 @@
                 <a href="index.html#about" class="hover:text-[#F26E3E] transition">About Us</a>
                 <a href="contact.html" class="hover:text-[#F26E3E] transition">Contact</a>
             </div>
-            <button onclick="toggleMobileMenu()" class="md:hidden text-3xl text-[#5F2C8A]">
-                <i class="fa-solid fa-bars"></i>
-            </button>
         </div>
     </nav>
 
-    <!-- HERO - using your goalimage.jpg -->
+    <!-- HERO -->
     <section class="hero-bg min-h-screen flex items-center pt-20 text-white">
         <div class="max-w-7xl mx-auto px-6 text-center">
             <h1 class="logo-font text-6xl md:text-7xl leading-none tracking-tighter">Own the Future.<br>Fix It Today.</h1>
             <p class="mt-6 text-2xl max-w-2xl mx-auto">Regenerative homes. Trusted local services. Real stewardship in the RGV.</p>
             
-            <div class="mt-16 flex flex-col md:flex-row gap-6 justify-center max-w-3xl mx-auto">
-                <a href="homes.html" class="bg-white text-[#5F2C8A] px-10 py-6 rounded-3xl text-xl font-semibold hover:scale-105 transition">Pre-Qualify for Homes</a>
-                <a href="services.html" class="border-2 border-white px-10 py-6 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Request Repair Service</a>
+            <!-- Vertical Stacked Buttons -->
+            <div class="mt-16 max-w-md mx-auto flex flex-col gap-5">
+                <a href="services.html" class="bg-white text-[#5F2C8A] px-10 py-6 rounded-3xl text-xl font-semibold hover:scale-105 transition">Request Service, Repair, or Upgrade</a>
+                <a href="homes.html" class="border-2 border-white px-10 py-6 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Pre-Qualify for Homes</a>
                 <a href="sustainability.html" class="border-2 border-white px-10 py-6 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Explore Sustainability</a>
             </div>
         </div>
     </section>
 
-    <!-- ABOUT US (scroll target) -->
-    <section id="about" class="py-24 bg-white">
+    <!-- IMMERSIVE "WHAT UMBRA DOES" SECTION -->
+    <section class="immersive-bg py-32 text-white">
         <div class="max-w-4xl mx-auto px-6 text-center">
-            <h2 class="text-5xl font-bold text-[#5F2C8A] mb-8">Building Better Homes and Better Lives</h2>
-            <p class="text-lg leading-relaxed text-[#1F2A2F]/80">UMBRA DOMUS sources properties with care, renovates them with regenerative features (solar, gardens, clean water), and offers flexible ownership paths. We also provide reliable electrical, plumbing, construction, and garden services to the entire RGV community — always with hands-on stewardship.</p>
+            <h2 class="logo-font text-5xl md:text-6xl font-bold mb-8">What Umbra Does</h2>
+            <p class="text-xl leading-relaxed max-w-3xl mx-auto">
+                We create lasting stability through thoughtfully renovated homes and dependable community services. 
+                With care and craftsmanship, we transform properties into regenerative spaces that honor both people and place — 
+                delivering quality, integrity, and a brighter future, one home and one project at a time.
+            </p>
         </div>
     </section>
 
     <script>
         function toggleMobileMenu() {
-            alert("Mobile menu coming in next update — we're building fast.");
+            alert("Mobile menu coming in next update.");
         }
     </script>
 </body>
