@@ -8,13 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;600&display=swap');
-        
-        body { 
-            font-family: 'Inter', system-ui, sans-serif; 
-        }
-        .logo-font { 
-            font-family: 'Playfair Display', serif; 
-        }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .logo-font { font-family: 'Playfair Display', serif; }
         
         .hero-bg {
             background: linear-gradient(rgba(95,44,138,0.75), rgba(62,183,143,0.65)),
@@ -22,9 +17,8 @@
         }
         
         .immersive-bg {
-            background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.75)),
-                        url('assets/about-us.jpg') center/cover no-repeat fixed;
-            background-attachment: fixed;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+                        url('assets/construction.jpg') center/cover no-repeat fixed;
         }
     </style>
 </head>
@@ -43,9 +37,6 @@
                 <a href="#about" class="hover:text-[#F26E3E] transition">About Us</a>
                 <a href="contact.html" class="hover:text-[#F26E3E] transition">Contact</a>
             </div>
-            <button onclick="toggleMobileMenu()" class="md:hidden text-3xl text-[#5F2C8A]">
-                <i class="fa-solid fa-bars"></i>
-            </button>
         </div>
     </nav>
 
@@ -63,7 +54,7 @@
         </div>
     </section>
 
-    <!-- IMMERSIVE "WHAT UMBRA DOES" SECTION -->
+    <!-- WHAT UMBRA DOES - TEST VERSION -->
     <section id="about" class="immersive-bg py-32 text-white relative min-h-[620px] flex items-center">
         <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
             <h2 class="logo-font text-5xl md:text-6xl font-bold mb-12 tracking-tighter">What Umbra Does</h2>
@@ -76,10 +67,5 @@
         </div>
     </section>
 
-    <script>
-        function toggleMobileMenu() {
-            alert("Mobile menu coming in next update.");
-        }
-    </script>
 </body>
 </html>
