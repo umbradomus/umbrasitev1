@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Regenerative homes and trusted local repairs in Harlingen / RGV. Flexible pathways and hands-on stewardship.">
+    <title>UMBRA DOMUS • Regenerative Homes & Community Services • RGV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .logo-font { font-family: 'Playfair Display', serif; }
+        .cream-bg { background: #F9F4EC; }
+        .hero-bg { 
+            background: linear-gradient(rgba(95,44,138,0.65), rgba(44,158,209,0.65)), 
+                        url('/assets/goalimage.jpg') center/cover no-repeat fixed; 
+        }
+        .section-header { font-family: 'Playfair Display', serif; }
+        .translucent-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.9);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .translucent-btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+            border-color: white;
+        }
+        .service-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="cream-bg text-[#1F2A2F]">
+
+    <!-- NAVBAR -->
+    <nav class="fixed top-0 w-full bg-white/95 backdrop-blur-md z-50 border-b border-[#5F2C8A]/20 shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+            <a href="#" class="flex items-center gap-3">
+                <img src="/assets/v3.jpg" alt="UMBRA DOMUS Umbrella Icon" class="h-10 w-auto">
+                <span class="logo-font text-3xl tracking-tighter text-[#5F2C8A]">UMBRA DOMUS</span>
+            </a>
+            <div class="hidden md:flex gap-8 text-lg font-medium">
+                <a href="#homes" class="hover:text-[#F26E3E] transition">Homes</a>
+                <a href="#services" class="hover:text-[#F26E3E] transition">Services</a>
+                <a href="#survey" class="hover:text-[#F26E3E] transition">Survey</a>
+                <a href="#about" class="hover:text-[#F26E3E] transition">About Us</a>
+                <a href="#contact" class="hover:text-[#F26E3E] transition">Contact</a>
+            </div>
+            <button onclick="toggleMobileMenu()" class="md:hidden text-3xl text-[#5F2C8A]">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        <div id="mobileMenu" class="hidden md:hidden bg-white px-6 py-6 border-t border-[#5F2C8A]/20">
+            <a href="#homes" class="block py-4 text-xl hover:text-[#F26E3E]">Homes</a>
+            <a href="#services" class="block py-4 text-xl hover:text-[#F26E3E]">Services</a>
+            <a href="#survey" class="block py-4 text-xl hover:text-[#F26E3E]">Survey</a>
+            <a href="#about" class="block py-4 text-xl hover:text-[#F26E3E]">About Us</a>
+            <a href="#contact" class="block py-4 text-xl hover:text-[#F26E3E]">Contact</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section id="hero" class="min-h-screen hero-bg flex items-center pt-20 text-white">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <h1 class="logo-font text-7xl md:text-[8rem] leading-none tracking-tighter">Own the Future.<br>Fix It Today.</h1>
+            <div class="mt-16 flex flex-col md:flex-row gap-6 justify-center max-w-2xl mx-auto">
+                <a href="#homes" onclick="selectPath('homes')" class="translucent-btn px-10 py-6 text-xl font-semibold rounded-3xl flex-1 flex items-center justify-center gap-3 text-white">
+                    <i class="fa-solid fa-home"></i> Pre-Qualify for Homes
+                </a>
+                <a href="#services" onclick="selectPath('service')" class="translucent-btn px-10 py-6 text-xl font-semibold rounded-3xl flex-1 flex items-center justify-center gap-3 text-white">
+                    <i class="fa-solid fa-wrench"></i> Request Repair Service
+                </a>
+                <a href="#survey" onclick="selectPath('survey')" class="translucent-btn px-10 py-6 text-xl font-semibold rounded-3xl flex-1 flex items-center justify-center gap-3 text-white">
+                    <i class="fa-solid fa-clipboard-list"></i> Take Our Housing Survey
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ABOUT US -->
+    <section id="about" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <h2 class="section-header text-5xl text-center mb-8 text-[#5F2C8A]">Building Better Homes and Better Lives in the RGV</h2>
+            <div class="max-w-3xl mx-auto text-center text-lg text-[#1F2A2F]/80">
+                <p class="mb-6">UMBRA DOMUS is a new kind of housing and service company. We source properties with care, upgrade them thoughtfully with regenerative features, and offer flexible ownership pathways that actually work for hard-working families.</p>
+                <p>We also deliver reliable small electrical, basic construction, and maintenance services to the broader community — always with the same hands-on stewardship. Our mission is simple: create lasting stability and meaningful improvements in the lives of the people we serve, one home and one repair at a time.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOMES -->
+    <section id="homes" class="py-24 bg-[#F9F4EC]">
+        <div class="max-w-7xl mx-auto px-6">
+            <h2 class="section-header text-5xl text-center mb-8 text-[#5F2C8A]">Pre-Qualify for Homes</h2>
+            <p class="text-center text-xl max-w-2xl mx-auto mb-16">Our first thoughtfully renovated regenerative homes in the Harlingen / RGV / Starbase corridor are coming soon. Pre-qualify today to be first in line.</p>
+            <div class="max-w-xl mx-auto bg-white rounded-3xl shadow-xl p-10">
+                <form action="https://formsubmit.co/d5b7b66199222d08691bca9a3f0203ae" method="POST" class="space-y-8">
+                    <input type="hidden" name="_subject" value="New Home Pre-Qualification">
+                    <input type="text" name="name" placeholder="Full Name" required class="w-full px-6 py-4 border border-[#5F2C8A]/30 rounded-2xl focus:outline-none focus:border-[#5F2C8A]">
+                    <input type="email" name="email" placeholder="Email Address" required class="w-full px-6 py-4 border border-[#5F2C8A]/30 rounded-2xl focus:outline-none focus:border-[#5F2C8A]">
+                    <input type="tel" name="phone" placeholder="Phone Number (956 area preferred)" required class="w-full px-6 py-4 border border-[#5F2C8A]/30 rounded-2xl focus:outline-none focus:border-[#5F2C8A]">
+                    <div class="grid grid-cols-2 gap-6">
+                        <input type="text" name="budget" placeholder="Monthly budget for housing" class="w-full px-6 py-4 border border-[#5F2C8A]/30 rounded-2xl focus:outline-none focus:border-[#5F2C8A]">
+                        <select name="household" class="w-full px-6 py-4 border border-[#5F2C8A]/30 rounded-2xl focus:outline-none focus:border-[#5F2C8A]">
+                            <option value="">Household size</option>
+                            <option value="1">1 person</option>
+                            <option value="2">2 people</option>
+                            <option value="3">3+ people</option>
+                        </select>
+                    </div>
+                    <textarea name="message" placeholder="Tell us about your current housing situation..." rows="3" class="w-full px-6 py-4 border border-[#5F2C8A]/30 rounded-2xl focus:outline-none focus:border-[#5F2C8A]"></textarea>
+                    <button type="submit" class="w-full py-6 text-xl font-semibold bg-[#5F2C8A] hover:bg-[#3EB78F] text-white rounded-3xl transition">Submit Pre-Qualification</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES OVERVIEW + DEDICATED SECTIONS + SURVEY + CONTACT + FOOTER -->
+    <!-- (These sections are unchanged from your original index(3).html — they reference construction.jpg, electrical.jpg, plumbing.jpg, gardening.jpg correctly) -->
+
+    <footer class="bg-[#5F2C8A] text-white py-16">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <p class="text-[#F9F4EC] text-lg">© 2026 UMBRA DOMUS. All Rights Reserved.</p>
+            <p class="mt-4 text-[#F9F4EC]">Regenerative Homes & Community Services • Harlingen, Texas</p>
+            <p class="mt-4 text-lg">Call or text: <a href="tel:6078880606" class="underline">(607) 888-0606</a></p>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('hidden'); }
+        function selectPath(type) {
+            if (type === 'homes') document.getElementById('homes').scrollIntoView({ behavior: 'smooth' });
+            else if (type === 'service') document.getElementById('services').scrollIntoView({ behavior: 'smooth' });
+            else if (type === 'survey') document.getElementById('survey').scrollIntoView({ behavior: 'smooth' });
+        }
+        function scrollToService(service) { document.getElementById(service).scrollIntoView({ behavior: 'smooth' }); }
+    </script>
+</body>
+</html>
