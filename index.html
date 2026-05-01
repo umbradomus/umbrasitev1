@@ -22,7 +22,7 @@
         }
         
         .immersive-bg {
-            background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+            background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.75)),
                         url('assets/about-us.jpg') center/cover no-repeat fixed;
             background-attachment: fixed;
         }
@@ -64,7 +64,7 @@
     </section>
 
     <!-- IMMERSIVE "WHAT UMBRA DOES" SECTION -->
-    <section id="about" class="immersive-bg py-32 text-white relative overflow-hidden">
+    <section id="about" class="immersive-bg py-32 text-white relative min-h-[620px] flex items-center">
         <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
             <h2 class="logo-font text-5xl md:text-6xl font-bold mb-12 tracking-tighter">What Umbra Does</h2>
             <p class="text-2xl leading-relaxed max-w-3xl mx-auto">
@@ -74,20 +74,12 @@
                 Through regenerative features and reliable service, we help families and communities build stability that lasts.
             </p>
         </div>
-        
-        <!-- Subtle overlay accent -->
-        <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent"></div>
     </section>
 
     <script>
         function toggleMobileMenu() {
-            alert("Mobile menu coming in next update. In the meantime, the desktop nav works perfectly.");
+            alert("Mobile menu coming in next update.");
         }
-        
-        // Optional: Force background refresh on load (helps in some dev environments)
-        window.addEventListener('load', () => {
-            console.log('%c✅ UMBRA DOMUS — "What Umbra Does" background loaded successfully', 'color: #3EB78F; font-weight: bold;');
-        });
     </script>
 </body>
 </html>
