@@ -17,8 +17,20 @@
         }
         
         .immersive-bg {
-            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+            background: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
                         url('assets/about-us.jpg') center/cover no-repeat fixed;
+        }
+
+        /* Smooth transition between sections */
+        .hero-bg::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 180px;
+            background: linear-gradient(transparent, #F9F4EC);
+            z-index: 10;
         }
     </style>
 </head>
@@ -40,13 +52,13 @@
         </div>
     </nav>
 
-    <!-- HERO -->
-    <section class="hero-bg min-h-screen flex items-center pt-20 text-white">
+    <!-- HERO - More spacious -->
+    <section class="hero-bg min-h-screen flex items-center pt-12 text-white relative">
         <div class="max-w-7xl mx-auto px-6 text-center">
-            <h1 class="logo-font text-6xl md:text-7xl leading-none tracking-tighter">Providing Homes<br>That Provide More.</h1>
-            <p class="mt-6 text-2xl tracking-widest uppercase">Sustainable Solutions // Regenerative Repairs</p>
+            <h1 class="logo-font text-6xl md:text-7xl leading-none tracking-tighter mb-6">Providing Homes<br>That Provide More.</h1>
+            <p class="mt-2 text-2xl md:text-3xl tracking-widest uppercase text-white/90">Sustainable Solutions • Regenerative Repairs</p>
             
-            <div class="mt-16 max-w-md mx-auto flex flex-col gap-5">
+            <div class="mt-24 max-w-md mx-auto flex flex-col gap-6">
                 <a href="services.html" class="bg-white text-[#5F2C8A] px-10 py-6 rounded-3xl text-xl font-semibold hover:scale-105 transition">Request Service, Repair, or Upgrade</a>
                 <a href="homes.html" class="border-2 border-white px-10 py-6 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Pre-Qualify for Homes</a>
                 <a href="sustainability.html" class="border-2 border-white px-10 py-6 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Explore Sustainability</a>
@@ -54,16 +66,20 @@
         </div>
     </section>
 
-    <!-- WHAT UMBRA DOES -->
-    <section id="about" class="immersive-bg py-32 text-white relative min-h-[620px] flex items-center">
-        <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
-            <h2 class="logo-font text-5xl md:text-6xl font-bold mb-12 tracking-tighter">What Umbra Does</h2>
-            <p class="text-2xl leading-relaxed max-w-3xl mx-auto">
-                We craft homes and spaces that truly give back — thoughtfully renovated, built with integrity, and designed for longevity.
-            </p>
-            <p class="mt-8 text-lg max-w-2xl mx-auto opacity-90">
-                Through regenerative features and reliable service, we help families and communities build stability that lasts.
-            </p>
+    <!-- WHAT UMBRA DOES - More space + better copy -->
+    <section id="about" class="immersive-bg py-28 md:py-36 text-white">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="logo-font text-5xl md:text-6xl font-bold mb-16 tracking-tighter">What Umbra Does</h2>
+            
+            <div class="max-w-3xl mx-auto space-y-8 text-xl leading-relaxed">
+                <p>We believe every house should <span class="font-semibold">provide more</span> than just four walls and a roof.</p>
+                
+                <p>We source undervalued properties, renovate them with care, and thoughtfully add regenerative features that deliver real savings and long-term resilience.</p>
+                
+                <p class="text-lg opacity-90">What truly sets us apart is our stewardship. We don’t just hand you the keys — we teach homeowners how to care for and upgrade their properties themselves. Renters get to choose from a menu of upgrades that can immediately lower their utility bills.</p>
+                
+                <p class="text-2xl font-light">Homes that don’t just shelter families — they build dignity, equity, and a better future.</p>
+            </div>
         </div>
     </section>
 
