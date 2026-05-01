@@ -14,23 +14,12 @@
         .hero-bg {
             background: linear-gradient(rgba(95,44,138,0.75), rgba(62,183,143,0.65)),
                         url('assets/goalimage.jpg') center/cover no-repeat fixed;
+            min-height: 100vh;
         }
         
         .immersive-bg {
             background: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
                         url('assets/about-us.jpg') center/cover no-repeat fixed;
-        }
-
-        /* Smooth transition between sections */
-        .hero-bg::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 180px;
-            background: linear-gradient(transparent, #F9F4EC);
-            z-index: 10;
         }
     </style>
 </head>
@@ -52,33 +41,33 @@
         </div>
     </nav>
 
-    <!-- HERO - More spacious -->
-    <section class="hero-bg min-h-screen flex items-center pt-12 text-white relative">
+    <!-- HERO - Extremely spacious -->
+    <section class="hero-bg min-h-screen flex items-center pt-4 text-white relative">
         <div class="max-w-7xl mx-auto px-6 text-center">
-            <h1 class="logo-font text-6xl md:text-7xl leading-none tracking-tighter mb-6">Providing Homes<br>That Provide More.</h1>
-            <p class="mt-2 text-2xl md:text-3xl tracking-widest uppercase text-white/90">Sustainable Solutions • Regenerative Repairs</p>
+            <h1 class="logo-font text-6xl md:text-[5.5rem] leading-none tracking-tighter mb-12">Providing Homes<br>That Provide More.</h1>
+            <p class="text-2xl md:text-3xl tracking-widest uppercase text-white/90 mb-28">Sustainable Solutions • Regenerative Repairs</p>
             
-            <div class="mt-24 max-w-md mx-auto flex flex-col gap-6">
-                <a href="services.html" class="bg-white text-[#5F2C8A] px-10 py-6 rounded-3xl text-xl font-semibold hover:scale-105 transition">Request Service, Repair, or Upgrade</a>
-                <a href="homes.html" class="border-2 border-white px-10 py-6 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Pre-Qualify for Homes</a>
-                <a href="sustainability.html" class="border-2 border-white px-10 py-6 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Explore Sustainability</a>
+            <div class="max-w-md mx-auto flex flex-col gap-8">
+                <a href="services.html" class="bg-white text-[#5F2C8A] px-12 py-7 rounded-3xl text-xl font-semibold hover:scale-105 transition">Request Service, Repair, or Upgrade</a>
+                <a href="homes.html" class="border-2 border-white px-12 py-7 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Pre-Qualify for Homes</a>
+                <a href="sustainability.html" class="border-2 border-white px-12 py-7 rounded-3xl text-xl font-semibold hover:bg-white/10 transition">Explore Sustainability</a>
             </div>
         </div>
     </section>
 
-    <!-- WHAT UMBRA DOES - More space + better copy -->
-    <section id="about" class="immersive-bg py-28 md:py-36 text-white">
+    <!-- WHAT UMBRA DOES - Very generous space -->
+    <section id="about" class="immersive-bg py-32 md:py-48 text-white">
         <div class="max-w-4xl mx-auto px-6 text-center">
-            <h2 class="logo-font text-5xl md:text-6xl font-bold mb-16 tracking-tighter">What Umbra Does</h2>
+            <h2 class="logo-font text-5xl md:text-6xl font-bold mb-20 tracking-tighter">What Umbra Does</h2>
             
-            <div class="max-w-3xl mx-auto space-y-8 text-xl leading-relaxed">
-                <p>We believe every house should <span class="font-semibold">provide more</span> than just four walls and a roof.</p>
+            <div class="max-w-3xl mx-auto space-y-12 text-xl leading-relaxed">
+                <p>We believe every house should <span class="font-semibold">provide more</span> than just shelter.</p>
                 
-                <p>We source undervalued properties, renovate them with care, and thoughtfully add regenerative features that deliver real savings and long-term resilience.</p>
+                <p>We source undervalued properties, renovate them with care, and add regenerative features that deliver real savings and lasting resilience.</p>
                 
-                <p class="text-lg opacity-90">What truly sets us apart is our stewardship. We don’t just hand you the keys — we teach homeowners how to care for and upgrade their properties themselves. Renters get to choose from a menu of upgrades that can immediately lower their utility bills.</p>
+                <p class="text-lg opacity-90">Our hands-on stewardship goes further: we teach homeowners how to care for and upgrade their properties themselves. Renters can choose from upgrades that immediately help lower their bills.</p>
                 
-                <p class="text-2xl font-light">Homes that don’t just shelter families — they build dignity, equity, and a better future.</p>
+                <p class="text-2xl font-light">Homes that don’t just house families — they build dignity, equity, and a stronger future.</p>
             </div>
         </div>
     </section>
