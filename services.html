@@ -8,22 +8,60 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;600&display=swap');
+        html { scroll-behavior: smooth; }
         body { font-family: 'Inter', system-ui, sans-serif; }
         .logo-font { font-family: 'Playfair Display', serif; }
         .brand-nav {
             background: linear-gradient(to right, #1A1428, #2C1B47);
             box-shadow: 0 4px 30px rgba(95, 44, 138, 0.35);
         }
-        .service-image {
-            min-height: 18rem;
+        .service-card {
+            min-height: 100%;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .service-card:hover,
+        .service-card:focus-visible {
+            transform: translateY(-4px);
+            border-color: #F26E3E;
+            box-shadow: 0 18px 45px rgba(31, 42, 47, 0.16);
+            outline: none;
+        }
+        .service-photo {
+            aspect-ratio: 4 / 3;
+        }
+        .upgrade-photo {
+            min-height: 15rem;
+        }
+        .field {
+            width: 100%;
+            min-height: 3.25rem;
+            border: 1px solid #D8D2C8;
+            border-radius: 0.5rem;
+            background: #fff;
+            padding: 0.75rem 1rem;
+            color: #1F2A2F;
+        }
+        .field:focus {
+            border-color: #5F2C8A;
+            box-shadow: 0 0 0 3px rgba(95, 44, 138, 0.16);
+            outline: none;
+        }
+        textarea.field {
+            min-height: 10rem;
+            resize: vertical;
+        }
+        @media (max-width: 640px) {
+            .service-photo {
+                aspect-ratio: 16 / 10;
+            }
         }
     </style>
 </head>
 <body class="bg-[#F9F4EC] text-[#1F2A2F]">
     <nav class="brand-nav fixed top-0 w-full z-50 border-b border-white/10">
-        <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+        <div class="max-w-7xl mx-auto px-5 py-4 md:px-6 md:py-5 flex justify-between items-center">
             <a href="index.html" class="flex items-center gap-3">
-                <img src="assets/logofinal1.jpg" alt="UMBRA DOMUS" class="h-12 w-auto">
+                <img src="assets/logofinal1.jpg" alt="UMBRA DOMUS" class="h-11 md:h-12 w-auto">
             </a>
             <div class="hidden md:flex items-center gap-8 text-lg font-medium text-white">
                 <a href="services.html" class="text-[#F26E3E]">Services</a>
@@ -36,131 +74,183 @@
     </nav>
 
     <main>
-        <section class="pt-36 pb-20 md:pt-44 md:pb-28 bg-[#1A1428] text-white">
-            <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1fr_0.8fr] gap-14 items-end">
+        <section class="pt-32 pb-14 md:pt-40 md:pb-20 bg-[#1A1428] text-white">
+            <div class="max-w-7xl mx-auto px-5 md:px-6 grid lg:grid-cols-[1fr_0.75fr] gap-10 items-end">
                 <div>
-                    <p class="uppercase tracking-[0.22em] text-sm text-[#F26E3E] font-semibold mb-5">Service, repair, and upgrade support</p>
-                    <h1 class="logo-font text-5xl md:text-7xl leading-none mb-8">Keep Your Home Working Better.</h1>
-                    <p class="text-xl md:text-2xl leading-relaxed text-white/80 max-w-3xl">Umbra Domus helps homeowners and renters handle practical repairs, thoughtful upgrades, and regenerative improvements with clear scopes and grounded guidance.</p>
+                    <p class="uppercase tracking-[0.18em] text-xs md:text-sm text-[#F26E3E] font-semibold mb-5">Service, repair, and upgrade support</p>
+                    <h1 class="logo-font text-5xl md:text-7xl leading-none mb-6">Keep Your Home Working Better.</h1>
+                    <p class="text-lg md:text-2xl leading-relaxed text-white/80 max-w-3xl">Tap a service below to start a request. The form will fill in the service type and scroll you straight to the next step.</p>
                 </div>
-                <div class="border-l-4 border-[#3EB78F] pl-6">
-                    <p class="text-lg leading-relaxed text-white/80">Start with the issue you can see. We help assess the work, organize the next step, and connect repairs to longer-term savings where possible.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="py-20 md:py-28">
-            <div class="max-w-7xl mx-auto px-6">
-                <div class="max-w-3xl mb-14">
-                    <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-5">Services We Handle</h2>
-                    <p class="text-lg text-[#4B555A] leading-relaxed">From urgent fixes to planned property improvements, these are the core service lanes Umbra Domus is building around.</p>
-                </div>
-
-                <div class="grid md:grid-cols-2 gap-8">
-                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
-                        <img src="assets/electrical.jpg" alt="Electrical service work" class="service-image w-full object-cover">
-                        <div class="p-7">
-                            <div class="flex items-center gap-3 text-[#F26E3E] mb-4">
-                                <i class="fa-solid fa-bolt text-xl" aria-hidden="true"></i>
-                                <h3 class="text-2xl font-bold">Electrical</h3>
-                            </div>
-                            <p class="text-[#4B555A] leading-relaxed mb-5">Troubleshooting, fixture updates, outlet concerns, lighting improvements, safety checks, and energy-minded electrical upgrades.</p>
-                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Repair and upgrade planning</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Lighting and fixture support</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Efficiency-focused recommendations</li>
-                            </ul>
-                        </div>
-                    </article>
-
-                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
-                        <img src="assets/plumbing.jpg" alt="Plumbing service work" class="service-image w-full object-cover">
-                        <div class="p-7">
-                            <div class="flex items-center gap-3 text-[#2D936C] mb-4">
-                                <i class="fa-solid fa-droplet text-xl" aria-hidden="true"></i>
-                                <h3 class="text-2xl font-bold">Plumbing</h3>
-                            </div>
-                            <p class="text-[#4B555A] leading-relaxed mb-5">Leaks, clogs, fixture swaps, water-saving upgrades, inspection notes, and practical help prioritizing what needs attention first.</p>
-                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Fixture and flow improvements</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Water waste reduction</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Clear next-step assessments</li>
-                            </ul>
-                        </div>
-                    </article>
-
-                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
-                        <img src="assets/construction.jpg" alt="Basic construction and repair work" class="service-image w-full object-cover">
-                        <div class="p-7">
-                            <div class="flex items-center gap-3 text-[#5F2C8A] mb-4">
-                                <i class="fa-solid fa-hammer text-xl" aria-hidden="true"></i>
-                                <h3 class="text-2xl font-bold">Basic Construction</h3>
-                            </div>
-                            <p class="text-[#4B555A] leading-relaxed mb-5">Small repairs, finish work, practical improvements, prep work, and property updates that make a home more durable and livable.</p>
-                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Home repair coordination</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Small improvement scopes</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Durability-minded upgrades</li>
-                            </ul>
-                        </div>
-                    </article>
-
-                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
-                        <img src="assets/gardening.jpg" alt="Garden and property maintenance" class="service-image w-full object-cover">
-                        <div class="p-7">
-                            <div class="flex items-center gap-3 text-[#2D936C] mb-4">
-                                <i class="fa-solid fa-seedling text-xl" aria-hidden="true"></i>
-                                <h3 class="text-2xl font-bold">Garden & Maintenance</h3>
-                            </div>
-                            <p class="text-[#4B555A] leading-relaxed mb-5">Yard care, garden setup, productive landscaping ideas, maintenance planning, and outdoor improvements that support a healthier property.</p>
-                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Garden and fruit tree support</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Outdoor maintenance planning</li>
-                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Regenerative property ideas</li>
-                            </ul>
-                        </div>
-                    </article>
+                <div class="border-l-4 border-[#3EB78F] pl-5">
+                    <p class="text-base md:text-lg leading-relaxed text-white/80">For mobile and QR-code visitors, the page is built around quick taps, large form fields, and a short path from problem to request.</p>
                 </div>
             </div>
         </section>
 
-        <section class="py-20 bg-white">
-            <div class="max-w-7xl mx-auto px-6">
-                <div class="grid lg:grid-cols-[0.85fr_1fr] gap-12 items-start">
-                    <div>
-                        <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-5">How Service Requests Work</h2>
-                        <p class="text-lg text-[#4B555A] leading-relaxed">The goal is simple: understand the problem, make the next step clear, and avoid turning a small issue into a bigger one.</p>
+        <section class="py-14 md:py-20">
+            <div class="max-w-7xl mx-auto px-5 md:px-6">
+                <div class="max-w-3xl mb-10">
+                    <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-4">Choose A Service</h2>
+                    <p class="text-lg text-[#4B555A] leading-relaxed">Select the closest match. If you are not sure, choose the service that feels closest and describe what is happening in the form.</p>
+                </div>
+
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+                    <a href="#service-request" data-service="Electrical" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
+                        <img src="assets/electrical.jpg" alt="Electrical service work" class="service-photo w-full object-cover">
+                        <div class="p-4">
+                            <div class="flex items-center gap-2 text-[#F26E3E] mb-2">
+                                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                                <h3 class="text-lg font-bold">Electrical</h3>
+                            </div>
+                            <p class="text-sm text-[#4B555A] leading-relaxed">Lighting, outlets, fixtures, troubleshooting, and energy-minded updates.</p>
+                        </div>
+                    </a>
+
+                    <a href="#service-request" data-service="Plumbing" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
+                        <img src="assets/plumbing.jpg" alt="Plumbing service work" class="service-photo w-full object-cover">
+                        <div class="p-4">
+                            <div class="flex items-center gap-2 text-[#2D936C] mb-2">
+                                <i class="fa-solid fa-droplet" aria-hidden="true"></i>
+                                <h3 class="text-lg font-bold">Plumbing</h3>
+                            </div>
+                            <p class="text-sm text-[#4B555A] leading-relaxed">Leaks, clogs, fixture swaps, flow issues, and water-saving upgrades.</p>
+                        </div>
+                    </a>
+
+                    <a href="#service-request" data-service="Basic Construction" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
+                        <img src="assets/construction.jpg" alt="Basic construction and repair work" class="service-photo w-full object-cover">
+                        <div class="p-4">
+                            <div class="flex items-center gap-2 text-[#5F2C8A] mb-2">
+                                <i class="fa-solid fa-hammer" aria-hidden="true"></i>
+                                <h3 class="text-lg font-bold">Construction</h3>
+                            </div>
+                            <p class="text-sm text-[#4B555A] leading-relaxed">Small repairs, finish work, prep work, and practical home improvements.</p>
+                        </div>
+                    </a>
+
+                    <a href="#service-request" data-service="Garden & Maintenance" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
+                        <img src="assets/gardening.jpg" alt="Garden and property maintenance" class="service-photo w-full object-cover">
+                        <div class="p-4">
+                            <div class="flex items-center gap-2 text-[#2D936C] mb-2">
+                                <i class="fa-solid fa-seedling" aria-hidden="true"></i>
+                                <h3 class="text-lg font-bold">Garden & Maintenance</h3>
+                            </div>
+                            <p class="text-sm text-[#4B555A] leading-relaxed">Yard care, garden setup, outdoor maintenance, and property support.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <a href="#service-request" data-service="Upgrade" class="service-choice service-card mt-5 grid md:grid-cols-[0.95fr_1.35fr] bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
+                    <img src="assets/upgrade.jpg" alt="Home upgrade service" class="upgrade-photo h-full w-full object-cover">
+                    <div class="p-6 md:p-8 flex flex-col justify-center">
+                        <div class="flex items-center gap-3 text-[#F26E3E] mb-3">
+                            <i class="fa-solid fa-screwdriver-wrench text-xl" aria-hidden="true"></i>
+                            <h3 class="text-2xl md:text-3xl font-bold">Upgrade</h3>
+                        </div>
+                        <p class="text-[#4B555A] leading-relaxed max-w-3xl">Plan a home improvement that makes the property work harder for you, from efficiency upgrades to regenerative features and comfort improvements.</p>
                     </div>
-                    <div class="grid sm:grid-cols-3 gap-5">
-                        <div class="border-t-4 border-[#F26E3E] pt-5">
-                            <span class="text-sm font-bold text-[#F26E3E]">01</span>
-                            <h3 class="font-bold text-xl my-2">Tell Us What Is Happening</h3>
-                            <p class="text-[#4B555A] leading-relaxed">Share the issue, location, photos if useful, and how urgent it feels.</p>
-                        </div>
-                        <div class="border-t-4 border-[#3EB78F] pt-5">
-                            <span class="text-sm font-bold text-[#2D936C]">02</span>
-                            <h3 class="font-bold text-xl my-2">Get A Clear Next Step</h3>
-                            <p class="text-[#4B555A] leading-relaxed">We help organize the scope, priority, and practical options.</p>
-                        </div>
-                        <div class="border-t-4 border-[#5F2C8A] pt-5">
-                            <span class="text-sm font-bold text-[#5F2C8A]">03</span>
-                            <h3 class="font-bold text-xl my-2">Repair Or Upgrade</h3>
-                            <p class="text-[#4B555A] leading-relaxed">Move forward with service that fits the home and the budget.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="py-20 md:py-24 bg-[#2C1B47] text-white">
-            <div class="max-w-5xl mx-auto px-6 text-center">
-                <h2 class="logo-font text-4xl md:text-5xl mb-6">Need Help With A Home Repair Or Upgrade?</h2>
-                <p class="text-xl text-white/80 leading-relaxed mb-10">Tell us what is going on, and Umbra Domus will help you sort the next step.</p>
-                <a href="contact.html" class="inline-flex items-center justify-center min-h-14 px-8 rounded-lg bg-[#F26E3E] text-white font-bold hover:bg-[#d95c2e] transition">
-                    Request Service
                 </a>
             </div>
         </section>
+
+        <section id="service-request" class="scroll-mt-28 py-16 md:py-24 bg-white">
+            <div class="max-w-5xl mx-auto px-5 md:px-6">
+                <div class="max-w-3xl mb-10">
+                    <p class="uppercase tracking-[0.18em] text-xs md:text-sm text-[#F26E3E] font-bold mb-4">Service request</p>
+                    <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-4">Tell Us What You Need</h2>
+                    <p class="text-lg text-[#4B555A] leading-relaxed">Fill out what you can. A member of the Umbra team will reach out to confirm details, timing, and next steps.</p>
+                </div>
+
+                <form id="serviceForm" class="grid gap-6 bg-[#F9F4EC] border border-[#E1D8CB] rounded-lg p-5 md:p-8 shadow-xl shadow-black/5">
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <label class="grid gap-2">
+                            <span class="font-semibold">Name</span>
+                            <input class="field" type="text" name="name" autocomplete="name" required>
+                        </label>
+                        <label class="grid gap-2">
+                            <span class="font-semibold">Phone</span>
+                            <input class="field" type="tel" name="phone" autocomplete="tel" required>
+                        </label>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <label class="grid gap-2">
+                            <span class="font-semibold">Email</span>
+                            <input class="field" type="email" name="email" autocomplete="email">
+                        </label>
+                        <label class="grid gap-2">
+                            <span class="font-semibold">Service address or area</span>
+                            <input class="field" type="text" name="location" autocomplete="street-address" placeholder="Harlingen, RGV, or property address">
+                        </label>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <label class="grid gap-2">
+                            <span class="font-semibold">Service type</span>
+                            <select id="serviceType" class="field" name="serviceType" required>
+                                <option value="">Choose a service</option>
+                                <option>Electrical</option>
+                                <option>Plumbing</option>
+                                <option>Basic Construction</option>
+                                <option>Garden & Maintenance</option>
+                                <option>Upgrade</option>
+                            </select>
+                        </label>
+                        <label class="grid gap-2">
+                            <span class="font-semibold">Urgency level or quote</span>
+                            <select class="field" name="urgency" required>
+                                <option value="">Choose one</option>
+                                <option>Emergency / as soon as possible</option>
+                                <option>Soon / within the next week</option>
+                                <option>Flexible timing</option>
+                                <option>Quote only</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label class="grid gap-2">
+                        <span class="font-semibold">Description of services needed</span>
+                        <textarea class="field" name="description" required placeholder="Describe what is happening, what you want fixed or upgraded, and any useful details."></textarea>
+                    </label>
+
+                    <label class="grid gap-2">
+                        <span class="font-semibold">Photos</span>
+                        <input class="field" type="file" name="photos" accept="image/*" multiple>
+                        <span class="text-sm text-[#657078]">Optional. Photos can help the team understand the issue before reaching out.</span>
+                    </label>
+
+                    <label class="flex gap-3 items-start text-sm md:text-base text-[#4B555A] leading-relaxed">
+                        <input type="checkbox" required class="mt-1 h-5 w-5 accent-[#5F2C8A]">
+                        <span>I understand this request is not confirmed until a member of the Umbra team reaches out with next steps.</span>
+                    </label>
+
+                    <div class="flex flex-col sm:flex-row gap-4 sm:items-center">
+                        <button type="submit" class="min-h-14 px-8 rounded-lg bg-[#F26E3E] text-white font-bold hover:bg-[#d95c2e] transition">
+                            Send Request
+                        </button>
+                        <p id="formMessage" class="text-sm text-[#2D936C] font-semibold" aria-live="polite"></p>
+                    </div>
+                </form>
+            </div>
+        </section>
     </main>
+
+    <script>
+        const serviceSelect = document.getElementById('serviceType');
+        const formMessage = document.getElementById('formMessage');
+
+        document.querySelectorAll('.service-choice').forEach((card) => {
+            card.addEventListener('click', () => {
+                serviceSelect.value = card.dataset.service;
+                formMessage.textContent = '';
+            });
+        });
+
+        document.getElementById('serviceForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            formMessage.textContent = 'Thank you. A member of the Umbra team will reach out to confirm the next step.';
+            event.currentTarget.reset();
+        });
+    </script>
 </body>
 </html>
