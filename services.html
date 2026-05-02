@@ -192,21 +192,21 @@
                             <span class="font-semibold">Service type</span>
                             <select id="serviceType" class="field" name="serviceType" required>
                                 <option value="">Choose a service</option>
-                                <option>Electrical</option>
-                                <option>Plumbing</option>
-                                <option>Basic Construction</option>
-                                <option>Garden & Maintenance</option>
-                                <option>Upgrade</option>
+                                <option value="Electrical">Electrical</option>
+                                <option value="Plumbing">Plumbing</option>
+                                <option value="Basic Construction">Basic Construction</option>
+                                <option value="Garden & Maintenance">Garden & Maintenance</option>
+                                <option value="Upgrade">Upgrade</option>
                             </select>
                         </label>
                         <label class="grid gap-2">
                             <span class="font-semibold">Urgency level or quote</span>
                             <select class="field" name="urgency" required>
                                 <option value="">Choose one</option>
-                                <option>Emergency / as soon as possible</option>
-                                <option>Soon / within the next week</option>
-                                <option>Flexible timing</option>
-                                <option>Quote only</option>
+                                <option value="Emergency">Emergency / as soon as possible</option>
+                                <option value="Soon">Soon / within the next week</option>
+                                <option value="Flexible">Flexible timing</option>
+                                <option value="Quote">Quote only</option>
                             </select>
                         </label>
                     </div>
@@ -214,12 +214,6 @@
                     <label class="grid gap-2">
                         <span class="font-semibold">Description of services needed</span>
                         <textarea class="field" name="description" required placeholder="Describe what is happening, what you want fixed or upgraded, and any useful details."></textarea>
-                    </label>
-
-                    <label class="grid gap-2">
-                        <span class="font-semibold">Photos</span>
-                        <input class="field" type="file" name="photos" accept="image/*" multiple>
-                        <span class="text-sm text-[#657078]">Optional. Photos can help the team understand the issue before reaching out.</span>
                     </label>
 
                     <label class="flex gap-3 items-start text-sm md:text-base text-[#4B555A] leading-relaxed">
@@ -241,6 +235,18 @@
     <script>
         const serviceSelect = document.getElementById('serviceType');
         const formMessage = document.getElementById('formMessage');
+        const googleFormConfig = {
+            actionUrl: 'https://docs.google.com/forms/d/e/1FAIpQLScxMF9S4BNz67RznwUkb2e3i630WeB6kjWs15dgM8y4LNFGog/formResponse',
+            fields: {
+                name: 'entry.131133613',
+                phone: 'entry.344301479',
+                email: 'entry.477670127',
+                location: 'entry.1901409637',
+                serviceType: 'entry.280958794',
+                urgency: 'entry.1994534986',
+                description: 'entry.866608397'
+            }
+        };
 
         document.querySelectorAll('.service-choice').forEach((card) => {
             card.addEventListener('click', () => {
@@ -249,10 +255,42 @@
             });
         });
 
-        document.getElementById('serviceForm').addEventListener('submit', (event) => {
+        document.getElementById('serviceForm').addEventListener('submit', async (event) => {
             event.preventDefault();
-            formMessage.textContent = 'Thank you. A member of the Umbra team will reach out to confirm the next step.';
-            event.currentTarget.reset();
+            const form = event.currentTarget;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const formData = new FormData(form);
+
+            if (!googleFormConfig.actionUrl) {
+                formMessage.textContent = 'Form is ready, but the Google Forms connection still needs to be added.';
+                return;
+            }
+
+            const googleData = new FormData();
+            Object.entries(googleFormConfig.fields).forEach(([fieldName, googleEntryId]) => {
+                if (googleEntryId) {
+                    googleData.append(googleEntryId, formData.get(fieldName) || '');
+                }
+            });
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Sending...';
+            formMessage.textContent = '';
+
+            try {
+                await fetch(googleFormConfig.actionUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: googleData
+                });
+                form.reset();
+                formMessage.textContent = 'Thank you. A member of the Umbra team will reach out to confirm the next step.';
+            } catch (error) {
+                formMessage.textContent = 'Something went wrong. Please try again or contact Umbra directly.';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Send Request';
+            }
         });
     </script>
 </body>
