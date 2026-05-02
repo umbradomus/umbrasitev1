@@ -10,29 +10,157 @@
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;600&display=swap');
         body { font-family: 'Inter', system-ui, sans-serif; }
         .logo-font { font-family: 'Playfair Display', serif; }
+        .brand-nav {
+            background: linear-gradient(to right, #1A1428, #2C1B47);
+            box-shadow: 0 4px 30px rgba(95, 44, 138, 0.35);
+        }
+        .service-image {
+            min-height: 18rem;
+        }
     </style>
 </head>
-<body class="bg-[#F9F4EC]">
-    <!-- Navbar (same as index) -->
-    <nav class="fixed top-0 w-full bg-white/95 backdrop-blur-md z-50 border-b border-[#5F2C8A]/20">
+<body class="bg-[#F9F4EC] text-[#1F2A2F]">
+    <nav class="brand-nav fixed top-0 w-full z-50 border-b border-white/10">
         <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
             <a href="index.html" class="flex items-center gap-3">
                 <img src="assets/logofinal1.jpg" alt="UMBRA DOMUS" class="h-12 w-auto">
             </a>
-            <div class="hidden md:flex gap-8 text-lg font-medium">
+            <div class="hidden md:flex items-center gap-8 text-lg font-medium text-white">
                 <a href="services.html" class="text-[#F26E3E]">Services</a>
-                <a href="sustainability.html">Sustainability</a>
-                <a href="homes.html">Homes</a>
-                <a href="index.html#about">About Us</a>
-                <a href="contact.html">Contact</a>
+                <a href="sustainability.html" class="hover:text-[#F26E3E] transition">Sustainability</a>
+                <a href="homes.html" class="hover:text-[#F26E3E] transition">Homes</a>
+                <a href="index.html#about" class="hover:text-[#F26E3E] transition">About Us</a>
+                <a href="contact.html" class="hover:text-[#F26E3E] transition">Contact</a>
             </div>
         </div>
     </nav>
 
-    <div class="pt-24 pb-16 max-w-7xl mx-auto px-6">
-        <h1 class="text-5xl font-bold text-center text-[#5F2C8A] mb-12">Our Services</h1>
-        <!-- Add your service cards here later -->
-        <p class="text-center text-xl">Electrical • Plumbing • Basic Construction • Garden & Maintenance</p>
-    </div>
+    <main>
+        <section class="pt-36 pb-20 md:pt-44 md:pb-28 bg-[#1A1428] text-white">
+            <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1fr_0.8fr] gap-14 items-end">
+                <div>
+                    <p class="uppercase tracking-[0.22em] text-sm text-[#F26E3E] font-semibold mb-5">Service, repair, and upgrade support</p>
+                    <h1 class="logo-font text-5xl md:text-7xl leading-none mb-8">Keep Your Home Working Better.</h1>
+                    <p class="text-xl md:text-2xl leading-relaxed text-white/80 max-w-3xl">Umbra Domus helps homeowners and renters handle practical repairs, thoughtful upgrades, and regenerative improvements with clear scopes and grounded guidance.</p>
+                </div>
+                <div class="border-l-4 border-[#3EB78F] pl-6">
+                    <p class="text-lg leading-relaxed text-white/80">Start with the issue you can see. We help assess the work, organize the next step, and connect repairs to longer-term savings where possible.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-20 md:py-28">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="max-w-3xl mb-14">
+                    <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-5">Services We Handle</h2>
+                    <p class="text-lg text-[#4B555A] leading-relaxed">From urgent fixes to planned property improvements, these are the core service lanes Umbra Domus is building around.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
+                        <img src="assets/electrical.jpg" alt="Electrical service work" class="service-image w-full object-cover">
+                        <div class="p-7">
+                            <div class="flex items-center gap-3 text-[#F26E3E] mb-4">
+                                <i class="fa-solid fa-bolt text-xl" aria-hidden="true"></i>
+                                <h3 class="text-2xl font-bold">Electrical</h3>
+                            </div>
+                            <p class="text-[#4B555A] leading-relaxed mb-5">Troubleshooting, fixture updates, outlet concerns, lighting improvements, safety checks, and energy-minded electrical upgrades.</p>
+                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Repair and upgrade planning</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Lighting and fixture support</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Efficiency-focused recommendations</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
+                        <img src="assets/plumbing.jpg" alt="Plumbing service work" class="service-image w-full object-cover">
+                        <div class="p-7">
+                            <div class="flex items-center gap-3 text-[#2D936C] mb-4">
+                                <i class="fa-solid fa-droplet text-xl" aria-hidden="true"></i>
+                                <h3 class="text-2xl font-bold">Plumbing</h3>
+                            </div>
+                            <p class="text-[#4B555A] leading-relaxed mb-5">Leaks, clogs, fixture swaps, water-saving upgrades, inspection notes, and practical help prioritizing what needs attention first.</p>
+                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Fixture and flow improvements</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Water waste reduction</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Clear next-step assessments</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
+                        <img src="assets/construction.jpg" alt="Basic construction and repair work" class="service-image w-full object-cover">
+                        <div class="p-7">
+                            <div class="flex items-center gap-3 text-[#5F2C8A] mb-4">
+                                <i class="fa-solid fa-hammer text-xl" aria-hidden="true"></i>
+                                <h3 class="text-2xl font-bold">Basic Construction</h3>
+                            </div>
+                            <p class="text-[#4B555A] leading-relaxed mb-5">Small repairs, finish work, practical improvements, prep work, and property updates that make a home more durable and livable.</p>
+                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Home repair coordination</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Small improvement scopes</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Durability-minded upgrades</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <article class="bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-xl shadow-black/5">
+                        <img src="assets/gardening.jpg" alt="Garden and property maintenance" class="service-image w-full object-cover">
+                        <div class="p-7">
+                            <div class="flex items-center gap-3 text-[#2D936C] mb-4">
+                                <i class="fa-solid fa-seedling text-xl" aria-hidden="true"></i>
+                                <h3 class="text-2xl font-bold">Garden & Maintenance</h3>
+                            </div>
+                            <p class="text-[#4B555A] leading-relaxed mb-5">Yard care, garden setup, productive landscaping ideas, maintenance planning, and outdoor improvements that support a healthier property.</p>
+                            <ul class="grid gap-2 text-sm text-[#1F2A2F]">
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Garden and fruit tree support</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Outdoor maintenance planning</li>
+                                <li><i class="fa-solid fa-check text-[#3EB78F] mr-2" aria-hidden="true"></i>Regenerative property ideas</li>
+                            </ul>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-20 bg-white">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="grid lg:grid-cols-[0.85fr_1fr] gap-12 items-start">
+                    <div>
+                        <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-5">How Service Requests Work</h2>
+                        <p class="text-lg text-[#4B555A] leading-relaxed">The goal is simple: understand the problem, make the next step clear, and avoid turning a small issue into a bigger one.</p>
+                    </div>
+                    <div class="grid sm:grid-cols-3 gap-5">
+                        <div class="border-t-4 border-[#F26E3E] pt-5">
+                            <span class="text-sm font-bold text-[#F26E3E]">01</span>
+                            <h3 class="font-bold text-xl my-2">Tell Us What Is Happening</h3>
+                            <p class="text-[#4B555A] leading-relaxed">Share the issue, location, photos if useful, and how urgent it feels.</p>
+                        </div>
+                        <div class="border-t-4 border-[#3EB78F] pt-5">
+                            <span class="text-sm font-bold text-[#2D936C]">02</span>
+                            <h3 class="font-bold text-xl my-2">Get A Clear Next Step</h3>
+                            <p class="text-[#4B555A] leading-relaxed">We help organize the scope, priority, and practical options.</p>
+                        </div>
+                        <div class="border-t-4 border-[#5F2C8A] pt-5">
+                            <span class="text-sm font-bold text-[#5F2C8A]">03</span>
+                            <h3 class="font-bold text-xl my-2">Repair Or Upgrade</h3>
+                            <p class="text-[#4B555A] leading-relaxed">Move forward with service that fits the home and the budget.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-20 md:py-24 bg-[#2C1B47] text-white">
+            <div class="max-w-5xl mx-auto px-6 text-center">
+                <h2 class="logo-font text-4xl md:text-5xl mb-6">Need Help With A Home Repair Or Upgrade?</h2>
+                <p class="text-xl text-white/80 leading-relaxed mb-10">Tell us what is going on, and Umbra Domus will help you sort the next step.</p>
+                <a href="contact.html" class="inline-flex items-center justify-center min-h-14 px-8 rounded-lg bg-[#F26E3E] text-white font-bold hover:bg-[#d95c2e] transition">
+                    Request Service
+                </a>
+            </div>
+        </section>
+    </main>
 </body>
 </html>
