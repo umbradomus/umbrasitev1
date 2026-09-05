@@ -28,7 +28,7 @@
     </nav>
   </div>
 </header>
-<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> {{RESPONSE_PROMISE}}</p>
+<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> Respondemos en 2 horas, de 7am a 9pm, los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
 
 <main>
   <section>
@@ -37,7 +37,7 @@
       <h1>Ya lo tenemos.</h1>
       <p class="lead">Recibimos su solicitud a las <strong><time id="when">ahora</time></strong>.</p>
       <div class="note">
-        <p><strong>Qué sigue:</strong> {{RESPONSE_PROMISE}}</p>
+        <p><strong>Qué sigue:</strong> Respondemos en 2 horas, de 7am a 9pm, los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
         <p id="by" hidden style="margin:0"><strong>Le contestamos antes de las <time id="bywhen"></time>.</strong></p>
       </div>
       <ol class="track" style="margin-top:2rem" aria-label="Estado">
@@ -70,7 +70,7 @@
 </footer>
 <script>
 (function () {
-  var WINDOW_MINUTES = null;
+  var WINDOW_MINUTES = 120;
   var now = new Date();
   var fmt = function (d) { return d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' }); };
   document.getElementById('when').textContent = fmt(now);

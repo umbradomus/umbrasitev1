@@ -32,7 +32,7 @@
     </nav>
   </div>
 </header>
-<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> {{RESPONSE_PROMISE}}</p>
+<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
 
 <main>
   <section>
@@ -41,7 +41,7 @@
       <h1 id="head">Got it.</h1>
       <p class="lead">We received it at <strong><time id="when">just now</time></strong>.</p>
       <div class="note">
-        <p><strong>What happens next:</strong> {{RESPONSE_PROMISE}}</p>
+        <p><strong>What happens next:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
         <p id="by" hidden style="margin:0"><strong>Expect to hear from us by <time id="bywhen"></time>.</strong></p>
       </div>
 
@@ -84,10 +84,10 @@
   <div class="wrap"><p class="fine">Electrical, plumbing and AC work is performed by licensed subcontractors. Umbra coordinates it and stands behind it.</p></div>
 </footer>
 <script>
-// Stamps the time the confirmation was reached. WINDOW_MINUTES is Drew's number: once set (e.g. 60),
+// Stamps the time the confirmation was reached. WINDOW_MINUTES is Drew's number (120 = the 2-hour promise);
 // the page also prints the clock time by which he has promised to answer. Null keeps it hidden.
 (function () {
-  var WINDOW_MINUTES = null;
+  var WINDOW_MINUTES = 120;
   var now = new Date();
   var fmt = function (d) { return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
   document.getElementById('when').textContent = fmt(now);
