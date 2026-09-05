@@ -84,12 +84,14 @@
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://www.umbradomus.com/request-received?kind=list">
         <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="fine" style="margin:0">Name and phone are required. The third field is optional.</p>
         <label>Your name
           <input class="field" type="text" name="name" autocomplete="name" required enterkeyhint="next">
         </label>
-        <label>Your phone <small>We'll call or text this number.</small>
+        <label>Your phone <small>So we can text you back within 2 hours.</small>
           <input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next">
         </label>
+        <label class="opt"><input type="checkbox" name="idioma" value="español"><span>Prefiero español <small>Optional.</small></span></label>
         <label>What are you looking for? <small>Optional. Bedrooms, area, budget, timing, anything.</small>
           <textarea class="field" name="what" rows="3"></textarea>
         </label>

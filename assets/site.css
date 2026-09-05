@@ -137,6 +137,8 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .chips span { display: inline-block; padding: 0.5rem 0.85rem; border: 1.5px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; min-height: 40px; }
 .chips input:checked + span { background: var(--ink); color: var(--white); border-color: var(--ink); }
 .chips input:focus-visible + span { box-shadow: 0 0 0 3px rgba(102,2,60,0.3); }
+.req label.opt { display: flex; align-items: center; gap: 0.65rem; font-weight: 500; }
+.req label.opt input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--tyrian); }
 .honey { position: absolute; left: -9999px; }
 .fine { font-size: 0.9rem; color: var(--muted); }
 

@@ -69,12 +69,14 @@
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://www.umbradomus.com/request-received">
         <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="fine" style="margin:0">All three fields are required.</p>
         <label>Your name
           <input class="field" type="text" name="name" autocomplete="name" required enterkeyhint="next">
         </label>
-        <label>Your phone <small>We'll call or text this number.</small>
+        <label>Your phone <small>So we can text you back within 2 hours.</small>
           <input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next">
         </label>
+        <label class="opt"><input type="checkbox" name="idioma" value="español"><span>Prefiero español <small>Optional.</small></span></label>
         <label>How can we help?
           <textarea class="field" name="message" rows="4" required></textarea>
         </label>
