@@ -1,323 +1,198 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Services - UMBRA DOMUS</title>
-
-    <meta name="description" content="Request a service, repair, or upgrade from UMBRA DOMUS. Sustainable solutions and regenerative repairs in the Rio Grande Valley.">
-    <link rel="canonical" href="https://www.umbradomus.com/services.html">
-
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-    <meta name="theme-color" content="#1A1428">
-
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="UMBRA DOMUS">
-    <meta property="og:title" content="Services — UMBRA DOMUS">
-    <meta property="og:description" content="Request a service, repair, or upgrade from UMBRA DOMUS. Sustainable solutions and regenerative repairs in the Rio Grande Valley.">
-    <meta property="og:url" content="https://www.umbradomus.com/services.html">
-    <meta property="og:image" content="https://www.umbradomus.com/assets/og-image.jpg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="UMBRA DOMUS — Regenerative Homes & Services">
-    <meta property="og:locale" content="en_US">
-
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Services — UMBRA DOMUS">
-    <meta name="twitter:description" content="Request a service, repair, or upgrade from UMBRA DOMUS. Sustainable solutions and regenerative repairs in the Rio Grande Valley.">
-    <meta name="twitter:image" content="https://www.umbradomus.com/assets/og-image.jpg">
-    <meta name="twitter:image:alt" content="UMBRA DOMUS — Regenerative Homes & Services">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;600&display=swap');
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', system-ui, sans-serif; }
-        .logo-font { font-family: 'Playfair Display', serif; }
-        .brand-nav {
-            background: linear-gradient(to right, #1A1428, #2C1B47);
-            box-shadow: 0 4px 30px rgba(95, 44, 138, 0.35);
-        }
-        .service-card {
-            min-height: 100%;
-            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-        }
-        .service-card:hover,
-        .service-card:focus-visible {
-            transform: translateY(-4px);
-            border-color: #F26E3E;
-            box-shadow: 0 18px 45px rgba(31, 42, 47, 0.16);
-            outline: none;
-        }
-        .service-photo {
-            aspect-ratio: 4 / 3;
-        }
-        .upgrade-photo {
-            min-height: 15rem;
-        }
-        .field {
-            width: 100%;
-            min-height: 3.25rem;
-            border: 1px solid #D8D2C8;
-            border-radius: 0.5rem;
-            background: #fff;
-            padding: 0.75rem 1rem;
-            color: #1F2A2F;
-        }
-        .field:focus {
-            border-color: #5F2C8A;
-            box-shadow: 0 0 0 3px rgba(95, 44, 138, 0.16);
-            outline: none;
-        }
-        textarea.field {
-            min-height: 10rem;
-            resize: vertical;
-        }
-        @media (max-width: 640px) {
-            .service-photo {
-                aspect-ratio: 16 / 10;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Services — UMBRA DOMUS</title>
+<meta name="description" content="Electrical, plumbing, AC, construction, garden and upgrades across the Rio Grande Valley. Request a repair in three fields, no account. Licensed trades performed by licensed subcontractors.">
+<link rel="canonical" href="https://www.umbradomus.com/services">
+<link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0F0B1A">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="UMBRA DOMUS">
+<meta property="og:title" content="Services — UMBRA DOMUS">
+<meta property="og:description" content="Electrical, plumbing, AC, construction, garden and upgrades across the Rio Grande Valley. Request a repair in three fields.">
+<meta property="og:url" content="https://www.umbradomus.com/services">
+<meta property="og:image" content="https://www.umbradomus.com/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="UMBRA DOMUS">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 </head>
-<body class="bg-[#F9F4EC] text-[#1F2A2F]">
-    <nav class="brand-nav fixed top-0 w-full z-50 border-b border-white/10">
-        <div class="max-w-7xl mx-auto px-5 py-4 md:px-6 md:py-5 flex justify-between items-center">
-            <a href="index.html" class="flex items-center gap-3">
-                <img src="assets/logo.jpg" alt="UMBRA DOMUS" class="h-11 md:h-12 w-auto">
-            </a>
-            <div class="hidden md:flex items-center gap-8 text-lg font-medium text-white">
-                <a href="services.html" class="text-[#F26E3E]">Services</a>
-                <a href="sustainability.html" class="hover:text-[#F26E3E] transition">Sustainability</a>
-                <a href="homes.html" class="hover:text-[#F26E3E] transition">Homes</a>
-                <a href="index.html#about" class="hover:text-[#F26E3E] transition">About Us</a>
-                <a href="contact.html" class="hover:text-[#F26E3E] transition">Contact</a>
-            </div>
-        </div>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Umbra Domus home">
+      <img src="/assets/mark-128.png" width="122" height="128" alt="">
+      <svg class="wm" viewBox="-10 -10 8528 720" role="img" aria-label="UMBRA DOMUS"><use href="/assets/wordmark.svg#wm"/></svg>
+    </a>
+    <a class="call" href="tel:+19565566438" aria-label="Call (956) 556-6438"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1L6.6 10.8z"/></svg><span class="num">(956) 556-6438</span></a>
+    <nav class="menu" aria-label="Site">
+      <a href="/services" aria-current="page">Services</a>
+      <a href="/sustainability">Sustainability</a>
+      <a href="/homes">Homes</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/es" lang="es" hreflang="es">Español</a>
     </nav>
+  </div>
+</header>
+<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> {{RESPONSE_PROMISE}}</p>
 
-    <main>
-        <section class="pt-32 pb-14 md:pt-40 md:pb-20 bg-[#1A1428] text-white">
-            <div class="max-w-7xl mx-auto px-5 md:px-6 grid lg:grid-cols-[1fr_0.75fr] gap-10 items-end">
-                <div>
-                    <p class="uppercase tracking-[0.18em] text-xs md:text-sm text-[#F26E3E] font-semibold mb-5">Service, repair, and upgrade support</p>
-                    <h1 class="logo-font text-5xl md:text-7xl leading-none mb-6">Providing For Your Home So It Can Provide For You.</h1>
-                    <p class="text-lg md:text-2xl leading-relaxed text-white/80 max-w-3xl">Umbra Domus brings more care, clarity, and quality to home service, with practical support that looks beyond the quick fix.</p>
-                </div>
-                <div class="border-l-4 border-[#3EB78F] pl-5">
-                    <p class="text-base md:text-lg leading-relaxed text-white/80">For mobile and QR-code visitors, the page is built around quick taps, large form fields, and a short path from problem to request.</p>
-                </div>
-            </div>
-        </section>
+<main>
+  <section class="dark" style="padding-bottom:2.5rem">
+    <div class="wrap">
+      <p class="kicker">Service, repair and upgrades</p>
+      <h1>Providing For Your Home So It Can Provide For You.</h1>
+      <p class="lead narrow">Pick the closest thing to what you need, or skip straight to the form. Three fields and you're done.</p>
+      <div class="cta-row">
+        <a class="btn" href="#request">Request a repair</a>
+        <a class="btn ghost" href="tel:+19565566438">Call (956) 556-6438</a>
+      </div>
+    </div>
+  </section>
 
-        <section id="service-options" class="scroll-mt-28 py-14 md:py-20">
-            <div class="max-w-7xl mx-auto px-5 md:px-6">
-                <div class="max-w-4xl mb-10 grid md:grid-cols-[auto_1fr] gap-5 md:gap-7 items-center">
-                    <img src="assets/logo.jpg" alt="UMBRA DOMUS" class="h-20 md:h-24 w-auto rounded-md shadow-lg shadow-black/10">
-                    <div>
-                        <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-4">Umbra's Got You Covered.</h2>
-                        <p class="text-lg text-[#4B555A] leading-relaxed">Choose a service, or the closest to what you need, down below.</p>
-                    </div>
-                </div>
+  <section id="service-options">
+    <div class="wrap">
+      <h2>Umbra's got you covered.</h2>
+      <div class="grid three">
 
-                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-                    <a href="#service-request" data-service="Electrical" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
-                        <img src="assets/electrical.jpg" alt="Electrical service work" class="service-photo w-full object-cover">
-                        <div class="p-4">
-                            <div class="flex items-center gap-2 text-[#F26E3E] mb-2">
-                                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-                                <h3 class="text-lg font-bold">Electrical</h3>
-                            </div>
-                            <p class="text-sm text-[#4B555A] leading-relaxed">Lighting, outlets, fixtures, troubleshooting, and energy-minded updates.</p>
-                        </div>
-                    </a>
+        <a class="tile rise" href="#request" data-service="Electrical">
+          <div class="ph"><picture><source srcset="/assets/img/electrical-640.webp" type="image/webp"><img src="/assets/img/electrical-640.jpg" width="640" height="480" alt="Ceiling wiring ready for a new fixture" loading="lazy"></picture></div>
+          <div class="body">
+            <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="#D9432B"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>Electrical</h3>
+            <p>Lighting, outlets, fixtures, ceiling fans, troubleshooting, and energy-minded updates.</p>
+            <p class="lic">Performed by licensed subcontractors (TDLR).</p>
+          </div>
+        </a>
 
-                    <a href="#service-request" data-service="Plumbing" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
-                        <img src="assets/plumbing.jpg" alt="Plumbing service work" class="service-photo w-full object-cover">
-                        <div class="p-4">
-                            <div class="flex items-center gap-2 text-[#2D936C] mb-2">
-                                <i class="fa-solid fa-droplet" aria-hidden="true"></i>
-                                <h3 class="text-lg font-bold">Plumbing</h3>
-                            </div>
-                            <p class="text-sm text-[#4B555A] leading-relaxed">Leaks, clogs, fixture swaps, flow issues, and water-saving upgrades.</p>
-                        </div>
-                    </a>
+        <a class="tile rise" href="#request" data-service="Plumbing">
+          <div class="ph"><picture><source srcset="/assets/img/plumbing-640.webp" type="image/webp"><img src="/assets/img/plumbing-640.jpg" width="640" height="480" alt="Hands working on a sink trap" loading="lazy"></picture></div>
+          <div class="body">
+            <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="#003153"><path d="M12 2s-6 7-6 12a6 6 0 0 0 12 0c0-5-6-12-6-12z"/></svg>Plumbing</h3>
+            <p>Leaks, clogs, running toilets, water heaters, fixture swaps, and water-saving upgrades.</p>
+            <p class="lic">Performed by licensed subcontractors (TSBPE).</p>
+          </div>
+        </a>
 
-                    <a href="#service-request" data-service="Basic Construction" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
-                        <img src="assets/construction.jpg" alt="Basic construction and repair work" class="service-photo w-full object-cover">
-                        <div class="p-4">
-                            <div class="flex items-center gap-2 text-[#5F2C8A] mb-2">
-                                <i class="fa-solid fa-hammer" aria-hidden="true"></i>
-                                <h3 class="text-lg font-bold">Construction</h3>
-                            </div>
-                            <p class="text-sm text-[#4B555A] leading-relaxed">Small repairs, finish work, prep work, and practical home improvements.</p>
-                        </div>
-                    </a>
+        <a class="tile rise" href="#request" data-service="AC &amp; Heating">
+          <div class="ph panel"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19M12 2l-2 2M12 2l2 2M12 22l-2-2M12 22l2-2M2 12l2-2M2 12l2 2M22 12l-2-2M22 12l-2 2"/></svg></div>
+          <div class="body">
+            <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#003153" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v18M3 12h18M6 6l12 12M18 6 6 18"/></svg>AC &amp; Heating</h3>
+            <p>Not cooling, not starting, weak airflow, thermostats, seasonal service, and replacements.</p>
+            <p class="lic">Performed by licensed subcontractors (TDLR).</p>
+          </div>
+        </a>
 
-                    <a href="#service-request" data-service="Garden & Maintenance" class="service-choice service-card bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
-                        <img src="assets/gardening.jpg" alt="Garden and property maintenance" class="service-photo w-full object-cover">
-                        <div class="p-4">
-                            <div class="flex items-center gap-2 text-[#2D936C] mb-2">
-                                <i class="fa-solid fa-seedling" aria-hidden="true"></i>
-                                <h3 class="text-lg font-bold">Garden & Maintenance</h3>
-                            </div>
-                            <p class="text-sm text-[#4B555A] leading-relaxed">Yard care, garden setup, outdoor maintenance, and property support.</p>
-                        </div>
-                    </a>
-                </div>
+        <a class="tile rise" href="#request" data-service="Construction">
+          <div class="ph"><picture><source srcset="/assets/img/construction-640.webp" type="image/webp"><img src="/assets/img/construction-640.jpg" width="640" height="480" alt="New steps being framed at a front door" loading="lazy"></picture></div>
+          <div class="body">
+            <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="#66023C"><path d="M14.7 3.3 20.7 9.3l-2.1 2.1-1.4-1.4-1.4 1.4-1.4-1.4-9.2 9.2-2.8-2.8 9.2-9.2-1.4-1.4 1.4-1.4-1.4-1.4z"/></svg>Construction</h3>
+            <p>Drywall, paint, doors, locks, trim, fences, decks, steps, rotted wood, and the small jobs nobody else will come out for.</p>
+          </div>
+        </a>
 
-                <a href="#service-request" data-service="Upgrade" class="service-choice service-card mt-5 grid md:grid-cols-[0.95fr_1.35fr] bg-white border border-[#E1D8CB] rounded-lg overflow-hidden shadow-lg shadow-black/5">
-                    <img src="assets/upgrade.jpg" alt="Home upgrade service" class="upgrade-photo h-full w-full object-cover">
-                    <div class="p-6 md:p-8 flex flex-col justify-center">
-                        <div class="flex items-center gap-3 text-[#F26E3E] mb-3">
-                            <i class="fa-solid fa-screwdriver-wrench text-xl" aria-hidden="true"></i>
-                            <h3 class="text-2xl md:text-3xl font-bold">Upgrade</h3>
-                        </div>
-                        <p class="text-[#4B555A] leading-relaxed max-w-3xl">Plan a home improvement that makes the property work harder for you, from efficiency upgrades to regenerative features and comfort improvements.</p>
-                    </div>
-                </a>
-            </div>
-        </section>
+        <a class="tile rise" href="#request" data-service="Garden &amp; Maintenance">
+          <div class="ph"><picture><source srcset="/assets/img/gardening-640.webp" type="image/webp"><img src="/assets/img/gardening-640.jpg" width="640" height="480" alt="Garden bed edging with hand tools" loading="lazy"></picture></div>
+          <div class="body">
+            <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="#4FB87B"><path d="M20 4c-8 0-14 4-14 12 0 1.5.3 2.8.8 4L4 22l2.4-2.4C8.2 21 10 21.5 12 21.5c8 0 8-10 8-17.5zM8.5 17.5c2-4 5-7 8.5-9.5-4 1.5-7.5 4.5-9.5 8.5z"/></svg>Garden &amp; Maintenance</h3>
+            <p>Yard care, garden setup, pressure washing, gutters, debris, and keeping a property up.</p>
+          </div>
+        </a>
 
-        <section id="service-request" class="scroll-mt-28 py-16 md:py-24 bg-white">
-            <div class="max-w-5xl mx-auto px-5 md:px-6">
-                <div class="max-w-3xl mb-10">
-                    <p class="uppercase tracking-[0.18em] text-xs md:text-sm text-[#F26E3E] font-bold mb-4">Service request</p>
-                    <h2 class="logo-font text-4xl md:text-5xl text-[#5F2C8A] mb-4">Tell Us What You Need</h2>
-                    <p class="text-lg text-[#4B555A] leading-relaxed">Fill out what you can. A member of the Umbra team will reach out to confirm details, timing, and next steps.</p>
-                </div>
+        <a class="tile rise" href="#request" data-service="Upgrade">
+          <div class="ph"><picture><source srcset="/assets/img/upgrade-960.webp" type="image/webp"><img src="/assets/img/upgrade-960.jpg" width="960" height="540" alt="A house with solar panels, rain barrels and a fruit garden" loading="lazy"></picture></div>
+          <div class="body">
+            <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="#D9432B"><path d="M21.7 7.3a1 1 0 0 0-1.4 0L18 9.6 14.4 6l2.3-2.3a1 1 0 0 0-1.4-1.4L13 4.6a5 5 0 0 0-6.6 6.1L2 15.1V22h6.9l4.4-4.4a5 5 0 0 0 6.1-6.6l2.3-2.3a1 1 0 0 0 0-1.4z"/></svg>Upgrade</h3>
+            <p>Insulation and shade, solar-ready wiring, water catchment for the garden, a fruit tree, and the comfort improvements that make a house cheaper to live in.</p>
+          </div>
+        </a>
+      </div>
+      <p class="note blue" style="margin-top:1.25rem"><strong>Electrical, plumbing and AC work is performed by licensed subcontractors.</strong> Umbra coordinates it, schedules it, and stands behind it.</p>
+    </div>
+  </section>
 
-                <form id="serviceForm" class="grid gap-6 bg-[#F9F4EC] border border-[#E1D8CB] rounded-lg p-5 md:p-8 shadow-xl shadow-black/5">
-                    <div class="grid md:grid-cols-2 gap-5">
-                        <label class="grid gap-2">
-                            <span class="font-semibold">Name</span>
-                            <input class="field" type="text" name="name" autocomplete="name" required>
-                        </label>
-                        <label class="grid gap-2">
-                            <span class="font-semibold">Phone</span>
-                            <input class="field" type="tel" name="phone" autocomplete="tel" required>
-                        </label>
-                    </div>
+  <section class="band" id="request">
+    <div class="wrap narrow">
+      <p class="kicker">Request</p>
+      <h2>Tell us what's wrong.</h2>
+      <p class="lead">Three fields. No account, no email needed. You'll get a confirmation that says when you'll hear from us.</p>
 
-                    <div class="grid md:grid-cols-2 gap-5">
-                        <label class="grid gap-2">
-                            <span class="font-semibold">Email</span>
-                            <input class="field" type="email" name="email" autocomplete="email">
-                        </label>
-                        <label class="grid gap-2">
-                            <span class="font-semibold">Service address or area</span>
-                            <input class="field" type="text" name="location" autocomplete="street-address" placeholder="Harlingen, RGV, or property address">
-                        </label>
-                    </div>
+      <form class="req" action="https://formsubmit.co/contact@umbradomus.com" method="POST">
+        <input type="hidden" name="_subject" value="Service request from umbradomus.com">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_next" value="https://www.umbradomus.com/request-received">
+        <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
 
-                    <div class="grid md:grid-cols-2 gap-5">
-                        <label class="grid gap-2">
-                            <span class="font-semibold">Service type</span>
-                            <select id="serviceType" class="field" name="serviceType" required>
-                                <option value="">Choose a service</option>
-                                <option value="Electrical">Electrical</option>
-                                <option value="Plumbing">Plumbing</option>
-                                <option value="Basic Construction">Basic Construction</option>
-                                <option value="Garden & Maintenance">Garden & Maintenance</option>
-                                <option value="Upgrade">Upgrade</option>
-                            </select>
-                        </label>
-                        <label class="grid gap-2">
-                            <span class="font-semibold">Urgency level or quote</span>
-                            <select class="field" name="urgency" required>
-                                <option value="">Choose one</option>
-                                <option value="Emergency">Emergency / as soon as possible</option>
-                                <option value="Soon">Soon / within the next week</option>
-                                <option value="Flexible">Flexible timing</option>
-                                <option value="Quote">Quote only</option>
-                            </select>
-                        </label>
-                    </div>
+        <div>
+          <p style="font-weight:600;margin-bottom:.4rem">Which one is closest? <small class="muted" style="font-weight:400">Optional.</small></p>
+          <div class="chips">
+            <label><input type="radio" name="service" value="Electrical"><span>Electrical</span></label>
+            <label><input type="radio" name="service" value="Plumbing"><span>Plumbing</span></label>
+            <label><input type="radio" name="service" value="AC &amp; Heating"><span>AC &amp; Heating</span></label>
+            <label><input type="radio" name="service" value="Construction"><span>Construction</span></label>
+            <label><input type="radio" name="service" value="Garden &amp; Maintenance"><span>Garden &amp; Maintenance</span></label>
+            <label><input type="radio" name="service" value="Upgrade"><span>Upgrade</span></label>
+            <label><input type="radio" name="service" value="Not sure"><span>Not sure</span></label>
+          </div>
+        </div>
 
-                    <label class="grid gap-2">
-                        <span class="font-semibold">Description of services needed</span>
-                        <textarea class="field" name="description" required placeholder="Describe what is happening, what you want fixed or upgraded, and any useful details."></textarea>
-                    </label>
+        <label>Your name
+          <input class="field" type="text" name="name" autocomplete="name" required enterkeyhint="next">
+        </label>
+        <label>Your phone <small>We'll call or text this number.</small>
+          <input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next">
+        </label>
+        <label>What's wrong? <small>A sentence is enough. Where it is and what it's doing.</small>
+          <textarea class="field" name="what" rows="4" required></textarea>
+        </label>
 
-                    <label class="flex gap-3 items-start text-sm md:text-base text-[#4B555A] leading-relaxed">
-                        <input type="checkbox" required class="mt-1 h-5 w-5 accent-[#5F2C8A]">
-                        <span>I understand this request is not confirmed until a member of the Umbra team reaches out with next steps.</span>
-                    </label>
+        <button class="btn wide" type="submit">Send request</button>
+        <p class="fine">Prefer to talk? <a href="tel:+19565566438">Call (956) 556-6438</a> or <a href="sms:+19565566438">text us</a>.</p>
+      </form>
+    </div>
+  </section>
+</main>
 
-                    <div class="flex flex-col sm:flex-row gap-4 sm:items-center">
-                        <button type="submit" class="min-h-14 px-8 rounded-lg bg-[#F26E3E] text-white font-bold hover:bg-[#d95c2e] transition">
-                            Send Request
-                        </button>
-                        <p id="formMessage" class="text-sm text-[#2D936C] font-semibold" aria-live="polite"></p>
-                    </div>
-                </form>
-            </div>
-        </section>
-    </main>
-
-    <script>
-        const serviceSelect = document.getElementById('serviceType');
-        const formMessage = document.getElementById('formMessage');
-        const googleFormConfig = {
-            actionUrl: 'https://docs.google.com/forms/d/e/1FAIpQLScxMF9S4BNz67RznwUkb2e3i630WeB6kjWs15dgM8y4LNFGog/formResponse',
-            fields: {
-                name: 'entry.131133613',
-                phone: 'entry.344301479',
-                email: 'entry.477670127',
-                location: 'entry.1901409637',
-                serviceType: 'entry.280958794',
-                urgency: 'entry.1994534986',
-                description: 'entry.866608397'
-            }
-        };
-
-        document.querySelectorAll('.service-choice').forEach((card) => {
-            card.addEventListener('click', () => {
-                serviceSelect.value = card.dataset.service;
-                formMessage.textContent = '';
-            });
-        });
-
-        document.getElementById('serviceForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            const submitButton = form.querySelector('button[type="submit"]');
-            const formData = new FormData(form);
-
-            if (!googleFormConfig.actionUrl) {
-                formMessage.textContent = 'Form is ready, but the Google Forms connection still needs to be added.';
-                return;
-            }
-
-            const googleData = new FormData();
-            Object.entries(googleFormConfig.fields).forEach(([fieldName, googleEntryId]) => {
-                if (googleEntryId) {
-                    googleData.append(googleEntryId, formData.get(fieldName) || '');
-                }
-            });
-
-            submitButton.disabled = true;
-            submitButton.textContent = 'Sending...';
-            formMessage.textContent = '';
-
-            try {
-                await fetch(googleFormConfig.actionUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: googleData
-                });
-                form.reset();
-                formMessage.textContent = 'Thank you. A member of the Umbra team will reach out to confirm the next step.';
-            } catch (error) {
-                formMessage.textContent = 'Something went wrong. Please try again or contact Umbra directly.';
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Send Request';
-            }
-        });
-    </script>
+<footer class="foot">
+  <div class="wrap cols">
+    <div>
+      <svg class="wm" viewBox="-10 -10 8528 720" role="img" aria-label="UMBRA DOMUS"><use href="/assets/wordmark.svg#wm"/></svg>
+      <p>Umbra Domus LLC<br>Brownsville, TX 78521</p>
+      <p>A real estate company serving Brownsville and the Rio Grande Valley.</p>
+    </div>
+    <div>
+      <p><a href="tel:+19565566438">(956) 556-6438</a><br><a href="sms:+19565566438">Text us</a></p>
+      <p><a href="mailto:contact@umbradomus.com">contact@umbradomus.com</a></p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="/services">Services</a>
+      <a href="/sustainability">Sustainability</a>
+      <a href="/homes">Homes</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/status">Where is my request?</a>
+      <a href="/es" lang="es" hreflang="es">Español</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="fine">Electrical, plumbing and AC work is performed by licensed subcontractors. Umbra coordinates it and stands behind it.</p></div>
+</footer>
+<script>
+// A tile click pre-selects the matching chip. Nothing else runs on this page.
+document.querySelectorAll('[data-service]').forEach(function (a) {
+  a.addEventListener('click', function () {
+    var r = document.querySelector('input[name="service"][value="' + a.getAttribute('data-service') + '"]');
+    if (r) r.checked = true;
+  });
+});
+</script>
 </body>
 </html>

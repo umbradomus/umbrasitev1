@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Got it — UMBRA DOMUS</title>
+<meta name="robots" content="noindex">
+<link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0F0B1A">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Umbra Domus home">
+      <img src="/assets/mark-128.png" width="122" height="128" alt="">
+      <svg class="wm" viewBox="-10 -10 8528 720" role="img" aria-label="UMBRA DOMUS"><use href="/assets/wordmark.svg#wm"/></svg>
+    </a>
+    <a class="call" href="tel:+19565566438" aria-label="Call (956) 556-6438"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1L6.6 10.8z"/></svg><span class="num">(956) 556-6438</span></a>
+    <nav class="menu" aria-label="Site">
+      <a href="/services">Services</a>
+      <a href="/sustainability">Sustainability</a>
+      <a href="/homes">Homes</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/es" lang="es" hreflang="es">Español</a>
+    </nav>
+  </div>
+</header>
+<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> {{RESPONSE_PROMISE}}</p>
+
+<main>
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker" id="kick">Received</p>
+      <h1 id="head">Got it.</h1>
+      <p class="lead">We received it at <strong><time id="when">just now</time></strong>.</p>
+      <div class="note">
+        <p><strong>What happens next:</strong> {{RESPONSE_PROMISE}}</p>
+        <p id="by" hidden style="margin:0"><strong>Expect to hear from us by <time id="bywhen"></time>.</strong></p>
+      </div>
+
+      <h2 style="margin-top:2rem">Where it stands</h2>
+      <ol class="track" aria-label="Status">
+        <li class="done"><div><strong>Received</strong><small>The clock has started.</small></div></li>
+        <li><div><strong>Quoted</strong><small>A price and a plan, in writing.</small></div></li>
+        <li><div><strong>Scheduled</strong><small>A day and a window, agreed with you.</small></div></li>
+        <li><div><strong>Done</strong><small>Finished and photographed.</small></div></li>
+      </ol>
+      <p class="fine" style="margin-top:.6rem"><a href="/status">How the status link works, and how to check on this request in the meantime.</a></p>
+
+      <p style="margin-top:2rem">If it's urgent, don't wait on us: <a href="tel:+19565566438">call (956) 556-6438</a>.</p>
+      <p><a href="/">Back to the homepage</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap cols">
+    <div>
+      <svg class="wm" viewBox="-10 -10 8528 720" role="img" aria-label="UMBRA DOMUS"><use href="/assets/wordmark.svg#wm"/></svg>
+      <p>Umbra Domus LLC<br>Brownsville, TX 78521</p>
+      <p>A real estate company serving Brownsville and the Rio Grande Valley.</p>
+    </div>
+    <div>
+      <p><a href="tel:+19565566438">(956) 556-6438</a><br><a href="sms:+19565566438">Text us</a></p>
+      <p><a href="mailto:contact@umbradomus.com">contact@umbradomus.com</a></p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="/services">Services</a>
+      <a href="/sustainability">Sustainability</a>
+      <a href="/homes">Homes</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/status">Where is my request?</a>
+      <a href="/es" lang="es" hreflang="es">Español</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="fine">Electrical, plumbing and AC work is performed by licensed subcontractors. Umbra coordinates it and stands behind it.</p></div>
+</footer>
+<script>
+// Stamps the time the confirmation was reached. WINDOW_MINUTES is Drew's number: once set (e.g. 60),
+// the page also prints the clock time by which he has promised to answer. Null keeps it hidden.
+(function () {
+  var WINDOW_MINUTES = null;
+  var now = new Date();
+  var fmt = function (d) { return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  document.getElementById('when').textContent = fmt(now);
+  if (WINDOW_MINUTES) {
+    document.getElementById('bywhen').textContent = fmt(new Date(now.getTime() + WINDOW_MINUTES * 60000));
+    document.getElementById('by').hidden = false;
+  }
+  if (new URLSearchParams(location.search).get('kind') === 'list') {
+    document.getElementById('kick').textContent = 'The waiting list';
+    document.getElementById('head').textContent = "You're on the list.";
+  }
+})();
+</script>
+</body>
+</html>
