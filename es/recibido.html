@@ -39,10 +39,10 @@
     <div class="wrap narrow">
       <p class="kicker">Recibido</p>
       <h1>Ya lo tenemos.</h1>
-      <p class="lead">Recibimos su solicitud a las <strong><time id="when">ahora</time></strong>.</p>
+      <p class="lead">Recibimos su solicitud a las <strong><time id="when">ahora</time></strong></p>
       <div class="note">
         <p><strong>Qué sigue:</strong> Respondemos en 2 horas, de 7am a 9pm, los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
-        <p id="by" hidden style="margin:0"><strong>Le contestamos antes de las <time id="bywhen"></time>.</strong></p>
+        <p id="by" hidden style="margin:0"><strong>Le contestamos antes de las <time id="bywhen"></time></strong></p>
       </div>
       <ol class="track" style="margin-top:2rem" aria-label="Estado">
         <li class="done"><div><strong>Recibido</strong></div></li>
@@ -65,6 +65,7 @@
     <div>
       <p><a href="tel:+19565566438">(956) 556-6438</a><br><a href="sms:+19565566438">Mandar mensaje de texto</a></p>
       <p><a href="mailto:contact@umbradomus.com">contact@umbradomus.com</a></p>
+      <p><a href="https://www.facebook.com/umbradomus" rel="me">Facebook</a><br><a href="https://www.instagram.com/umbradomus" rel="me">Instagram</a></p>
     </div>
     <nav aria-label="Pie de página">
       <a href="/es#solicitud">Pedir servicio</a>
@@ -73,13 +74,25 @@
   </div>
 </footer>
 <script>
+// WINDOW_MINUTES = the 2-hour promise. The promise runs 7am–9pm (OPEN_HOUR–CLOSE_HOUR): if the window would
+// end after 9:00 PM, or the request arrived before 7:00 AM, the answer-by time is clamped to 7:00 AM + the window
+// (9:00 a.m.), "de mañana" when the date rolls. Same clamp as request-received.html.
 (function () {
   var WINDOW_MINUTES = 120;
+  var OPEN_HOUR = 7, CLOSE_HOUR = 21;
   var now = new Date();
   var fmt = function (d) { return d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' }); };
   document.getElementById('when').textContent = fmt(now);
   if (WINDOW_MINUTES) {
-    document.getElementById('bywhen').textContent = fmt(new Date(now.getTime() + WINDOW_MINUTES * 60000));
+    var by = new Date(now.getTime() + WINDOW_MINUTES * 60000);
+    var close = new Date(now.getFullYear(), now.getMonth(), now.getDate(), CLOSE_HOUR, 0, 0, 0);
+    var early = now.getHours() < OPEN_HOUR;
+    var suffix = '';
+    if (early || by > close) {
+      by = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (early ? 0 : 1), OPEN_HOUR, WINDOW_MINUTES, 0, 0);
+      if (by.getDate() !== now.getDate()) suffix = ' de mañana.';
+    }
+    document.getElementById('bywhen').textContent = fmt(by) + suffix;
     document.getElementById('by').hidden = false;
   }
 })();
