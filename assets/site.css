@@ -1,5 +1,5 @@
 /* UMBRA DOMUS — one stylesheet, every page. No framework, no icon font, no hotlinked type.
-   Palette: the five ruled logo colours (2026-09-05) + white wordmark. */
+   Palette: the five ruled logo colours (2026-09-05); the wordmark is the teal of his 2026-09-07 logo. */
 @font-face {
   font-family: "Jost";
   font-style: normal;
@@ -12,6 +12,7 @@
 :root {
   --tyrian: #66023C;
   --ink: #0F0B1A;
+  --teal: #0D7471;
   --green: #4FB87B;
   --prussian: #003153;
   --vermillion: #D9432B;
@@ -65,7 +66,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .top .wrap { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.5rem 1rem; padding-block: 0.6rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--white); text-decoration: none; min-height: 44px; }
 .brand img { width: 38px; height: 40px; }
-.brand .wm { height: 14px; width: auto; color: var(--white); }
+.brand .wm { height: 14px; width: auto; color: var(--teal); }
 .call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--vermillion); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
 .call:hover { color: var(--white); background: #b83622; }
 .call svg { width: 18px; height: 18px; }
