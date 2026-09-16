@@ -74,7 +74,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .dark { background: var(--ink); color: var(--white); }
 .dark a { color: var(--white); }
 .dark a:hover { color: var(--green); }
-.kicker { text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.8rem; font-weight: 600; color: var(--vermillion-ink); margin-bottom: 0.9rem; }
+.kicker { text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.8rem; font-weight: 600; color: var(--teal); margin-bottom: 0.9rem; }
 .dark .kicker { color: var(--green); }
 
 /* ---------- header ---------- */
@@ -127,8 +127,8 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .links-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-weight: 500; }
 
 /* ---------- buttons ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 54px; padding: 0.7rem 1.4rem; border-radius: var(--radius); background: var(--vermillion-ink); color: var(--white); text-decoration: none; font-weight: 600; font-size: 1.05rem; border: 2px solid var(--vermillion-ink); cursor: pointer; font-family: inherit; }
-.btn:hover { background: var(--vermillion-ink-hover); border-color: var(--vermillion-ink-hover); color: var(--white); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 54px; padding: 0.7rem 1.4rem; border-radius: var(--radius); background: var(--teal); color: var(--white); text-decoration: none; font-weight: 600; font-size: 1.05rem; border: 2px solid var(--teal); cursor: pointer; font-family: inherit; }
+.btn:hover { background: var(--teal-deep); border-color: var(--teal-deep); color: var(--white); }
 .btn.ghost { background: transparent; color: inherit; border-color: currentColor; }
 .btn.ghost:hover { background: rgba(255,255,255,0.08); color: inherit; }
 .btn.wide { width: 100%; }
