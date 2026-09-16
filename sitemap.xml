@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url><loc>https://www.umbradomus.com/</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es"/></url>
-  <url><loc>https://www.umbradomus.com/services</loc></url>
+  <url><loc>https://www.umbradomus.com/services</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios"/></url>
+  <url><loc>https://www.umbradomus.com/automate</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/automate"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/automatizar"/></url>
+  <url><loc>https://www.umbradomus.com/connected-home</loc></url>
+  <url><loc>https://www.umbradomus.com/water-guard</loc></url>
+  <url><loc>https://www.umbradomus.com/landscape-lighting</loc></url>
+  <url><loc>https://www.umbradomus.com/smart-yard</loc></url>
+  <url><loc>https://www.umbradomus.com/care-plans</loc></url>
   <url><loc>https://www.umbradomus.com/sustainability</loc></url>
   <url><loc>https://www.umbradomus.com/homes</loc></url>
   <url><loc>https://www.umbradomus.com/about</loc></url>
   <url><loc>https://www.umbradomus.com/contact</loc></url>
+  <url><loc>https://www.umbradomus.com/status</loc></url>
   <url><loc>https://www.umbradomus.com/es</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/"/></url>
+  <url><loc>https://www.umbradomus.com/es/servicios</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services"/></url>
+  <url><loc>https://www.umbradomus.com/es/automatizar</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/automatizar"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/automate"/></url>
 </urlset>

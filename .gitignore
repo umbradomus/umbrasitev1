@@ -1,0 +1,9 @@
+# Working notes and local leftovers that must not be published with the site
+PASTE-INTO-CLAUDE-CODE.md
+DEPLOY-THIS.md
+CHANGES.md
+SET-WUB-UP-ON-THE-SITE-*.md
+_git-stale-locks-*/
+favicon-check.ico
+.DS_Store
+Thumbs.db

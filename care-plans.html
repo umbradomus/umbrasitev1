@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>About — UMBRA DOMUS</title>
-<meta name="description" content="Who's behind Umbra Domus: Drew, from upstate New York to wind turbines, SpaceX avionics, and houses in the Rio Grande Valley.">
-<link rel="canonical" href="https://www.umbradomus.com/about">
+<title>Care Plans — UMBRA DOMUS</title>
+<meta name="description" content="Somebody watching your smart-home gear so you don't have to. $19, $39 or $79 a month, cancel any time.">
+<link rel="canonical" href="https://www.umbradomus.com/care-plans">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=5">
@@ -15,9 +15,9 @@
 <meta name="theme-color" content="#0F0B1A">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="UMBRA DOMUS">
-<meta property="og:title" content="About — UMBRA DOMUS">
-<meta property="og:description" content="Who's behind Umbra Domus, and why houses in the Valley.">
-<meta property="og:url" content="https://www.umbradomus.com/about">
+<meta property="og:title" content="Care Plans — UMBRA DOMUS">
+<meta property="og:description" content="Somebody watching your smart-home gear so you don't have to. $19, $39 or $79 a month, cancel any time.">
+<meta property="og:url" content="https://www.umbradomus.com/care-plans">
 <meta property="og:image" content="https://www.umbradomus.com/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -39,10 +39,10 @@
     <nav class="menu" aria-label="Site">
       <a href="/services">Services</a>
       <a href="/automate">Automate</a>
-      <a href="/care-plans">Care Plans</a>
+      <a href="/care-plans" aria-current="page">Care Plans</a>
       <a href="/sustainability">Sustainability</a>
       <a href="/homes">Homes</a>
-      <a href="/about" aria-current="page">About</a>
+      <a href="/about">About</a>
       <a href="/contact">Contact</a>
       <a href="/es" lang="es" hreflang="es">Español</a>
     </nav>
@@ -51,62 +51,87 @@
 <p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
 
 <main>
-  <section>
-    <div class="wrap about">
-      <!-- portrait slot: shot list item 16, a real on-site portrait in work clothes. Placeholder until it is taken. -->
-      <!-- DREW-PHOTO: swap the placeholder for the picture block below when assets/img/drew-640.jpg exists.
-           To make that file: put drew.jpg in assets/img/ and run  python tools/photos.py assets/img/
-           Then delete the <figure class="portrait"> below and uncomment this one in its place.
+  <section class="dark" style="padding-bottom:2.5rem">
+    <div class="wrap">
+      <p class="kicker">Care Plans</p>
+      <h1>Somebody watching it, so you don't have to.</h1>
+      <p class="lead narrow">Smart-home gear doesn't stay set up on its own. Apps update, batteries die, schedules drift, a sensor drops off the network and nobody notices until something is wet. That's what this is for.</p>
+      <p>This is smart-home upkeep, not alarm monitoring. We don't install or watch cameras, locks or burglar alarms — that needs a licence we don't hold.</p>
+    </div>
+  </section>
 
-      <figure class="portrait has-photo">
-        <picture>
-          <source type="image/webp" srcset="/assets/img/drew-640.webp">
-          <img src="/assets/img/drew-640.jpg" width="640" height="800" alt="Drew, owner of Umbra Domus, on a job in work clothes" decoding="async">
-        </picture>
-        <figcaption>Drew, on a job in Brownsville.</figcaption>
-      </figure>
-
-      -->
-      <figure class="portrait">
-        <img src="/assets/mark-128.png?v=2" width="122" height="128" alt="Placeholder for a portrait of Drew, owner of Umbra Domus. The photo has not been taken yet.">
-        <figcaption>A real photo of Drew, on site, is coming. The photos of finished work will be ours — the placeholder images on the services page are not.</figcaption>
-      </figure>
-
-      <div>
-        <p class="kicker">Who's behind this</p>
-        <h1>I'm Drew. Umbra Domus is my company.</h1>
-        <p class="lead">For now it is mostly me, and I'd rather you know that than guess.</p>
-
-        <h2>Where I come from</h2>
-        <p>I grew up in a small town in upstate New York and started working at fourteen, washing dishes at the pizza place in town. By the end I was running the front of the shop: dough in the morning, the phone, the counter and the ticket line at the same time.</p>
-        <ul class="arc">
-          <li>Community college, electrical engineering technology.</li>
-          <li>Trained as a wind turbine technician at Northwest Renewable Energy Institute, then went up the towers.</li>
-          <li>SpaceX, working on avionics.</li>
-          <li>About two years as a commercial electrician, then residential work back in New York: houses, RVs, whatever needed fixing.</li>
-          <li>A field-service job that flew me around the country fixing machines. One of those trips was Brownsville. I stayed.</li>
+  <section class="band">
+    <div class="wrap">
+      <h2>Three plans</h2>
+      <div class="grid three">
+      <div class="pricecard rise" style="border-color:var(--tyrian);box-shadow:0 0 0 3px rgba(102,2,60,.12)">
+        <h3>Watch</h3>
+        <p class="price">$19<span class="per"> a month</span></p>
+        <p class="muted">Everything stays set up and somebody is looking at it.</p>
+        <ul class="inc compact">
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Remote system checks</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Firmware and app updates</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>We chase the alerts, not you</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Seasonal schedule changes</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>10% off any other work</strong></div></li>
         </ul>
-        <p>Every one of those jobs was the same job underneath: something is broken, somebody is waiting on it, and it has to be done right the first time.</p>
-
-        <h2>Why houses, and why here</h2>
-        <p>The Valley is full of good houses that need work, and full of people who can't get anyone to show up for a small job. Umbra Domus is a real estate company: we buy houses other people have overlooked, fix them properly, add the things that make them cheaper to live in, and then sell or rent them.</p>
-        <p>While we're getting to that first house, we do repair and service work across the Valley. That's how we meet people, and it's the part of the business that can help you today.</p>
-
-        <h2>The thing I actually care about</h2>
-        <p>How it feels to deal with us. Most of the time the hard part isn't the repair. It's waiting: for a call back, for a yes, for a price, for any news at all. There is so much annoying software and so much waiting around in the world, and I don't think there needs to be.</p>
-        <p>So here is how Umbra works. You tell us what's wrong in three fields. We answer inside a stated window, in writing: <strong>We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</strong> And you will always be able to see where your request stands, from received to done.</p>
-        <p>I spent about two years as a commercial electrician before this. <strong>That is exactly why I don't do electrical, plumbing or AC work at your house.</strong> I know what those licences take and I don't hold them, so I don't touch that work and I don't quote it. What I do is the repair, finish and property work on this site, and I do it properly.</p>
-
-        <p class="lead">The line I've kept through every rough stretch is the one I'd give anyone: keep moving forward.</p>
-
-        <p>We're new. Our first reviews will appear here, unedited, as they come in.</p>
-        <!-- review slot: the Google Business Profile review link goes here the day the profile exists. Nothing to link yet. -->
-
-        <div class="cta-row" style="margin-top:1.5rem">
-          <a class="btn" href="/services#request">Request a repair</a>
-          <a class="btn ghost" href="tel:+19565566438">Call (956) 556-6438</a>
-        </div>
+        <a class="btn wide" href="/services#request">Start Watch</a>
       </div>
+      <div class="pricecard rise">
+        <h3>Care</h3>
+        <p class="price">$39<span class="per"> a month</span></p>
+        <p class="muted">The above, plus you go to the front of the queue and we come out once a year.</p>
+        <ul class="inc compact">
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Remote system checks</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Firmware and app updates</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>We chase the alerts, not you</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Seasonal schedule changes</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>10% off any other work</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Priority booking</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>One on-site visit a year</strong></div></li>
+        </ul>
+        <a class="btn wide" href="/services#request">Start Care</a>
+      </div>
+      <div class="pricecard rise">
+        <h3>Full</h3>
+        <p class="price">$79<span class="per"> a month</span></p>
+        <p class="muted">The above, plus two visits and time on the clock for whatever comes up.</p>
+        <ul class="inc compact">
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Remote system checks</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Firmware and app updates</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>We chase the alerts, not you</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Seasonal schedule changes</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>10% off any other work</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Priority booking</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>Two on-site visits a year</strong></div></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg><div><strong>An hour of labour a quarter</strong></div></li>
+        </ul>
+        <a class="btn wide" href="/services#request">Start Full</a>
+      </div>
+      </div>
+
+      <p class="fine" style="margin-top:1.25rem">Prices are before Texas sales tax, which applies to some of this work and not to other parts. The quote shows it as a line.</p>
+
+      <div class="grid three" style="margin-top:1.5rem">
+        <div class="step"><h3>Cancel any time</h3><p class="muted">No contract, no cancellation fee.</p></div>
+        <div class="step"><h3>We already know your setup</h3><p class="muted">If we installed it, there's no "let me send a technician to have a look."</p></div>
+        <div class="step"><h3>Gear we didn't install, too</h3><p class="muted">We'll tell you honestly whether it's worth it before you sign up.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap narrow" style="text-align:center">
+      <h2>Start with Watch at $19.</h2>
+      <p class="lead">It costs less than one call-out, and it's the difference between finding a problem and finding a flood.</p>
+      <div class="cta-row" style="justify-content:center"><a class="btn" href="/services#request">Start a Care Plan</a></div>
+    </div>
+  </section>
+
+  <section class="dark">
+    <div class="wrap narrow">
+      <h2>What we don't do.</h2>
+      <p class="lead">Umbra Domus is not an electrical, plumbing, air conditioning or security company. <strong>We don't do that work and we don't quote it.</strong> If your job turns out to need one of those trades, we'll tell you the moment we know — not halfway through, and not after you've paid a deposit.</p>
     </div>
   </section>
 </main>
