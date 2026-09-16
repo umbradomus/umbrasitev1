@@ -1,5 +1,7 @@
 /* UMBRA DOMUS — one stylesheet, every page. No framework, no icon font, no hotlinked type.
-   Palette: the five ruled logo colours (2026-09-05) + white wordmark. */
+   Palette: his 2026-09-07 logo — teal #0D7471 for every fill and rule, black under the umbrella, olive / purple / rust
+   only as small marks. --teal-type is the one lighter tint minted for type on the dark grounds: 5.42:1 on the nav ink,
+   5.87:1 on black (OG143, 2026-09-11; #0D7471 itself reads 3.47:1 on the ink). */
 @font-face {
   font-family: "Jost";
   font-style: normal;
@@ -12,6 +14,13 @@
 :root {
   --tyrian: #66023C;
   --ink: #0F0B1A;
+  --teal: #0D7471;
+  --teal-deep: #0A5C5A;
+  --teal-type: #119793;
+  --olive: #3A4E36;
+  --purple: #251736;
+  --rust: #92310E;
+  --black: #000000;
   --green: #4FB87B;
   --prussian: #003153;
   --vermillion: #D9432B;
@@ -49,8 +58,8 @@ body {
   background: var(--paper);
 }
 img, svg { max-width: 100%; height: auto; display: block; }
-a { color: var(--tyrian); text-underline-offset: 3px; }
-a:hover { color: var(--vermillion); }
+a { color: var(--teal); text-underline-offset: 3px; }
+a:hover { color: var(--ink); }
 h1, h2, h3 { font-weight: 600; line-height: 1.08; letter-spacing: -0.015em; margin: 0 0 0.5em; }
 h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); }
 h2 { font-size: clamp(1.6rem, 4vw, 2.3rem); }
@@ -73,9 +82,9 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .top .wrap { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.5rem 1rem; padding-block: 0.6rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--white); text-decoration: none; min-height: 44px; }
 .brand img { width: 38px; height: 40px; }
-.brand .wm { height: 14px; width: auto; color: var(--white); }
-.call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--vermillion); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
-.call:hover { color: var(--white); background: #b83622; }
+.brand .wm { height: 14px; width: auto; color: var(--teal-type); }
+.call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--teal); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
+.call:hover { color: var(--white); background: var(--teal-deep); }
 .call svg { width: 18px; height: 18px; }
 .call .num { display: inline; font-size: .9rem; }
 .menu { grid-column: 1 / -1; display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0 -1.25rem; padding: 0 1.25rem 0.35rem; }
@@ -97,15 +106,23 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 }
 
 /* the response promise — Drew's blank until he fills it */
-.promise { margin: 0; background: var(--tyrian); color: var(--white); text-align: center; padding: 0.55rem 1rem; font-size: 0.95rem; }
+.promise { margin: 0; background: var(--teal); color: var(--white); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.18); text-align: center; padding: 0.55rem 1rem; font-size: 0.95rem; }
 .promise strong { font-weight: 600; }
 .promise svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 0.3rem; }
 
-/* ---------- hero ---------- */
-.hero { padding: clamp(3rem, 9vw, 6rem) 0; }
-.hero .mark { width: 92px; height: 96px; margin-bottom: 1.5rem; }
-.hero h1 { max-width: 14ch; }
+/* ---------- hero: the umbrella on his ground, teal over black ---------- */
+.hero { --um: 160px; --top: 38px; --split: calc(var(--top) + var(--um) * 0.585); padding: var(--top) 0 clamp(3rem, 8vw, 5rem); color: var(--white); text-align: center;
+  background: linear-gradient(to bottom, var(--teal) 0, var(--teal) var(--split), var(--black) var(--split), var(--black) 100%); }
+.hero .lockup { display: grid; justify-items: center; gap: calc(var(--um) * 0.1); margin-bottom: 2.25rem; }
+.hero .mark { width: auto; height: var(--um); }
+.hero .wm { height: 20px; width: auto; color: var(--teal-type); }
+.hero h1 { max-width: 14ch; margin-inline: auto; }
+.hero .lead { margin-inline: auto; max-width: 34rem; }
 .hero .sub { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.95rem; color: rgba(255,255,255,0.8); margin-bottom: 2rem; }
+.hero .cta-row, .hero .links-row { justify-content: center; }
+.hero a:not(.btn) { color: var(--white); }
+.hero a:not(.btn):hover { color: var(--teal-type); }
+@media (min-width: 760px) { .hero { --um: 240px; --top: 48px; } .hero .wm { height: 30px; } }
 .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }
 .links-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-weight: 500; }
 
@@ -125,16 +142,20 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .tile:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(15,11,26,0.12); color: inherit; }
 .tile .ph { aspect-ratio: 4 / 3; background: var(--paper-2); }
 .tile .ph img { width: 100%; height: 100%; object-fit: cover; }
-.tile .ph.panel { display: grid; place-items: center; background: linear-gradient(135deg, var(--prussian), var(--blue-edge)); color: var(--white); }
+.tile .ph.panel { display: grid; place-items: center; background: linear-gradient(135deg, var(--teal), var(--teal-deep)); color: var(--white); }
 .tile .ph.panel svg { width: 34%; height: auto; }
 .tile .body { padding: 1rem 1.1rem 1.15rem; }
 .tile h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
 .tile h3 svg { width: 20px; height: 20px; flex: none; }
 .tile p { margin: 0; color: var(--muted); font-size: 0.98rem; }
-.tile .lic { margin-top: 0.6rem; font-size: 0.85rem; color: var(--prussian); font-weight: 500; }
+.tile .lic { margin-top: 0.6rem; font-size: 0.85rem; color: var(--teal); font-weight: 500; }
 .step { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem; }
-.step .n { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--tyrian); color: var(--white); font-weight: 600; margin-bottom: 0.7rem; }
-.note { border-left: 4px solid var(--green); background: var(--white); padding: 0.9rem 1.1rem; border-radius: 0 var(--radius) var(--radius) 0; }
+.step .n { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--teal); color: var(--white); font-weight: 600; margin-bottom: 0.7rem; }
+/* the three panels of the umbrella, as three small marks */
+.step:nth-child(1) .n { background: var(--olive); }
+.step:nth-child(2) .n { background: var(--purple); }
+.step:nth-child(3) .n { background: var(--rust); }
+.note { border-left: 4px solid var(--teal); background: var(--white); padding: 0.9rem 1.1rem; border-radius: 0 var(--radius) var(--radius) 0; }
 .note.blue { border-color: var(--blue-edge); }
 
 /* ---------- forms ---------- */
@@ -164,14 +185,14 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .track { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; counter-reset: s; }
 .track li { display: grid; grid-template-columns: 34px 1fr; gap: 0.8rem; align-items: start; padding: 0.8rem 0.9rem; background: var(--white); border: 1px solid var(--line); border-radius: 12px; }
 .track li::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--paper-2); color: var(--ink); font-weight: 600; }
-.track li.done::before { content: "✓"; background: var(--green); color: var(--ink); }
-.track li.now { border-color: var(--tyrian); box-shadow: 0 0 0 3px rgba(102,2,60,0.12); }
-.track li.now::before { background: var(--tyrian); color: var(--white); }
+.track li.done::before { content: "✓"; background: var(--teal); color: var(--white); }
+.track li.now { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,116,113,0.18); }
+.track li.now::before { background: var(--teal); color: var(--white); }
 .track strong { display: block; }
 .track small { color: var(--muted); }
 
 /* ---------- about ---------- */
-.portrait { margin: 0 0 1.5rem; background: var(--tyrian); border-radius: var(--radius); aspect-ratio: 4 / 5; display: grid; place-items: center; color: var(--white); text-align: center; padding: 1.5rem; max-width: 22rem; }
+.portrait { margin: 0 0 1.5rem; background: var(--teal); border-radius: var(--radius); aspect-ratio: 4 / 5; display: grid; place-items: center; color: var(--white); text-align: center; padding: 1.5rem; max-width: 22rem; }
 .portrait img { width: 96px; height: 100px; margin-bottom: 0.75rem; }
 .portrait figcaption { font-size: 0.95rem; opacity: 0.9; }
 /* the same slot once a real photo of Drew is in it: the photo fills the frame, the caption sits under it */
@@ -181,21 +202,23 @@ textarea.field { min-height: 8rem; resize: vertical; }
 @media (min-width: 760px) { .about { display: grid; grid-template-columns: 22rem 1fr; gap: 3rem; align-items: start; } .portrait { position: sticky; top: 6.5rem; } }
 .arc { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; gap: 0.35rem; }
 .arc li { padding-left: 1.1rem; position: relative; }
-.arc li::before { content: ""; position: absolute; left: 0; top: 0.68em; width: 8px; height: 8px; border-radius: 50%; background: var(--vermillion); }
+.arc li::before { content: ""; position: absolute; left: 0; top: 0.68em; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
 
 /* ---------- footer ---------- */
-.foot { background: var(--prussian); color: var(--white); padding: 2.5rem 0 2rem; border-top: 4px solid var(--blue-edge); }
+.foot { background: var(--black); color: var(--white); padding: 2.5rem 0 2rem; border-top: 4px solid var(--teal); }
 .foot a { color: var(--white); }
-.foot a:hover { color: var(--green); }
+.foot a:hover { color: var(--teal-type); }
 .foot .cols { display: grid; gap: 1.5rem; }
 @media (min-width: 760px) { .foot .cols { grid-template-columns: 1.3fr 1fr 1fr; } }
-.foot .wm { height: 15px; width: auto; color: var(--white); margin-bottom: 0.8rem; }
+.foot .wm { height: 15px; width: auto; color: var(--teal-type); margin-bottom: 0.8rem; }
 .foot nav { display: grid; gap: 0.35rem; }
 .foot p { margin-bottom: 0.5rem; }
 .foot .fine { color: rgba(255,255,255,0.72); margin-top: 1.5rem; }
 
 /* ---------- motion: near-free, CSS only ---------- */
 @media (prefers-reduced-motion: no-preference) {
+  .hero .mark { animation: unfurl 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes unfurl { from { opacity: 0; transform: translateY(-14px) scale(0.94); } to { opacity: 1; transform: none; } }
   @supports (animation-timeline: view()) {
     .rise { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 35%; }
     @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
