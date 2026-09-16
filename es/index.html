@@ -193,9 +193,33 @@
         busy = false;
         return;
       }
-      var dt = new DataTransfer();
-      files.forEach(function (f) { dt.items.add(f); });
-      input.files = dt.files;
+      /* One field per photo. The relay keeps only the last part when several parts
+         share a name, so two photos arrived as the same picture twice. */
+      var slots = [];
+      try {
+        files.forEach(function (f, i) {
+          var one = new DataTransfer();
+          one.items.add(f);
+          var slot = document.createElement('input');
+          slot.type = 'file';
+          slot.name = 'attachment' + (i + 1);
+          slot.hidden = true;
+          slot.style.display = 'none';
+          slot.files = one.files;
+          if (slot.files.length !== 1) throw new Error('one photo per field');
+          form.appendChild(slot);
+          slots.push(slot);
+        });
+        /* a disabled control is not submitted, so the shared name never goes out */
+        input.disabled = true;
+      } catch (err) {
+        /* the browser wouldn't take it: send it the old way rather than not at all */
+        slots.forEach(function (slot) { form.removeChild(slot); });
+        input.disabled = false;
+        var dt = new DataTransfer();
+        files.forEach(function (f) { dt.items.add(f); });
+        input.files = dt.files;
+      }
       form.submit();
     })['catch'](function () {
       if (btn) { btn.disabled = false; btn.textContent = label; }
