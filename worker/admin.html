@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Umbra intake — the aging list</title>
+<style>
+  :root { color-scheme: light dark; --ink:#14110f; --bg:#faf8f5; --line:#ddd6cc; --muted:#6c645b; --hot:#a32c1c; --warm:#a3721c; --ok:#2c6a40; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#f3efe9; --bg:#15130f; --line:#3a352e; --muted:#a49a8d; --hot:#ff8a76; --warm:#e7b658; --ok:#79c894; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:14px 14px 60px; }
+  h1 { font-size:1.15rem; margin:0 0 .2rem; }
+  .sub { color:var(--muted); font-size:.85rem; margin:0 0 1rem; }
+  .job { border:1px solid var(--line); border-radius:10px; padding:12px; margin:0 0 12px; background:color-mix(in srgb, var(--bg) 88%, var(--ink) 4%); }
+  .job.open { border-left:5px solid var(--warm); }
+  .job.late { border-left:5px solid var(--hot); }
+  .job.closed { opacity:.72; border-left:5px solid var(--ok); }
+  .top { display:flex; flex-wrap:wrap; gap:.5rem; align-items:baseline; justify-content:space-between; }
+  .id { font-weight:700; font-size:1.05rem; letter-spacing:.02em; }
+  .mins { font-variant-numeric:tabular-nums; font-weight:700; }
+  .mins.late { color:var(--hot); }
+  .mins.ok { color:var(--ok); }
+  .meta { color:var(--muted); font-size:.85rem; margin:.35rem 0 0; }
+  .what { margin:.5rem 0 0; white-space:pre-wrap; }
+  .pix { display:flex; gap:6px; flex-wrap:wrap; margin:.6rem 0 0; padding:0; list-style:none; }
+  .pix img { width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid var(--line); }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; margin:.75rem 0 0; }
+  button, a.btn { font:inherit; font-weight:600; padding:.62rem .9rem; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; text-decoration:none; }
+  button[disabled] { opacity:.45; cursor:default; }
+  button.go { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .flag { color:var(--hot); font-weight:700; font-size:.85rem; }
+  .bar { display:flex; gap:8px; align-items:center; margin:0 0 1rem; flex-wrap:wrap; }
+  .err { color:var(--hot); }
+  code { font-size:.82em; word-break:break-all; }
+</style>
+</head>
+<body>
+<h1>Umbra intake — oldest unquoted first</h1>
+<p class="sub" id="sub">Loading…</p>
+<div class="bar">
+  <button id="refresh" class="go">Refresh</button>
+  <span class="sub" id="stamp"></span>
+</div>
+<div id="list"></div>
+
+<script>
+(function () {
+  var KEY = new URLSearchParams(location.search).get('k') || '';
+  var list = document.getElementById('list');
+  var sub = document.getElementById('sub');
+  var stamp = document.getElementById('stamp');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function cls(j) {
+    if (j.quoted_at) return 'closed';
+    return (j.minutes_open != null && j.minutes_open >= 120) ? 'late' : 'open';
+  }
+
+  function render(data) {
+    stamp.textContent = 'as of ' + new Date(data.now).toLocaleTimeString();
+    var open = data.jobs.filter(function (j) { return !j.quoted_at; }).length;
+    sub.textContent = data.count + ' request' + (data.count === 1 ? '' : 's') + ' · ' + open + ' waiting on a quote';
+    list.innerHTML = '';
+    data.jobs.forEach(function (j) {
+      var d = document.createElement('div');
+      d.className = 'job ' + cls(j);
+      var mins = j.quoted_at
+        ? '<span class="mins ok">quoted in ' + esc(j.minutes_to_quote) + ' min</span>'
+        : '<span class="mins ' + (j.minutes_open >= 120 ? 'late' : '') + '">' + esc(j.minutes_open) + ' min open</span>';
+      var pix = '';
+      for (var n = 1; n <= j.photos; n++) {
+        pix += '<li><a href="/api/photo/' + esc(j.id) + '/' + n + '?t=' + encodeURIComponent(j.token) + '" target="_blank" rel="noopener">' +
+               '<img alt="photo ' + n + '" src="/api/photo/' + esc(j.id) + '/' + n + '?t=' + encodeURIComponent(j.token) + '"></a></li>';
+      }
+      d.innerHTML =
+        '<div class="top"><span class="id">' + esc(j.id) + '</span>' + mins + '</div>' +
+        '<p class="meta">' + esc(j.received_at_chicago || j.received_at) + ' · ' + esc(j.status) +
+          (j.forward_failed ? ' · <span class="flag">EMAIL FORWARD FAILED</span>' : '') + '</p>' +
+        '<p class="meta"><strong>' + esc(j.name) + '</strong>' +
+          (j.phone ? ' · <a href="tel:' + esc(j.phone) + '">' + esc(j.phone) + '</a>' : '') +
+          (j.idioma ? ' · ' + esc(j.idioma) : '') + '</p>' +
+        '<p class="meta">' + esc(j.service || '(no category)') + (j.address ? ' · ' + esc(j.address) : '') + '</p>' +
+        '<p class="what">' + esc(j.what) + '</p>' +
+        (pix ? '<ul class="pix">' + pix + '</ul>' : '') +
+        '<div class="btns">' +
+          '<button data-act="quoted" data-id="' + esc(j.id) + '"' + (j.quoted_at ? ' disabled' : '') + '>Quoted</button>' +
+          '<button data-act="scheduled" data-id="' + esc(j.id) + '"' + (j.scheduled_at ? ' disabled' : '') + '>Scheduled</button>' +
+          '<button data-act="done" data-id="' + esc(j.id) + '"' + (j.done_at ? ' disabled' : '') + '>Done</button>' +
+          '<a class="btn" href="/api/export/' + esc(j.id) + '.md?k=' + encodeURIComponent(KEY) + '" target="_blank" rel="noopener">Markdown</a>' +
+          (j.status_link ? '<a class="btn" href="' + esc(j.status_link) + '" target="_blank" rel="noopener">Their link</a>' : '') +
+        '</div>';
+      list.appendChild(d);
+    });
+  }
+
+  function load() {
+    sub.textContent = 'Loading…';
+    fetch('/api/jobs?k=' + encodeURIComponent(KEY), { headers: { accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(render)
+      .catch(function (e) { sub.innerHTML = '<span class="err">Could not load the list (' + esc(e.message) + '). Check the key in the address bar.</span>'; });
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-act]') : null;
+    if (!b) return;
+    var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
+    var extra = {};
+    if (act === 'quoted') {
+      var amt = prompt('Quote amount for ' + id + ' (dollars, optional — leave blank to just stamp the time):', '');
+      if (amt === null) return;
+      if (amt.trim() !== '') extra.quote_amount = Number(amt.replace(/[^0-9.]/g, ''));
+    }
+    b.disabled = true;
+    fetch('/api/job/' + id + '/event?k=' + encodeURIComponent(KEY), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ type: act }, extra)),
+    }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(load)
+      .catch(function (err) { b.disabled = false; alert('That did not save: ' + err.message); });
+  });
+
+  document.getElementById('refresh').addEventListener('click', load);
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>

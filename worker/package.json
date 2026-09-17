@@ -1,0 +1,16 @@
+{
+  "name": "umbra-intake-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Umbra Domus Stage 1 — the form posts to something we own. Record, photos, clock, nudge.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node test/run-all.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.10.0",
+    "wrangler": "^3.114.1"
+  }
+}

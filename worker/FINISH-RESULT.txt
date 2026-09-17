@@ -1,0 +1,12 @@
+﻿FINISH-STAGE-1  2026-09-17 18:42:33
+============================================================
+STEP A  found the Cloudflare sign-in
+STEP B  SKIP - subdomain already set: umbradomus
+
+STEP C  running the deploy - this takes a few minutes
+============================================================
+============================================================
+STEP C  deploy exit code: 1
+STEP D  skipped - the deploy stopped. Read DEPLOY-RESULT.md.
+
+FINISHED at 18:42:35
