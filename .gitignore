@@ -7,3 +7,11 @@ _git-stale-locks-*/
 favicon-check.ico
 .DS_Store
 Thumbs.db
+
+# The intake Worker. Secrets and build junk never get committed.
+worker/.dev.vars
+worker/DEPLOY-RESULT.md
+worker/DEPLOY-LOG.txt
+worker/node_modules/
+worker/.wrangler/
+worker/test/.tmp/

@@ -1,0 +1,48 @@
+#  UMBRA DOMUS · INTAKE WORKER · STAGE 1
+#  Nothing secret lives in this file. ADMIN_KEY and NTFY_TOPIC are set with
+#  `wrangler secret put` once, and read from worker/.dev.vars when running locally.
+#  worker/.dev.vars is git-ignored and must never be committed.
+
+name = "umbra-intake"
+main = "src/index.js"
+# admin.html sits beside src/, so the module base is the worker folder.
+base_dir = "."
+compatibility_date = "2025-06-01"
+
+# admin.html is a real file, imported as text so the Worker can serve it at /admin.
+rules = [
+  { type = "Text", globs = ["**/*.html"], fallthrough = false }
+]
+
+[vars]
+# The site the confirmation and status links point at.
+SITE_BASE_URL = "https://www.umbradomus.com"
+# The Worker's own public address — used for the link inside the 90-minute push.
+# Fill this in after the first `wrangler deploy` prints the workers.dev URL.
+PUBLIC_BASE_URL = "https://umbra-intake.umbradomus.workers.dev"
+# The last job id already used on paper. U-0001 and U-0002 exist, so the first
+# record this Worker creates is U-0003.
+SEED_LAST_ID = "2"
+# "false" sends a bare /admin link in the push instead of one carrying the key.
+NUDGE_LINK_INCLUDES_KEY = "true"
+
+# --- THE RECORD STORE -------------------------------------------------------
+# Create with:  npx wrangler kv namespace create RECORDS
+# then paste the id it prints over the placeholder below.
+[[kv_namespaces]]
+binding = "RECORDS"
+id = "6ee39a58edfc419c9a61ec3b7d11dd99"
+
+# --- THE PHOTOS -------------------------------------------------------------
+# Create with:  npx wrangler r2 bucket create umbra-job-photos
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "umbra-job-photos"
+
+# --- THE NUDGE --------------------------------------------------------------
+# Every 15 minutes. Anything still unquoted at 90 minutes gets one push.
+[triggers]
+crons = ["*/15 * * * *"]
+
+[observability]
+enabled = true
