@@ -8,6 +8,8 @@
 <link rel="canonical" href="https://www.umbradomus.com/status">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
+<!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
+<script src="/assets/umbra-endpoint.js"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=6">
@@ -40,6 +42,26 @@
 <p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
 
 <main>
+  <!-- THE REAL THING. Hidden unless the confirmation link carried ?id= and ?t= AND a Worker
+       is configured in /assets/umbra-endpoint.js. Otherwise #generic below is the page,
+       unchanged, and it still says honestly that the link is being built. -->
+  <section id="live" hidden>
+    <div class="wrap narrow">
+      <p class="kicker" id="live-kicker">Your request</p>
+      <h1 id="live-head">Your request</h1>
+      <p class="lead" id="live-lead"></p>
+      <ol class="track" id="live-track" aria-label="Where your request is"></ol>
+      <div class="note" id="live-scope" hidden style="margin-top:1.2rem"></div>
+      <div id="live-photos-wrap" hidden style="margin-top:1.2rem">
+        <p style="font-weight:600;margin-bottom:.4rem">The photos you sent</p>
+        <ul class="pix" id="live-photos"></ul>
+      </div>
+      <p style="margin-top:2rem">Something not right, or something to add? <a href="sms:+19565566438">Text (956) 556-6438</a> and give us your request number.</p>
+      <p><a href="/">Back to the homepage</a></p>
+    </div>
+  </section>
+
+  <div id="generic">
   <section>
     <div class="wrap narrow">
       <p class="kicker">Where is my request?</p>
@@ -66,6 +88,7 @@
       </div>
     </div>
   </section>
+  </div>
 </main>
 
 <footer class="foot">
@@ -94,5 +117,104 @@
   </div>
   <div class="wrap"><p class="fine">Umbra Domus is not an electrical, plumbing, air conditioning or security company. We don't do that work and we don't quote it.</p></div>
 </footer>
+<script>
+// Reads the confirmation link. With no ?id= and ?t=, or with no Worker configured in
+// /assets/umbra-endpoint.js, this does nothing at all and the page is exactly as it was.
+(function () {
+  var q = new URLSearchParams(location.search);
+  var id = q.get('id'), t = q.get('t');
+  var base = String(window.UMBRA_API_BASE || '');
+  if (!id || !t || !/^U-\d{4,6}$/.test(id) || !base) return;
+
+  var LABEL = {
+    received: 'We have it, and the clock has started.',
+    quoted: 'You have a price and a plan, in writing.',
+    scheduled: 'A day and a window, agreed with you.',
+    done: 'Finished, photographed, and you have said it is right.'
+  };
+
+  function fmt(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  fetch(base.replace(/\/+$/, '') + '/api/job/' + encodeURIComponent(id) + '?t=' + encodeURIComponent(t))
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (j) {
+      document.getElementById('live-kicker').textContent = 'Request ' + j.id;
+      var steps = j.ladder || [];
+      var at = null;
+      for (var i = 0; i < steps.length; i++) if (steps[i].at) at = steps[i];
+      document.getElementById('live-head').textContent = at ? at.label + '.' : 'Received.';
+      document.getElementById('live-lead').textContent =
+        'Received ' + (j.received_at_chicago || fmt(j.received_at)) + '. This page is live — reopen it any time.';
+
+      var ol = document.getElementById('live-track');
+      ol.innerHTML = '';
+      var lastDone = -1;
+      steps.forEach(function (s, i) { if (s.at) lastDone = i; });
+      steps.forEach(function (s, i) {
+        var li = document.createElement('li');
+        if (s.at) li.className = (i === lastDone) ? 'now' : 'done';
+        var d = document.createElement('div');
+        var st = document.createElement('strong');
+        st.textContent = s.label;
+        var sm = document.createElement('small');
+        sm.textContent = s.at ? (fmt(s.at) + ' — ' + (LABEL[s.step] || '')) : (LABEL[s.step] || '');
+        d.appendChild(st); d.appendChild(sm);
+        li.appendChild(d);
+        ol.appendChild(li);
+      });
+
+      if (j.scope || j.quote_amount != null) {
+        var note = document.getElementById('live-scope');
+        note.innerHTML = '';
+        if (j.scope) {
+          var ps = document.createElement('p');
+          ps.style.margin = '0';
+          ps.textContent = j.scope;
+          note.appendChild(ps);
+        }
+        if (j.quote_amount != null) {
+          var pq = document.createElement('p');
+          pq.style.margin = j.scope ? '.5rem 0 0' : '0';
+          pq.innerHTML = '<strong>Your price: $' + String(j.quote_amount).replace(/[^0-9.,]/g, '') + '</strong>';
+          note.appendChild(pq);
+        }
+        note.hidden = false;
+      }
+
+      var pix = j.photos || [];
+      if (pix.length) {
+        var ul = document.getElementById('live-photos');
+        ul.innerHTML = '';
+        pix.forEach(function (p, i) {
+          var li = document.createElement('li');
+          var a = document.createElement('a');
+          a.href = base.replace(/\/+$/, '') + p.url;
+          a.target = '_blank'; a.rel = 'noopener';
+          var img = document.createElement('img');
+          img.src = a.href; img.alt = 'Photo ' + (i + 1) + ' you sent';
+          a.appendChild(img);
+          var nm = document.createElement('span');
+          nm.className = 'nm';
+          nm.textContent = 'Photo ' + (i + 1);
+          li.appendChild(a); li.appendChild(nm);
+          ul.appendChild(li);
+        });
+        document.getElementById('live-photos-wrap').hidden = false;
+      }
+
+      document.getElementById('generic').hidden = true;
+      document.getElementById('live').hidden = false;
+    })
+    .catch(function () {
+      // A wrong or expired link answers the same as one that never existed.
+      // Leave the page as it is rather than telling a stranger which it was.
+    });
+})();
+</script>
 </body>
 </html>

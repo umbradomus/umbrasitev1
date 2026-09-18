@@ -1,4 +1,4 @@
-﻿FINISH-STAGE-1  2026-09-17 18:42:33
+﻿FINISH-STAGE-1  2026-09-17 18:43:37
 ============================================================
 STEP A  found the Cloudflare sign-in
 STEP B  SKIP - subdomain already set: umbradomus
@@ -6,7 +6,37 @@ STEP B  SKIP - subdomain already set: umbradomus
 STEP C  running the deploy - this takes a few minutes
 ============================================================
 ============================================================
-STEP C  deploy exit code: 1
-STEP D  skipped - the deploy stopped. Read DEPLOY-RESULT.md.
+STEP C  deploy exit code: 0
+STEP D  git add/commit/push done
+[main 9a30d23] Stage 1: the intake Worker, its tests and README
+ 20 files changed, 6593 insertions(+)
+ create mode 100644 worker/.dev.vars.example
+ create mode 100644 worker/DEPLOY-STAGE-1.cmd
+ create mode 100644 worker/FINISH-RESULT.txt
+ create mode 100644 worker/FINISH-STAGE-1.cmd
+ create mode 100644 worker/README.md
+ create mode 100644 worker/SIGN-IN-THEN-DEPLOY.cmd
+ create mode 100644 worker/admin.html
+ create mode 100644 worker/deploy-stage-1.ps1
+ create mode 100644 worker/finish-stage-1.ps1
+ create mode 100644 worker/package-lock.json
+ create mode 100644 worker/package.json
+ create mode 100644 worker/src/export.js
+ create mode 100644 worker/src/forward.js
+ create mode 100644 worker/src/index.js
+ create mode 100644 worker/src/notify.js
+ create mode 100644 worker/src/store.js
+ create mode 100644 worker/src/util.js
+ create mode 100644 worker/test/lib/multipart.mjs
+ create mode 100644 worker/test/lib/servers.mjs
+ create mode 100644 worker/test/run-all.mjs
+git.exe : To https://github.com/umbradomus/umbrasitev1.git
+At C:\Users\andre\Umbra\umbrasitev1\worker\finish-stage-1.ps1:82 char:10
++   $g3 = (& git push origin HEAD 2>&1 | Out-String)
++          ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith...umbrasitev1.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   0ded76f..9a30d23  HEAD -> main
 
-FINISHED at 18:42:35
+FINISHED at 18:44:27

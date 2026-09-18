@@ -11,6 +11,8 @@
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/request-received">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
+<!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
+<script src="/assets/umbra-endpoint.js"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=6">
@@ -32,6 +34,7 @@
       <a href="/es">Inicio</a>
       <a href="/es/servicios">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
+      <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
       <a href="/request-received" lang="en" hreflang="en">English</a>
     </nav>
   </div>
@@ -47,6 +50,12 @@
       <div class="note">
         <p><strong>Qué sigue:</strong> Respondemos en 2 horas, de 7am a 9pm, los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
         <p id="by" hidden style="margin:0"><strong>Le contestamos antes de las <time id="bywhen"></time></strong></p>
+      </div>
+
+      <!-- Solo aparece cuando el Worker mandó al navegador aqui con ?id= y ?t=. Sin eso, la pagina queda igual que antes. -->
+      <div class="note" id="jobnote" hidden>
+        <p style="margin:0 0 .4rem"><strong>Su número de solicitud es <span id="jobid"></span>.</strong></p>
+        <p style="margin:0">Guarde este enlace. Le muestra en cuál de los cuatro pasos va su solicitud, cuando quiera, sin crear cuenta: <a id="joblink" href="/status">ver mi solicitud</a>.</p>
       </div>
       <ol class="track" style="margin-top:2rem" aria-label="Estado">
         <li class="done"><div><strong>Recibido</strong></div></li>
@@ -75,6 +84,7 @@
       <a href="/es">Inicio</a>
       <a href="/es/servicios">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
+      <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
       <a href="/es/servicios#pedir">Pedir servicio</a>
       <a href="/request-received" lang="en" hreflang="en">English</a>
     </nav>
@@ -102,6 +112,15 @@
     }
     document.getElementById('bywhen').textContent = fmt(by) + suffix;
     document.getElementById('by').hidden = false;
+  }
+  // El Worker manda el id del registro y su token privado. Sin ellos no pasa nada.
+  // (La pagina de estado solo existe en ingles por ahora; el enlace va a /status.)
+  var q = new URLSearchParams(location.search);
+  var jobId = q.get('id'), jobTok = q.get('t');
+  if (jobId && jobTok && /^U-\d{4,6}$/.test(jobId)) {
+    document.getElementById('jobid').textContent = jobId;
+    document.getElementById('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
+    document.getElementById('jobnote').hidden = false;
   }
 })();
 </script>

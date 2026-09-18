@@ -11,6 +11,8 @@
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/request-received">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
+<!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
+<script src="/assets/umbra-endpoint.js"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=6">
@@ -51,6 +53,12 @@
       <div class="note" id="next">
         <p><strong>What happens next:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
         <p id="by" hidden style="margin:0"><strong>Expect to hear from us by <time id="bywhen"></time>.</strong></p>
+      </div>
+
+      <!-- Shown only when the Worker sent the browser here with ?id= and ?t=. Without them this block stays hidden and the page is exactly as it was. -->
+      <div class="note" id="jobnote" hidden>
+        <p style="margin:0 0 .4rem"><strong>Your request number is <span id="jobid"></span>.</strong></p>
+        <p style="margin:0">Keep this link. It shows which of the four steps your request is on, any time, with no account: <a id="joblink" href="/status">check your request</a>.</p>
       </div>
 
       <div id="stands">
@@ -118,6 +126,15 @@
     }
     document.getElementById('bywhen').textContent = fmt(by) + suffix;
     document.getElementById('by').hidden = false;
+  }
+  // The Worker sends the browser here with the new record's id and its private token.
+  // Neither is present on a plain FormSubmit redirect, and then this block does nothing.
+  var q = new URLSearchParams(location.search);
+  var jobId = q.get('id'), jobTok = q.get('t');
+  if (jobId && jobTok && /^U-\d{4,6}$/.test(jobId)) {
+    document.getElementById('jobid').textContent = jobId;
+    document.getElementById('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
+    document.getElementById('jobnote').hidden = false;
   }
   if (new URLSearchParams(location.search).get('kind') === 'list') {
     document.getElementById('kick').textContent = 'The waiting list';

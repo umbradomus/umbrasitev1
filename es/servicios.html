@@ -11,6 +11,8 @@
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/services">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
+<!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
+<script src="/assets/umbra-endpoint.js"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=6">
@@ -43,6 +45,7 @@
       <a href="/es">Inicio</a>
       <a href="/es/servicios" aria-current="page">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
+      <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
       <a href="/services" lang="en" hreflang="en">English</a>
     </nav>
   </div>
@@ -162,8 +165,14 @@
           <textarea class="field" name="what" rows="4" required></textarea>
         </label>
         <label>Fotos del problema <small>Opcional, pero así le damos un precio real más rápido — muchas veces sin ir primero.</small>
-          <input class="field file" type="file" name="attachment" accept="image/*" multiple>
+          <input class="field file" type="file" name="attachment" accept="image/*" multiple data-photo-input>
         </label>
+        <div class="photo-actions" data-photo-buttons hidden>
+          <button class="btn ghost" type="button" data-photo-camera><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h3.2l1.4-2h8.8l1.4 2H21a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>Tomar una foto</button>
+          <button class="btn ghost" type="button" data-photo-library><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.6"/><path d="M3 15.5l4.5-4.2 4 3.6 3.4-3 6.1 5.1"/><circle cx="8.3" cy="9.3" r="1.3"/></svg>Elegir fotos</button>
+        </div>
+        <input type="file" accept="image/*" capture="environment" data-photo-capture hidden aria-hidden="true" tabindex="-1" style="display:none">
+        <ul class="pix" data-photo-list aria-label="Fotos que ha agregado" hidden></ul>
         <p class="fine" data-shrink-note style="margin:-.5rem 0 0">Las fotos se reducen aquí antes de enviarse, para que funcione con cualquier conexión.</p>
         <p class="fine" style="margin:0">Sus fotos y datos le llegan a Drew por correo electrónico a través de FormSubmit, nuestro servicio de envío. No los vendemos, no los publicamos sin preguntarle, y puede pedirnos que los borremos cuando quiera.</p>
         <button class="btn wide" type="submit">Enviar solicitud</button>
@@ -188,6 +197,7 @@
       <a href="/es">Inicio</a>
       <a href="/es/servicios">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
+      <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
       <a href="/es/servicios#pedir">Pedir servicio</a>
       <a href="/services" lang="en" hreflang="en">English</a>
     </nav>
@@ -206,18 +216,133 @@ document.querySelectorAll('[data-service]').forEach(function (a) {
 <script>
 /* Photos: shrink on the phone before upload. The mail relay caps a submission at 10 MB
    and a modern phone photo is 2-4 MB, so four untouched photos fail silently. This also
-   turns iPhone HEIC into JPEG for free, because Safari decodes it into the canvas. */
+   turns iPhone HEIC into JPEG for free, because Safari decodes it into the canvas.
+
+   Two ways in, one list out. "Tomar una foto" is a separate input carrying capture=environment,
+   because capture forces a single shot and cancels multiple — bolting it onto the library
+   input would kill multi-select. Both routes append to the same `picked` array, get the
+   same resize, and go out in the same one-file-per-field slots. */
 (function () {
   var form = document.querySelector('form.req');
   if (!form) return;
-  var input = form.querySelector('input[type="file"]');
+  var input = form.querySelector('[data-photo-input]') || form.querySelector('input[type="file"]');
   if (!input || typeof DataTransfer !== 'function') {
-    /* no shrinking here, so don't promise it */
+    /* no shrinking here, so don't promise it — and the plain multi-file input stands in */
     var n = document.querySelector('[data-shrink-note]');
     if (n) n.hidden = true;
     return;
   }
   var MAX_EDGE = 1600, QUALITY = 0.8, CAP = 9 * 1024 * 1024, busy = false;
+
+  var cam     = form.querySelector('[data-photo-capture]');
+  var actions = form.querySelector('[data-photo-buttons]');
+  var camBtn  = form.querySelector('[data-photo-camera]');
+  var libBtn  = form.querySelector('[data-photo-library]');
+  var list    = form.querySelector('[data-photo-list]');
+  var picked  = [];   /* the one list both buttons feed */
+  var queue   = Promise.resolve();
+  var pending = 0;    /* copies still being read, so a fast submit still waits */
+  var urls    = [];   /* object URLs for the thumbnails, revoked on removal */
+
+  function drain() {
+    /* `picked` is the only list that counts, so empty the control we just read.
+       It also makes a repeat pick of the same file fire change again, and it keeps
+       a removed photo from riding along on a submit that takes the native path. */
+    try { input.value = ''; } catch (err) {}
+  }
+
+  function detach(f) {
+    /* Take our own copy of the bytes. A File handed over by a file input is backed by
+       that input, and clearing the control can leave the object readable but empty —
+       which is how a library photo arrives as a 0-byte attachment. Copying first makes
+       `picked` independent of both controls. */
+    if (f.arrayBuffer) {
+      return f.arrayBuffer().then(function (buf) {
+        return new File([buf], f.name, { type: f.type, lastModified: f.lastModified });
+      })['catch'](function () { return f; });
+    }
+    return new Promise(function (done) {
+      var r = new FileReader();
+      r.onload  = function () { done(new File([r.result], f.name, { type: f.type, lastModified: f.lastModified })); };
+      r.onerror = function () { done(f); };
+      r.readAsArrayBuffer(f);
+    });
+  }
+
+  function render() {
+    if (!list) return;
+    urls.forEach(function (u) { URL.revokeObjectURL(u); });
+    urls = [];
+    while (list.firstChild) list.removeChild(list.firstChild);
+    list.hidden = !picked.length;
+    picked.forEach(function (f, i) {
+      var li = document.createElement('li');
+      var img = document.createElement('img');
+      var u = URL.createObjectURL(f);
+      urls.push(u);
+      img.src = u;
+      img.alt = '';
+      var nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.textContent = f.name || 'foto';
+      var rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'rm';
+      rm.setAttribute('aria-label', 'Quitar esta foto');
+      rm.textContent = '×';
+      rm.addEventListener('click', function () {
+        picked.splice(i, 1);
+        render();
+      });
+      li.appendChild(img);
+      li.appendChild(nm);
+      li.appendChild(rm);
+      list.appendChild(li);
+    });
+  }
+
+  function add(files) {
+    /* append, never replace: a second photo joins the first. One chain, so the
+       copies land in the order they were taken. */
+    Array.prototype.forEach.call(files, function (f) {
+      pending++;
+      queue = queue.then(function () {
+        return detach(f).then(function (copy) { picked.push(copy); pending--; render(); });
+      })['catch'](function () { pending--; });
+    });
+    return queue;
+  }
+
+  if (actions && libBtn) {
+    /* the script is alive, so swap the raw input for the two buttons */
+    input.hidden = true;
+    input.style.display = 'none';
+    actions.hidden = false;
+    libBtn.addEventListener('click', function () { input.click(); });
+    input.addEventListener('change', function () {
+      if (input.files && input.files.length) add(input.files).then(drain, drain);
+    });
+  }
+
+  if (cam && camBtn) {
+    /* hide rather than hand a laptop a button that opens nothing */
+    var coarse = (window.matchMedia && window.matchMedia('(any-pointer: coarse)').matches) ||
+                 navigator.maxTouchPoints > 0;
+    /* A laptop is a fine pointer and gets no camera button at all, rather than one that
+       opens a file dialog. Two things are deliberately NOT used as extra gates:
+       `'capture' in input`, which Blink reports false even where capture works, and
+       enumerateDevices, which reports nothing before permission on some browsers.
+       Wrongly hiding this on a real phone is worse than showing it on a rare
+       touchscreen laptop, where it degrades to the ordinary picker anyway. */
+    if (!coarse) camBtn.hidden = true;
+    camBtn.addEventListener('click', function () { cam.click(); });
+    cam.addEventListener('change', function () {
+      if (!cam.files || !cam.files.length) return;
+      /* clear it once copied, or a second shot with the same name fires no change event */
+      var clear = function () { try { cam.value = ''; } catch (err) {} };
+      add(cam.files).then(clear, clear);
+    });
+  }
 
   function shrink(file) {
     return new Promise(function (done) {
@@ -242,13 +367,13 @@ document.querySelectorAll('[data-service]').forEach(function (a) {
   }
 
   form.addEventListener('submit', function (e) {
-    if (busy || !input.files || !input.files.length) return;
+    if (busy || (!picked.length && !pending)) return;
     e.preventDefault();
     busy = true;
     var btn = form.querySelector('button[type="submit"]');
     var label = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando\u2026'; }
-    Promise.all(Array.prototype.map.call(input.files, shrink)).then(function (files) {
+    queue.then(function () { return Promise.all(picked.map(shrink)); }).then(function (files) {
       var total = files.reduce(function (a, f) { return a + f.size; }, 0);
       var dropped = 0;
       while (files.length > 1 && total > CAP) { total -= files.pop().size; dropped++; }

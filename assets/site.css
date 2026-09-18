@@ -268,3 +268,15 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .field.file { min-height: 0; padding: 0.55rem 0.7rem; font-size: 1rem; }
 .field.file::file-selector-button { font: inherit; font-weight: 600; font-size: 0.95rem; border: 0; background: var(--ink); color: var(--white); border-radius: 8px; padding: 0.6rem 0.9rem; margin-right: 0.7rem; min-height: 44px; cursor: pointer; }
 .field.file::file-selector-button:hover { background: var(--tyrian); }
+
+/* two ways to add a photo, side by side. The raw file input stays in the markup and
+   takes over whenever the script does not run, so the no-JS path is unchanged. */
+.photo-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: -0.35rem 0 0; }
+.photo-actions .btn { flex: 1 1 11rem; }
+.pix { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.pix li { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--paper); }
+.pix img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; flex: none; background: var(--line); }
+.pix .nm { flex: 1 1 auto; min-width: 0; font-weight: 400; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pix .rm { flex: none; min-height: 40px; min-width: 40px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: 1.35rem; line-height: 1; cursor: pointer; }
+.pix .rm:hover { background: var(--ink); color: var(--white); }
+.pix .rm:focus-visible { outline: 3px solid var(--tyrian); outline-offset: 2px; }
