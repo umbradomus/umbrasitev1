@@ -357,6 +357,9 @@ function adminRow(rec, nowIso) {
     idioma: (rec.fields || {}).idioma || '',
     status_link: rec.status_link || '',
     token: rec.token,
+    /* Everything the form posted, exactly as stored — repeated names stay arrays.
+       Admin only: this row is served behind the key and never on the status link. */
+    fields: rec.fields || {},
   };
 }
 
