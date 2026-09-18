@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="/assets/site.css">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=2"></script>
+<!-- WSS-03 · the drywall-holes intake: the service tap reveals the problem row, and
+     "Holes to patch" reveals one card per place tapped. -->
+<script src="/assets/umbra-intake.js?v=1" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=6">
@@ -76,6 +79,243 @@
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://www.umbradomus.com/request-received">
         <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <div>
+          <p style="font-weight:600;margin-bottom:.4rem">Which one is closest? <small class="muted" style="font-weight:400">Optional.</small></p>
+          <div class="chips">
+            <label><input type="radio" name="service" value="Drywall &amp; Paint"><span>Drywall &amp; Paint</span></label>
+            <label><input type="radio" name="service" value="Doors &amp; Carpentry"><span>Doors &amp; Carpentry</span></label>
+            <label><input type="radio" name="service" value="Yard &amp; Property"><span>Yard &amp; Property</span></label>
+            <label><input type="radio" name="service" value="Comfort &amp; Efficiency"><span>Comfort &amp; Efficiency</span></label>
+            <label><input type="radio" name="service" value="Home Automation"><span>Home Automation</span></label>
+            <label><input type="radio" name="service" value="Not sure"><span>Not sure</span></label>
+          </div>
+        </div>
+
+        <!-- WSS-03 · THE INTAKE THAT GIVES THE WORKER SOMETHING TO WORK WITH.
+             Ported, not redesigned, from the file Drew approved on 2026-09-18:
+             Bridge\BIP\UMBRA\WSS\INTAKE-DRYWALL-HOLES-APPROVED-2026-09-18.html.
+             The reference's bottom two boxes — the JSON payload panel and the
+             derived-scope list under it — are a demonstration built for Drew to
+             judge the data by. They are not customer UI and they are deliberately
+             NOT here, and their headings are not quoted here either, so a grep of
+             this page for them comes back empty.
+
+             Every control below ships DISABLED and is enabled only when its own
+             place is tapped, because a disabled control is never submitted. That is
+             how a place nobody tapped posts no fields at all — not empty ones. With
+             JavaScript off none of it is ever revealed or enabled, so the form stays
+             exactly the form it was. -->
+        <div class="intake" data-intake hidden>
+
+          <div class="step" data-intake-problem hidden>
+            <p class="q">What is it?</p>
+            <p class="hint">Whichever is closest.</p>
+            <ul class="chips">
+              <li class="chip"><label><input type="radio" name="problem" value="Holes to patch" disabled><span>Holes to patch</span></label></li>
+              <li class="chip"><label><input type="radio" name="problem" value="Cracks" disabled><span>Cracks</span></label></li>
+              <li class="chip"><label><input type="radio" name="problem" value="Water stain" disabled><span>Water stain</span></label></li>
+              <li class="chip"><label><input type="radio" name="problem" value="A bad old patch" disabled><span>A bad old patch</span></label></li>
+              <li class="chip"><label><input type="radio" name="problem" value="Just needs painting" disabled><span>Just needs painting</span></label></li>
+              <li class="chip"><label><input type="radio" name="problem" value="Something else" disabled><span>Something else</span></label></li>
+            </ul>
+          </div>
+
+          <div class="step" data-intake-holes hidden>
+            <p class="q">Where is it?</p>
+            <p class="hint">Tap any that apply.</p>
+            <div class="room">
+              <svg viewBox="0 0 320 210" role="img" aria-label="A room seen from inside: ceiling, back wall, side wall, a door and a window">
+                <polygon id="z-ceiling" class="zone" points="10,10 310,10 248,62 72,62"></polygon>
+                <polygon id="z-wall-back" class="zone" points="72,62 248,62 248,150 72,150"></polygon>
+                <polygon id="z-wall-side" class="zone" points="10,10 72,62 72,150 10,200"></polygon>
+                <polygon points="72,150 248,150 310,200 10,200" fill="#D9D2C7" fill-opacity=".5" stroke="#D9D2C7" stroke-width="1.2"></polygon>
+                <rect id="z-open-window" class="zone" x="100" y="80" width="52" height="40" rx="2"></rect>
+                <polygon id="z-open-door" class="zone" points="196,78 232,72 232,150 196,150"></polygon>
+                <g id="z-edges">
+                  <path class="edge" d="M72,62 L248,62"></path>
+                  <path class="edge" d="M72,62 L72,150"></path>
+                  <path class="edge" d="M248,62 L248,150"></path>
+                  <path class="edge" d="M10,10 L72,62"></path>
+                </g>
+                <text class="lbl" x="160" y="30" text-anchor="middle">ceiling</text>
+                <text class="lbl" x="160" y="140" text-anchor="middle">wall</text>
+                <!-- the side wall reads at an angle, so its label runs along the wall instead of sitting flat -->
+                <text class="lbl" x="41" y="126" text-anchor="middle" transform="rotate(-13 41 126)">wall</text>
+                <text class="lbl" x="126" y="104" text-anchor="middle">window</text>
+                <text class="lbl" x="214" y="118" text-anchor="middle">door</text>
+              </svg>
+            </div>
+            <ul class="chips">
+              <li class="chip"><label><input type="checkbox" name="problem_area" value="Ceiling" data-area="ceiling" data-z="z-ceiling" disabled><span>Ceiling</span></label></li>
+              <li class="chip"><label><input type="checkbox" name="problem_area" value="Walls" data-area="walls" data-z="z-wall-back z-wall-side" disabled><span>Walls</span></label></li>
+              <li class="chip"><label><input type="checkbox" name="problem_area" value="Corner or edge" data-area="corner" data-z="z-edges" disabled><span>Corner or edge</span></label></li>
+              <li class="chip"><label><input type="checkbox" name="problem_area" value="Around a door or window" data-area="opening" data-z="z-open-door z-open-window" disabled><span>Around a door or window</span></label></li>
+            </ul>
+
+            <p class="q">Tell us about each place</p>
+            <p class="hint">A few quick questions for each place.</p>
+            <div class="area" data-card="ceiling" hidden>
+              <h3><i class="pin"></i>Ceiling</h3>
+              <p class="q">Roughly how many spots?</p>
+              <p class="hint">An estimate is fine — we count them on site.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="1–5" disabled><span>1–5</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="6–15" disabled><span>6–15</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="16–30" disabled><span>16–30</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
+              </ul>
+              <div class="exact"><label>Exact number, if you know it:
+                <input type="number" name="ceiling_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
+              <p class="q">How big is the biggest one here?</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
+              </ul>
+              <p class="q">What state are they in?</p>
+              <p class="hint">Tap any that apply.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Open holes" disabled><span>Open holes</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+              <p class="q">Smooth or textured?</p>
+              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="ceiling_surface" value="Smooth" disabled><span>Smooth</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_surface" value="Textured" disabled><span>Textured</span></label></li>
+                <li class="chip"><label><input type="radio" name="ceiling_surface" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+            </div>
+            <div class="area" data-card="walls" hidden>
+              <h3><i class="pin"></i>Walls</h3>
+              <p class="q">Roughly how many spots?</p>
+              <p class="hint">An estimate is fine — we count them on site.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="walls_count_band" value="1–5" disabled><span>1–5</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_count_band" value="6–15" disabled><span>6–15</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_count_band" value="16–30" disabled><span>16–30</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
+              </ul>
+              <div class="exact"><label>Exact number, if you know it:
+                <input type="number" name="walls_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
+              <p class="q">How big is the biggest one here?</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="walls_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
+              </ul>
+              <p class="q">What state are they in?</p>
+              <p class="hint">Tap any that apply.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Open holes" disabled><span>Open holes</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+              <p class="q">Smooth or textured?</p>
+              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="walls_surface" value="Smooth" disabled><span>Smooth</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_surface" value="Textured" disabled><span>Textured</span></label></li>
+                <li class="chip"><label><input type="radio" name="walls_surface" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+            </div>
+            <div class="area" data-card="corner" hidden>
+              <h3><i class="pin"></i>Corner or edge</h3>
+              <p class="q">Roughly how many spots?</p>
+              <p class="hint">An estimate is fine — we count them on site.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="corner_count_band" value="1–5" disabled><span>1–5</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_count_band" value="6–15" disabled><span>6–15</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_count_band" value="16–30" disabled><span>16–30</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
+              </ul>
+              <div class="exact"><label>Exact number, if you know it:
+                <input type="number" name="corner_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
+              <p class="q">How big is the biggest one here?</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="corner_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
+              </ul>
+              <p class="q">What state are they in?</p>
+              <p class="hint">Tap any that apply.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Open holes" disabled><span>Open holes</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+              <p class="q">Smooth or textured?</p>
+              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="corner_surface" value="Smooth" disabled><span>Smooth</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_surface" value="Textured" disabled><span>Textured</span></label></li>
+                <li class="chip"><label><input type="radio" name="corner_surface" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+            </div>
+            <div class="area" data-card="opening" hidden>
+              <h3><i class="pin"></i>Around a door or window</h3>
+              <p class="q">Roughly how many spots?</p>
+              <p class="hint">An estimate is fine — we count them on site.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="opening_count_band" value="1–5" disabled><span>1–5</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_count_band" value="6–15" disabled><span>6–15</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_count_band" value="16–30" disabled><span>16–30</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
+              </ul>
+              <div class="exact"><label>Exact number, if you know it:
+                <input type="number" name="opening_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
+              <p class="q">How big is the biggest one here?</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="opening_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
+              </ul>
+              <p class="q">What state are they in?</p>
+              <p class="hint">Tap any that apply.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Open holes" disabled><span>Open holes</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
+                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+              <p class="q">Smooth or textured?</p>
+              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
+              <ul class="chips">
+                <li class="chip"><label><input type="radio" name="opening_surface" value="Smooth" disabled><span>Smooth</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_surface" value="Textured" disabled><span>Textured</span></label></li>
+                <li class="chip"><label><input type="radio" name="opening_surface" value="Not sure" disabled><span>Not sure</span></label></li>
+              </ul>
+            </div>
+
+            <p class="q">Do you have the leftover paint?</p>
+            <p class="hint">An old can with the color name on it saves a trip.</p>
+            <ul class="chips">
+              <li class="chip"><label><input type="radio" name="paint_on_site" value="Yes" disabled><span>Yes</span></label></li>
+              <li class="chip"><label><input type="radio" name="paint_on_site" value="No" disabled><span>No</span></label></li>
+              <li class="chip"><label><input type="radio" name="paint_on_site" value="Not sure" checked disabled><span>Not sure</span></label></li>
+            </ul>
+
+            <!-- The honesty gate, and it is in the data rather than in anyone's
+                 judgement: every tapped place with a count means a price can be
+                 generated with no guessing; one count left to us means NOT QUOTABLE
+                 until we look. -->
+            <p class="gate" data-gate hidden></p>
+          </div>
+        </div>
+
         <p class="fine" style="margin:0">All three fields are required.</p>
         <label>Your name
           <input class="field" type="text" name="name" autocomplete="name" required enterkeyhint="next">
@@ -85,9 +325,19 @@
         </label>
         <label>Street and city <small>So we know it's in our area.</small><input class="field" type="text" name="address" autocomplete="street-address"></label>
         <label class="opt"><input type="checkbox" name="idioma" value="español"><span>Prefiero español <small>Optional.</small></span></label>
-        <label>How can we help?
-          <textarea class="field" name="message" rows="4" required></textarea>
+        <label><span data-what-label>How can we help?</span> <small data-what-hint></small>
+          <textarea class="field" name="what" rows="4" required></textarea>
         </label>
+        <!-- R17d · the photo block's final wording. Line 1 is deliberately per-surface
+             rather than "the whole wall or ceiling": it scales the photo count to the
+             size of the job. Line 3 removes the fear of sending too many, which is the
+             thing that actually holds a customer to two photos. -->
+        <p class="hint" style="margin-bottom:.35rem">Turn the light on. The more we can see, the tighter the price — often with no visit at all.</p>
+        <ol class="guide">
+          <li><b>One shot of each wall or ceiling with spots on it.</b> Stand back so the whole surface is in frame.</li>
+          <li><b>A close-up of the worst one.</b> Put a coin or a pen next to it so we can see the size.</li>
+          <li><b>Anything else that helps.</b> More is fine — we would rather have too many than too few.</li>
+        </ol>
         <label>Photos of the problem <small>Optional, but it gets you a real price faster — often without a visit first.</small>
           <input class="field file" type="file" name="attachment" accept="image/*" multiple data-photo-input>
         </label>
