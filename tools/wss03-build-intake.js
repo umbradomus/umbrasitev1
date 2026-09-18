@@ -107,10 +107,11 @@ function build() {
   L.push('        <!-- WSS-03 · THE INTAKE THAT GIVES THE WORKER SOMETHING TO WORK WITH.');
   L.push('             Ported, not redesigned, from the file Drew approved on 2026-09-18:');
   L.push('             Bridge\\BIP\\UMBRA\\WSS\\INTAKE-DRYWALL-HOLES-APPROVED-2026-09-18.html.');
-  L.push('             The reference\'s bottom two boxes — "What the worker receives" and "The');
-  L.push('             package it can build from that" — are a demonstration built for Drew to');
+  L.push('             The reference\'s bottom two boxes — the JSON payload panel and the');
+  L.push('             derived-scope list under it — are a demonstration built for Drew to');
   L.push('             judge the data by. They are not customer UI and they are deliberately');
-  L.push('             NOT here.');
+  L.push('             NOT here, and their headings are not quoted here either, so a grep of');
+  L.push('             this page for them comes back empty.');
   L.push('');
   L.push('             Every control below ships DISABLED and is enabled only when its own');
   L.push('             place is tapped, because a disabled control is never submitted. That is');
