@@ -15,6 +15,54 @@ function title(rec) {
   return 'UNTITLED REQUEST';
 }
 
+/* ⬛ THE ANSWERS THE CUSTOMER TAPPED (R17 · R31).
+   The intake asks where, how many, how big, what condition, what surface — and
+   until this section existed the record showed NONE of it. The answers were kept
+   (they are in the fields bag and in `01-RAW-SUBMISSION.json`) but the file a
+   person reads — the file the quote seat works from — showed only name, phone,
+   address and the sentence they typed. The redesign collected the data and the
+   record hid it. Measured on U-0004 and U-0005, 2026-09-19.
+   Everything in the bag is printed except the relay's own control fields, so a
+   field added to the form tomorrow appears here without anyone editing this file.
+   That is deliberate: a renderer with a hardcoded list is a second place the form
+   has to be maintained by hand, and it goes stale silently. */
+const CONTROL_FIELDS = /^(_subject|_captcha|_template|_next|_honey|_replyto|attachment\d*)$/;
+const CHANNEL_FIELDS = /^(email_sent|email_copy_id|email_copy_ms|sent_by|browser_copy_id)$/;
+/* the four places the holes block repeats for */
+const PLACE = /^(ceiling|walls|corner|opening)_(.+)$/;
+const ASKS = {
+  count_band:  'how many — their own estimate',
+  count_exact: 'exact number, if they typed one',
+  biggest:     'the biggest one',
+  condition:   'condition',
+  surface:     'surface',
+};
+const TOP = {
+  problem:       'what kind of job',
+  problem_area:  '⬛ where — every place they tapped',
+  paint_on_site: 'is the paint on site',
+};
+function answerCell(v) {
+  if (Array.isArray(v)) return v.length ? v.map((x) => String(x)).join(' · ') : '`____`';
+  return mdCell(v);
+}
+function answersSection(f) {
+  const rows = [];
+  for (const name of Object.keys(f)) {
+    if (CONTROL_FIELDS.test(name) || CHANNEL_FIELDS.test(name)) continue;
+    /* `service` is `category` in section A and `what` is its own row there — a
+       second printing of either is a second place to read the same fact, and it
+       would also make an OLD-form submission show one lonely row that reads like
+       a fault instead of the honest "none". */
+    if (name === 'name' || name === 'phone' || name === 'address' || name === 'what' || name === 'service') continue;
+    const m = PLACE.exec(name);
+    const where = m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) : '';
+    const ask = m ? (ASKS[m[2]] || m[2]) : (TOP[name] || name);
+    rows.push(`| ${where || '—'} | ${ask} | ${answerCell(f[name])} | \`${name}\` |`);
+  }
+  return rows;
+}
+
 export function renderJobMarkdown(rec, opts = {}) {
   const f = rec.fields || {};
   const photos = Array.isArray(rec.photos) ? rec.photos : [];
@@ -55,6 +103,25 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`email copy id\` | ${mdCell(rec.email_copy_id)} ← R28: the browser's own copy of this submission, matched by this id |`);
   L.push(`| \`confirmation shown\` | /request-received ("We reply within 2 hours, 7am–9pm") |`);
   L.push('');
+
+  /* A2 — printed only when the submission actually carries tapped answers, so a
+     request from the old form (or with JavaScript off) says so plainly instead of
+     showing an empty table that reads like a fault. */
+  {
+    const rows = answersSection(f);
+    L.push('## A2 · THE ANSWERS THEY TAPPED — the intake, question by question');
+    if (rows.length) {
+      L.push('**Verbatim, in the order the form posted them. `____` means the question was shown and left blank; a question that is absent was never shown, because they did not tap that place.**');
+      L.push('| where | question | their answer | posted as |');
+      L.push('|---|---|---|---|');
+      for (const r of rows) L.push(r);
+      L.push('');
+      L.push('⬛ **A count they estimated is an estimate — we count on site, and the quote says so.** The exact number is what they typed, not what we found.');
+    } else {
+      L.push('**None — this submission carries no tapped answers.** It came from the old form, or from a browser with JavaScript switched off. **What they wanted is the `what` line above and the photos; nothing was lost, but nothing was structured either.**');
+    }
+    L.push('');
+  }
 
   L.push('## B · THE THREE QUESTIONS — what had to be asked before pricing');
   L.push('| # | question | answer | asked via |');
