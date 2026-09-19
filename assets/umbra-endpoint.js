@@ -22,6 +22,14 @@ window.UMBRA_WORKER_BASE = 'https://umbra-intake.umbradomus.workers.dev';
   var FORMSUBMIT = 'https://formsubmit.co/07242513cc0b8b4dac5ae320baa7c431';
   var base = String(window.UMBRA_WORKER_BASE || '').replace(/\/+$/, '');
 
+  /* THE EMAIL LEG (R28). The browser sends its own copy straight to FormSubmit,
+     so the email no longer depends on the Worker being alive — or on FormSubmit
+     accepting Cloudflare's shared address, which it has been refusing with 429
+     on every request the Worker has ever taken. /assets/umbra-two-channels.js
+     reads this. Blank it and the browser stops sending its copy; the Worker's
+     own forward then carries the email exactly as it does today. */
+  window.UMBRA_EMAIL_ACTION = FORMSUBMIT;
+
   /* Where the form posts. */
   window.UMBRA_FORM_ACTION = base ? base + '/intake' : FORMSUBMIT;
   /* Where /status and /request-received ask about a job. '' means there is no

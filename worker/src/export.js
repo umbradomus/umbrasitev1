@@ -51,7 +51,8 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`photos\` | ${photos.length ? `${photos.length} arrived — ${photos.map((p) => '`' + p.key + '`').join(' · ')}` : '`____`'} |`);
   L.push(`| \`photo sha256\` | ${photos.length ? photos.map((p) => '`' + String(p.sha256).slice(0, 12) + '`').join(' · ') : '`____`'} |`);
   L.push(`| \`status link\` | ${mdCell(rec.status_link)} |`);
-  L.push(`| \`email forwarded\` | ${rec.forward_failed ? '**NO — `forward_failed`**' : (rec.forwarded_at ? mdCell(rec.forwarded_at) : '`____`')} |`);
+  L.push(`| \`email forwarded\` | ${rec.forward_failed ? '**NO — `forward_failed`**' : (rec.forwarded_at ? mdCell(rec.forwarded_at) + (rec.forwarded_by ? ` — sent by the ${rec.forwarded_by}` : '') : '`____`')} |`);
+  L.push(`| \`email copy id\` | ${mdCell(rec.email_copy_id)} ← R28: the browser's own copy of this submission, matched by this id |`);
   L.push(`| \`confirmation shown\` | /request-received ("We reply within 2 hours, 7am–9pm") |`);
   L.push('');
 

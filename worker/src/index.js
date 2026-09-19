@@ -205,15 +205,33 @@ async function handleIntake(request, env, ctx) {
     }
   }
 
-  /* 3 · THE SECOND CHANNEL. Always attempted, whatever happened above. */
+  /* 3 · THE SECOND CHANNEL — AND WHO OWNS IT (R28 · R30).
+     The browser sends its own copy straight to FormSubmit BEFORE it posts here,
+     from the customer's own address. It posts `email_sent=yes` only when
+     FormSubmit redirected it back to our own origin, which FormSubmit does only
+     after it has taken the submission — so `yes` is a delivery, not an attempt.
+     THE BROWSER OWNS THE EMAIL. This forward is the FALLBACK and fires only on
+     `no`, so there is exactly one email per job in every combination: Worker up,
+     Worker down, JavaScript off.
+     WHY THE FALLBACK IS SECOND AND NOT FIRST: this send leaves from Cloudflare's
+     shared address, and FormSubmit has answered it `429` on every request the
+     Worker has ever taken — U-0003, U-0004, U-0005. The leg that works is the
+     browser's. This one is kept because when the browser cannot send, a
+     rate-limited attempt still beats no attempt. */
+  const browserSent = String((fields && fields.email_sent) || '').trim().toLowerCase() === 'yes';
   let forward = { ok: false, error: 'not attempted' };
-  try {
-    forward = await forwardToFormSubmit(env, entries, {
-      job_id: id || '(no record — see forward_failed)',
-      status_link: status_link || '(no record)',
-    });
-  } catch (err) {
-    forward = { ok: false, error: String(err && err.message || err) };
+  if (browserSent) {
+    forward = { ok: true, status: 0, by: 'browser' };
+  } else {
+    try {
+      forward = await forwardToFormSubmit(env, entries, {
+        job_id: id || '(no record — see forward_failed)',
+        status_link: status_link || '(no record)',
+      });
+    } catch (err) {
+      forward = { ok: false, error: String(err && err.message || err) };
+    }
+    forward.by = 'worker';
   }
 
   /* 4 · the record. Written last so it carries the outcome of 2 and 3. */
@@ -245,6 +263,9 @@ async function handleIntake(request, env, ctx) {
       nudged_at: null,
       forwarded_at: forward.ok ? new Date().toISOString() : null,
       forward_failed: !forward.ok,
+      /* which leg carried it, so a 429 can never again be invisible */
+      forwarded_by: forward.by || 'worker',
+      email_copy_id: typeof fields.email_copy_id === 'string' ? fields.email_copy_id : null,
       events: [],
     };
     addEvent(rec, 'received', {
@@ -253,9 +274,9 @@ async function handleIntake(request, env, ctx) {
       page: rec.page || undefined,
     }, received_at);
     if (!forward.ok) {
-      addEvent(rec, 'forward_failed', { endpoint: 'formsubmit', detail: forward.error || ('status ' + forward.status) });
+      addEvent(rec, 'forward_failed', { endpoint: 'formsubmit', detail: forward.error || ('status ' + forward.status), by: forward.by || 'worker' });
     } else {
-      addEvent(rec, 'forwarded', { endpoint: 'formsubmit', status: forward.status });
+      addEvent(rec, 'forwarded', { endpoint: 'formsubmit', status: forward.status, by: forward.by || 'worker', copy: rec.email_copy_id || undefined });
     }
     for (const p of stored) {
       if (p.store_failed) addEvent(rec, 'photo_store_failed', { key: p.key, detail: p.store_failed });
