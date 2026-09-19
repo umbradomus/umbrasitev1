@@ -1,0 +1,36 @@
+# THE CRLF CURE — cut by BIP 2BBIP11, 2026-09-19, off WSS-07's finding.
+#
+# WSS-07 spent a round restoring three pages that had been rewritten end to end
+# with no content change at all. The culprit outlived the round: core.autocrlf
+# is set to true MACHINE-WIDE on this PC, and `git status` will never show you
+# that. Every coder that checks this repo out rewrites LF files to CRLF, and the
+# whole file then reads as modified. It has cost the floor hours twice and it
+# WILL recur, because nothing in the repo contradicted the machine setting.
+#
+# .gitattributes is the only cure that survives a fresh clone, a second machine
+# and whatever a future agent's global config happens to say: it overrides
+# core.autocrlf per-repository. The repo stores LF; the worktree gets LF.
+* text=auto eol=lf
+
+# The one place CRLF is correct. cmd.exe and PowerShell both want it, and a .cmd
+# checked out with LF can misparse a multi-line block. These are checked out CRLF
+# and stored LF, so they stop showing up as phantom modifications either way.
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binary. text=auto already detects these; naming them makes it unambiguous and
+# stops any future global setting from touching an image or a font.
+*.png   -text
+*.jpg   -text
+*.jpeg  -text
+*.gif   -text
+*.ico   -text
+*.webp  -text
+*.svg   text eol=lf
+*.woff  -text
+*.woff2 -text
+*.ttf   -text
+*.pdf   -text
+*.mp4   -text
+*.zip   -text
