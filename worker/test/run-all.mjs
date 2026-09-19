@@ -23,9 +23,12 @@ const WORKER_DIR = path.resolve(HERE, '..');
 const REPO_DIR = path.resolve(WORKER_DIR, '..');
 const TMP = path.join(HERE, '.tmp');
 
-/* The pre-change copies of the site, for the byte-identity suite. Staged from the
-   user's machine before any edit was made. */
-const ORIGINAL_SITE = process.env.UMBRA_ORIGINAL_SITE || '/mnt/user-data/uploads/umbrasitev1';
+/* The pre-change copies of the site, for the byte-identity suite (F). Where this
+   was written that was a copy staged under /mnt/user-data; on Drew's machine no
+   such copy exists, so the default is the repo itself — which makes suite F a
+   self-comparison until UMBRA_ORIGINAL_SITE points at a genuinely older tree.
+   The override stays in front: the next machine will differ again. */
+const ORIGINAL_SITE = process.env.UMBRA_ORIGINAL_SITE || REPO_DIR;
 
 const PORT = {
   worker: 8787,
@@ -38,8 +41,31 @@ const PORT = {
 
 const ADMIN_KEY = 'test-admin-key-' + crypto.randomBytes(9).toString('hex');
 const NTFY_TOPIC = 'umbra-test-' + crypto.randomBytes(5).toString('hex');
-const CHROME = process.env.CHROME_PATH ||
-  '/home/claude/.cache/puppeteer/chrome/linux-148.0.7778.97/chrome-linux64/chrome';
+/** The Chrome that puppeteer-core drives. CHROME_PATH wins; otherwise the first
+    of the usual install locations that exists on this machine. No Chrome is a
+    loud stop, never a silent skip. */
+function findChrome() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const pf = process.env.ProgramFiles || 'C:\\Program Files';
+  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+  const local = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const candidates = process.platform === 'win32' ? [
+    path.join(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    path.join(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    path.join(local, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    path.join(pf86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    path.join(pf, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+  ] : process.platform === 'darwin' ? [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  ] : [
+    '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser',
+    '/home/claude/.cache/puppeteer/chrome/linux-148.0.7778.97/chrome-linux64/chrome',
+  ];
+  const hit = candidates.find((c) => fs.existsSync(c));
+  if (!hit) throw new Error('no Chrome found — set CHROME_PATH. Looked at:\n  ' + candidates.join('\n  '));
+  return hit;
+}
+const CHROME = findChrome();
 
 /* ------------------------------------------------------------- test plumbing */
 
@@ -110,16 +136,23 @@ function copyTree(from, to, skip = []) {
   }
 }
 
-/** The one-line switch, applied exactly as Drew would apply it. */
+/** The one-line switch, applied exactly as Drew would apply it. The line reads
+    `window.UMBRA_WORKER_BASE = '<whatever it is today>';` — since Stage 1 that
+    is the real Worker's URL, not '' — so the match is on the line's shape, never
+    on a particular value. A miss THROWS: a copy that did not flip posts to
+    whatever the repo points at, and every assertion downstream measures the
+    wrong thing. Returns the before/after lines for the proof. */
+const ONE_LINE = /^window\.UMBRA_WORKER_BASE = '[^'\r\n]*';[ \t]*$/m;
 function flipConstant(root, base) {
   const f = path.join(root, 'assets', 'umbra-endpoint.js');
   const before = fs.readFileSync(f, 'utf8');
-  const after = before.replace(
-    "window.UMBRA_WORKER_BASE = '';",
-    `window.UMBRA_WORKER_BASE = '${base}';`,
-  );
-  if (before === after) throw new Error('the one line was not found in assets/umbra-endpoint.js');
-  fs.writeFileSync(f, after);
+  const m = before.match(ONE_LINE);
+  if (!m) throw new Error(`the one line was not found in ${f} — expected a line shaped like window.UMBRA_WORKER_BASE = '…';`);
+  const line = `window.UMBRA_WORKER_BASE = '${base}';`;
+  const after = before.replace(ONE_LINE, () => line);
+  if (after !== before) fs.writeFileSync(f, after);
+  console.log(`flip ${path.relative(TMP, f)}: ${m[0].trim()}  →  ${line}${after === before ? '  (already so)' : ''}`);
+  return { before: m[0].trim(), after: line, changed: after !== before };
 }
 
 /* -------------------------------------------------------------- browser helper */
@@ -196,7 +229,20 @@ async function main() {
   copyTree(REPO_DIR, siteWorker, SKIP);
   copyTree(REPO_DIR, siteNew, SKIP);
   copyTree(ORIGINAL_SITE, siteOld, SKIP);
-  flipConstant(siteWorker, `http://127.0.0.1:${PORT.worker}`);
+  /* siteWorker points at the Worker under test. siteNew is "the modified site
+     with the constant left on FormSubmit" — that is '', and since Stage 1 the
+     repo no longer ships '' there, so it is put there here. siteOld gets the
+     same when it carries the file (a pre-Stage-1 tree does not, and posts to
+     FormSubmit by its markup alone). NO test copy may ever reach production. */
+  const flips = {
+    worker: flipConstant(siteWorker, `http://127.0.0.1:${PORT.worker}`),
+    new: flipConstant(siteNew, ''),
+    old: fs.existsSync(path.join(siteOld, 'assets', 'umbra-endpoint.js')) ? flipConstant(siteOld, '') : null,
+  };
+  if (!flips.worker.changed) throw new Error('siteWorker did not change on flip — it would be indistinguishable from an unflipped copy');
+  const servedWorker = fs.readFileSync(path.join(siteWorker, 'assets', 'umbra-endpoint.js'), 'utf8');
+  const servedNew = fs.readFileSync(path.join(siteNew, 'assets', 'umbra-endpoint.js'), 'utf8');
+  if (servedWorker === servedNew) throw new Error('site-worker and site-new serve byte-identical umbra-endpoint.js — the flip did not flip');
 
   /* --- servers ----------------------------------------------------------- */
   const stub = await captureServer({ port: PORT.stub, tls: false });
@@ -260,12 +306,10 @@ crons = ["*/15 * * * *"]
   wrangler.stdout.on('data', (d) => { wlog += d; });
   wrangler.stderr.on('data', (d) => { wlog += d; });
 
-  /* wrangler dev reads .dev.vars from the project dir, so hand it one there and
-     take it away again at the end. */
-  const liveDevVars = path.join(WORKER_DIR, '.dev.vars');
-  const hadDevVars = fs.existsSync(liveDevVars);
-  const savedDevVars = hadDevVars ? fs.readFileSync(liveDevVars) : null;
-  fs.writeFileSync(liveDevVars, devVars);
+  /* wrangler reads .dev.vars from the directory of the --config it was given
+     (getVarsForDev: path.resolve(dirname(userConfigPath), '.dev.vars')), so the
+     one written into TMP above is the one it sees. worker/.dev.vars is Drew's
+     real file and is never touched. */
 
   const W = `http://127.0.0.1:${PORT.worker}`;
   let up = false;
@@ -287,7 +331,10 @@ crons = ["*/15 * * * *"]
     headless: true,
     args: [
       '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
-      `--host-resolver-rules=MAP formsubmit.co 127.0.0.1:${PORT.formsubmitTls}`,
+      /* formsubmit.co lands on the TLS relay; every *.workers.dev name is
+         unresolvable, so no test copy can reach the production Worker even if
+         a flip were ever missed. */
+      `--host-resolver-rules=MAP formsubmit.co 127.0.0.1:${PORT.formsubmitTls}, MAP *.workers.dev ~NOTFOUND`,
       '--ignore-certificate-errors',
       /* the container's outbound proxy would swallow the host-resolver rule */
       '--no-proxy-server',
@@ -298,8 +345,6 @@ crons = ["*/15 * * * *"]
     try { await browser.close(); } catch (e) {}
     wrangler.kill('SIGTERM');
     await Promise.all([close(stub), close(relay), close(sw), close(sn), close(so)]);
-    if (hadDevVars) fs.writeFileSync(liveDevVars, savedDevVars);
-    else fs.rmSync(liveDevVars, { force: true });
   };
 
   try {
