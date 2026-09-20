@@ -234,6 +234,19 @@ async function handleIntake(request, env, ctx) {
     forward.by = 'worker';
   }
 
+  /* 3b · EMAIL-01: the browser's report and the fallback's answer, in words,
+     computed once so the record, the events and the note cannot disagree. */
+  const emailSentField = typeof fields.email_sent === 'string' && fields.email_sent.trim() !== ''
+    ? fields.email_sent.trim().toLowerCase() : null;
+  const emailCopyMs = typeof fields.email_copy_ms === 'string' && /^[0-9]+$/.test(fields.email_copy_ms.trim())
+    ? parseInt(fields.email_copy_ms.trim(), 10) : null;
+  const forwardDetail = forward.error
+    || ('status ' + forward.status + (forward.response && forward.response.text ? ' — ' + forward.response.text.slice(0, 160) : ''));
+  const lostNote = forward.ok ? null
+    : 'NO EMAIL REACHED ANYONE. The browser copy ' +
+      (emailSentField === 'yes' ? 'said yes' : emailSentField === null ? 'was not attempted (no JavaScript or the old form)' : 'reported ' + emailSentField + (emailCopyMs === null ? '' : ' after ' + emailCopyMs + ' ms')) +
+      ' and the Worker fallback failed (' + forwardDetail + '). This record is the only copy of the request.';
+
   /* 4 · the record. Written last so it carries the outcome of 2 and 3. */
   if (id) {
     const rec = {
@@ -266,6 +279,22 @@ async function handleIntake(request, env, ctx) {
       /* which leg carried it, so a 429 can never again be invisible */
       forwarded_by: forward.by || 'worker',
       email_copy_id: typeof fields.email_copy_id === 'string' ? fields.email_copy_id : null,
+      /* EMAIL-01 · THE FIELD THAT DECIDES IS ON THE RECORD. Until 2026-09-20
+         `email_sent` and `email_copy_ms` were read here and dropped, so the one
+         thing that chose which channel owned the email could never be read
+         back (U-0006: browser said no at 21 s, fallback 429, record silent).
+         `email_sent` is the browser's own word, verbatim: 'yes' | 'no' | null
+         (null = JavaScript off or the old form; the copy was never attempted).
+         `sent_by` is WHO DELIVERED: 'browser' | 'worker' | 'nobody'. */
+      email_sent: emailSentField,
+      email_copy_ms: emailCopyMs,
+      sent_by: forward.ok ? (forward.by || 'worker') : 'nobody',
+      /* both legs failed: the browser did not say yes and the fallback did not
+         deliver. A job with no email must never look like a job with one. */
+      email_lost: !forward.ok,
+      status_note: forward.ok ? null : lostNote,
+      /* what FormSubmit answered the fallback, in words, when it refused */
+      forward_response: forward.response || null,
       events: [],
     };
     addEvent(rec, 'received', {
@@ -274,7 +303,20 @@ async function handleIntake(request, env, ctx) {
       page: rec.page || undefined,
     }, received_at);
     if (!forward.ok) {
-      addEvent(rec, 'forward_failed', { endpoint: 'formsubmit', detail: forward.error || ('status ' + forward.status), by: forward.by || 'worker' });
+      addEvent(rec, 'forward_failed', {
+        endpoint: 'formsubmit', detail: forwardDetail, by: forward.by || 'worker',
+        response: forward.response ? forward.response.text : undefined,
+      });
+      /* EMAIL-01 · THE DOUBLE FAILURE, LOUD. `forward_failed` alone has been on
+         every job since U-0003 and reads as "the fallback failed" — which is
+         also what it says when the browser DID deliver. This event fires only
+         when neither leg did, and says so in words the audit list prints. */
+      addEvent(rec, 'email_lost', {
+        note: lostNote,
+        browser: emailSentField === null ? 'not attempted (no JavaScript or old form)' : ('email_sent=' + emailSentField + (emailCopyMs === null ? '' : ' after ' + emailCopyMs + ' ms')),
+        worker: forwardDetail,
+        response: forward.response ? forward.response.text : undefined,
+      });
     } else {
       addEvent(rec, 'forwarded', { endpoint: 'formsubmit', status: forward.status, by: forward.by || 'worker', copy: rec.email_copy_id || undefined });
     }
@@ -368,6 +410,13 @@ function adminRow(rec, nowIso) {
     quote_amount: rec.quote_amount,
     nudged_at: rec.nudged_at,
     forward_failed: Boolean(rec.forward_failed),
+    /* EMAIL-01: which leg was tried, which channel owned the email, and whether any email went at all */
+    forwarded_by: rec.forwarded_by || null,
+    email_sent: rec.email_sent === undefined ? null : rec.email_sent,
+    email_copy_ms: rec.email_copy_ms === undefined ? null : rec.email_copy_ms,
+    sent_by: rec.sent_by || (rec.forward_failed ? null : rec.forwarded_by || null),
+    email_lost: Boolean(rec.email_lost),
+    status_note: rec.status_note || null,
     photos: (rec.photos || []).length,
     name: (rec.fields || {}).name || '',
     phone: (rec.fields || {}).phone || '',

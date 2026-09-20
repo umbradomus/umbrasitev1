@@ -45,7 +45,12 @@
   if (!EMAIL_ACTION) return;
 
   var OK_PATH = String(window.UMBRA_EMAIL_OK_PATH || '/assets/email-copy-ok.html');
-  var CAP_MS  = Number(window.UMBRA_EMAIL_CAP_MS || 25000);
+  /* EMAIL-01 (2026-09-20): was 25000. U-0006 sat 21 s on this leg before the
+     real post began — longer than a person waits. 8 s is the ceiling now; a
+     copy that has not redirected home by then is reported `no` and the
+     Worker's fallback fires. The number spent here is posted as email_copy_ms
+     and, since EMAIL-01, kept on the record. */
+  var CAP_MS  = Number(window.UMBRA_EMAIL_CAP_MS || 8000);
   var OK_URL  = location.origin + OK_PATH;
 
   var nativeSubmit = HTMLFormElement.prototype.submit;
