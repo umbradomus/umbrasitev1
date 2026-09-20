@@ -53,6 +53,25 @@
   var CAP_MS  = Number(window.UMBRA_EMAIL_CAP_MS || 8000);
   var OK_URL  = location.origin + OK_PATH;
 
+  /* EMAIL-01 · THE REASON EVERY LIVE SUBMIT SAID `no` (measured 00:50:24Z
+     2026-09-20 from a real Chrome on www.umbradomus.com, PROBE-05): FormSubmit
+     TOOK the copy and answered 302 to _next in under a second — the email was
+     delivered — and then the host (Vercel, cleanUrls) answered that address
+     308 → the same path WITHOUT ".html". The frame settled on
+     /assets/email-copy-ok, this code compared it with /assets/email-copy-ok.html,
+     and reported `no`. So the Worker forwarded a second copy, hit 429, and the
+     record said the email failed when it had arrived. Two addresses, one page:
+     both are home. The comparison is on the path with any ".html", query and
+     fragment removed, and _next is sent already clean so the 308 hop is not
+     spent at all. */
+  function homePath(u) {
+    return String(u || '').replace(/[?#][\s\S]*$/, '').replace(/\.html$/, '').replace(/\/+$/, '');
+  }
+  var OK_HOME = homePath(OK_URL);
+  function isHome(href) {
+    return homePath(href) === OK_HOME;
+  }
+
   var nativeSubmit = HTMLFormElement.prototype.submit;
 
   /* A correlation id the collector can match on. The job number is minted by
@@ -138,7 +157,7 @@
       });
       if (!keys.length) throw new Error('nothing to send');
 
-      temp.appendChild(hidden('_next', OK_URL));
+      temp.appendChild(hidden('_next', OK_HOME));
       temp.appendChild(hidden('sent_by', 'browser-direct'));
       temp.appendChild(hidden('browser_copy_id', id));
 
@@ -152,7 +171,7 @@
           finish(false);
           return;
         }
-        finish(href.indexOf(OK_URL) === 0);
+        finish(isHome(href));
       };
       frame.onerror = function () { finish(false); };
 
