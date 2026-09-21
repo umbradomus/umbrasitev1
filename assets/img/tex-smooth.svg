@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Smooth wall">
+  <rect width="64" height="64" fill="#F3F0EA"/>
+  <rect x="0" y="0" width="64" height="64" fill="url(#g)"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity=".9"/>
+    <stop offset="1" stop-color="#E4DFD5" stop-opacity=".9"/></linearGradient></defs>
+  <rect x=".75" y=".75" width="62.5" height="62.5" fill="none" stroke="#D9D2C7" stroke-width="1.5"/></svg>

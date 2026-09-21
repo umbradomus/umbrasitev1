@@ -13,9 +13,9 @@
 <link rel="stylesheet" href="/assets/site.css">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
-<!-- WSS-03 · the drywall-holes intake: the service tap reveals the problem row, and
-     "Holes to patch" reveals one card per place tapped. -->
-<script src="/assets/umbra-intake.js?v=1" defer></script>
+<!-- INTAKE v2 · the 14-screen wizard (INTAKE-FORM-V2-SPEC-2026-09-21). The v1 file
+     /assets/umbra-intake.js stays in the repo and is no longer referenced. -->
+<script src="/assets/umbra-intake-v2.js?v=1" defer></script>
 <script src="/assets/umbra-two-channels.js?v=2" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
@@ -147,280 +147,172 @@
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://www.umbradomus.com/request-received">
         <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="hidden" name="idioma" value="">
 
-        <div>
-          <p style="font-weight:600;margin-bottom:.4rem">Which one is closest? <small class="muted" style="font-weight:400">Optional.</small></p>
-          <div class="chips">
-            <label><input type="radio" name="service" value="Drywall &amp; Paint"><span>Drywall &amp; Paint</span></label>
-            <label><input type="radio" name="service" value="Doors &amp; Carpentry"><span>Doors &amp; Carpentry</span></label>
-            <label><input type="radio" name="service" value="Yard &amp; Property"><span>Yard &amp; Property</span></label>
-            <label><input type="radio" name="service" value="Comfort &amp; Efficiency"><span>Comfort &amp; Efficiency</span></label>
-            <label><input type="radio" name="service" value="Home Automation"><span>Home Automation</span></label>
-            <label><input type="radio" name="service" value="Not sure"><span>Not sure</span></label>
-          </div>
+        <!-- INTAKE v2 (INTAKE-FORM-V2-SPEC-2026-09-21 §3-§6). One question per screen,
+             photos first, bands only, no per-area repetition. Every visible word is a
+             string from the spec's table. The posted NAMES are the ones the Worker and
+             the Flux Capacitor already read; the posted VALUES are English on both
+             pages, exactly as the v1 Spanish page already did.
+
+             `service` keeps today's list and stays single. It is no longer a question:
+             the service tiles above still tick it, and Drywall & Paint is the default,
+             so the field arrives as it always did without spending a screen on it. -->
+        <div class="v2service" hidden aria-hidden="true">
+          <label><input type="radio" name="service" value="Drywall &amp; Paint" checked><span>Drywall &amp; Paint</span></label>
+          <label><input type="radio" name="service" value="Doors &amp; Carpentry"><span>Doors &amp; Carpentry</span></label>
+          <label><input type="radio" name="service" value="Yard &amp; Property"><span>Yard &amp; Property</span></label>
+          <label><input type="radio" name="service" value="Comfort &amp; Efficiency"><span>Comfort &amp; Efficiency</span></label>
+          <label><input type="radio" name="service" value="Home Automation"><span>Home Automation</span></label>
+          <label><input type="radio" name="service" value="Not sure"><span>Not sure</span></label>
         </div>
 
-        <!-- WSS-03 · THE INTAKE THAT GIVES THE WORKER SOMETHING TO WORK WITH.
-             Ported, not redesigned, from the file Drew approved on 2026-09-18:
-             Bridge\BIP\UMBRA\WSS\INTAKE-DRYWALL-HOLES-APPROVED-2026-09-18.html.
-             The reference's bottom two boxes — the JSON payload panel and the
-             derived-scope list under it — are a demonstration built for Drew to
-             judge the data by. They are not customer UI and they are deliberately
-             NOT here, and their headings are not quoted here either, so a grep of
-             this page for them comes back empty.
-
-             Every control below ships DISABLED and is enabled only when its own
-             place is tapped, because a disabled control is never submitted. That is
-             how a place nobody tapped posts no fields at all — not empty ones. With
-             JavaScript off none of it is ever revealed or enabled, so the form stays
-             exactly the form it was. -->
-        <div class="intake" data-intake hidden>
-
-          <div class="step" data-intake-problem hidden>
-            <p class="q">What is it?</p>
-            <p class="hint">Whichever is closest.</p>
-            <ul class="chips">
-              <li class="chip"><label><input type="radio" name="problem" value="Holes to patch" disabled><span>Holes to patch</span></label></li>
-              <li class="chip"><label><input type="radio" name="problem" value="Cracks" disabled><span>Cracks</span></label></li>
-              <li class="chip"><label><input type="radio" name="problem" value="Water stain" disabled><span>Water stain</span></label></li>
-              <li class="chip"><label><input type="radio" name="problem" value="A bad old patch" disabled><span>A bad old patch</span></label></li>
-              <li class="chip"><label><input type="radio" name="problem" value="Just needs painting" disabled><span>Just needs painting</span></label></li>
-              <li class="chip"><label><input type="radio" name="problem" value="Something else" disabled><span>Something else</span></label></li>
-            </ul>
+        <div class="intake2" data-intake2>
+          <div class="v2bar" aria-hidden="true"><i data-v2fill></i></div>
+        <section class="fstep" data-fstep="photos" hidden>
+          <p class="v2q">Show us the damage</p>
+          <p class="v2hint">Photos beat words</p>
+          <label class="v2file"><span class="v2sr">Add photos</span><input class="field file" type="file" name="attachment" accept="image/*" multiple data-photo-input></label>
+          <div class="photo-actions" data-photo-buttons hidden>
+            <button class="btn ghost v2cam" type="button" data-photo-camera aria-label="Take a photo"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h3.2l1.4-2h8.8l1.4 2H21a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg></button>
+            <button class="btn ghost" type="button" data-photo-library><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.6"/><path d="M3 15.5l4.5-4.2 4 3.6 3.4-3 6.1 5.1"/><circle cx="8.3" cy="9.3" r="1.3"/></svg>Add photos</button>
           </div>
-
-          <div class="step" data-intake-holes hidden>
-            <p class="q">Where is it?</p>
-            <p class="hint">Tap any that apply.</p>
-            <div class="room">
-              <svg viewBox="0 0 320 210" role="img" aria-label="A room seen from inside: ceiling, back wall, side wall, a door and a window">
-                <polygon id="z-ceiling" class="zone" points="10,10 310,10 248,62 72,62"></polygon>
-                <polygon id="z-wall-back" class="zone" points="72,62 248,62 248,150 72,150"></polygon>
-                <polygon id="z-wall-side" class="zone" points="10,10 72,62 72,150 10,200"></polygon>
-                <polygon points="72,150 248,150 310,200 10,200" fill="#D9D2C7" fill-opacity=".5" stroke="#D9D2C7" stroke-width="1.2"></polygon>
-                <rect id="z-open-window" class="zone" x="100" y="80" width="52" height="40" rx="2"></rect>
-                <polygon id="z-open-door" class="zone" points="196,78 232,72 232,150 196,150"></polygon>
-                <g id="z-edges">
-                  <path class="edge" d="M72,62 L248,62"></path>
-                  <path class="edge" d="M72,62 L72,150"></path>
-                  <path class="edge" d="M248,62 L248,150"></path>
-                  <path class="edge" d="M10,10 L72,62"></path>
-                </g>
-                <text class="lbl" x="160" y="30" text-anchor="middle">ceiling</text>
-                <text class="lbl" x="160" y="140" text-anchor="middle">wall</text>
-                <!-- the side wall reads at an angle, so its label runs along the wall instead of sitting flat -->
-                <text class="lbl" x="41" y="126" text-anchor="middle" transform="rotate(-13 41 126)">wall</text>
-                <text class="lbl" x="126" y="104" text-anchor="middle">window</text>
-                <text class="lbl" x="214" y="118" text-anchor="middle">door</text>
-              </svg>
-            </div>
-            <ul class="chips">
-              <li class="chip"><label><input type="checkbox" name="problem_area" value="Ceiling" data-area="ceiling" data-z="z-ceiling" disabled><span>Ceiling</span></label></li>
-              <li class="chip"><label><input type="checkbox" name="problem_area" value="Walls" data-area="walls" data-z="z-wall-back z-wall-side" disabled><span>Walls</span></label></li>
-              <li class="chip"><label><input type="checkbox" name="problem_area" value="Corner or edge" data-area="corner" data-z="z-edges" disabled><span>Corner or edge</span></label></li>
-              <li class="chip"><label><input type="checkbox" name="problem_area" value="Around a door or window" data-area="opening" data-z="z-open-door z-open-window" disabled><span>Around a door or window</span></label></li>
-            </ul>
-
-            <p class="q">Tell us about each place</p>
-            <p class="hint">A few quick questions for each place.</p>
-            <div class="area" data-card="ceiling" hidden>
-              <h3><i class="pin"></i>Ceiling</h3>
-              <p class="q">Roughly how many spots?</p>
-              <p class="hint">An estimate is fine — we count them on site.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="1–5" disabled><span>1–5</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="6–15" disabled><span>6–15</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="16–30" disabled><span>16–30</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
-              </ul>
-              <div class="exact"><label>Exact number, if you know it:
-                <input type="number" name="ceiling_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
-              <p class="q">How big is the biggest one here?</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
-              </ul>
-              <p class="q">What state are they in?</p>
-              <p class="hint">Tap any that apply.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Open holes" disabled><span>Open holes</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="ceiling_condition" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-              <p class="q">Smooth or textured?</p>
-              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="ceiling_surface" value="Smooth" disabled><span>Smooth</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_surface" value="Textured" disabled><span>Textured</span></label></li>
-                <li class="chip"><label><input type="radio" name="ceiling_surface" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-            </div>
-            <div class="area" data-card="walls" hidden>
-              <h3><i class="pin"></i>Walls</h3>
-              <p class="q">Roughly how many spots?</p>
-              <p class="hint">An estimate is fine — we count them on site.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="walls_count_band" value="1–5" disabled><span>1–5</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_count_band" value="6–15" disabled><span>6–15</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_count_band" value="16–30" disabled><span>16–30</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
-              </ul>
-              <div class="exact"><label>Exact number, if you know it:
-                <input type="number" name="walls_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
-              <p class="q">How big is the biggest one here?</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="walls_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
-              </ul>
-              <p class="q">What state are they in?</p>
-              <p class="hint">Tap any that apply.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Open holes" disabled><span>Open holes</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="walls_condition" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-              <p class="q">Smooth or textured?</p>
-              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="walls_surface" value="Smooth" disabled><span>Smooth</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_surface" value="Textured" disabled><span>Textured</span></label></li>
-                <li class="chip"><label><input type="radio" name="walls_surface" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-            </div>
-            <div class="area" data-card="corner" hidden>
-              <h3><i class="pin"></i>Corner or edge</h3>
-              <p class="q">Roughly how many spots?</p>
-              <p class="hint">An estimate is fine — we count them on site.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="corner_count_band" value="1–5" disabled><span>1–5</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_count_band" value="6–15" disabled><span>6–15</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_count_band" value="16–30" disabled><span>16–30</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
-              </ul>
-              <div class="exact"><label>Exact number, if you know it:
-                <input type="number" name="corner_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
-              <p class="q">How big is the biggest one here?</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="corner_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
-              </ul>
-              <p class="q">What state are they in?</p>
-              <p class="hint">Tap any that apply.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Open holes" disabled><span>Open holes</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="corner_condition" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-              <p class="q">Smooth or textured?</p>
-              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="corner_surface" value="Smooth" disabled><span>Smooth</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_surface" value="Textured" disabled><span>Textured</span></label></li>
-                <li class="chip"><label><input type="radio" name="corner_surface" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-            </div>
-            <div class="area" data-card="opening" hidden>
-              <h3><i class="pin"></i>Around a door or window</h3>
-              <p class="q">Roughly how many spots?</p>
-              <p class="hint">An estimate is fine — we count them on site.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="opening_count_band" value="1–5" disabled><span>1–5</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_count_band" value="6–15" disabled><span>6–15</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_count_band" value="16–30" disabled><span>16–30</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_count_band" value="More than 30" disabled><span>More than 30</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_count_band" value="Not sure — you count" disabled><span>Not sure — you count</span></label></li>
-              </ul>
-              <div class="exact"><label>Exact number, if you know it:
-                <input type="number" name="opening_count_exact" min="0" inputmode="numeric" placeholder="—" disabled></label></div>
-              <p class="q">How big is the biggest one here?</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="opening_biggest" value="Pinhole" disabled><span><i class="dot" style="width:4px;height:4px"></i>Pinhole</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_biggest" value="Coin" disabled><span><i class="dot" style="width:11px;height:11px"></i>Coin</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_biggest" value="Golf ball" disabled><span><i class="dot" style="width:20px;height:20px"></i>Golf ball</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_biggest" value="Fist or larger" disabled><span><i class="dot" style="width:30px;height:30px"></i>Fist or larger</span></label></li>
-              </ul>
-              <p class="q">What state are they in?</p>
-              <p class="hint">Tap any that apply.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Open holes" disabled><span>Open holes</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Already patched but it shows" disabled><span>Already patched but it shows</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Still has a plastic anchor in it" disabled><span>Still has a plastic anchor in it</span></label></li>
-                <li class="chip"><label><input type="checkbox" name="opening_condition" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-              <p class="q">Smooth or textured?</p>
-              <p class="hint">Run your hand over it. Textured takes longer to match.</p>
-              <ul class="chips">
-                <li class="chip"><label><input type="radio" name="opening_surface" value="Smooth" disabled><span>Smooth</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_surface" value="Textured" disabled><span>Textured</span></label></li>
-                <li class="chip"><label><input type="radio" name="opening_surface" value="Not sure" disabled><span>Not sure</span></label></li>
-              </ul>
-            </div>
-
-            <p class="q">Do you have the leftover paint?</p>
-            <p class="hint">An old can with the color name on it saves a trip.</p>
-            <ul class="chips">
-              <li class="chip"><label><input type="radio" name="paint_on_site" value="Yes" disabled><span>Yes</span></label></li>
-              <li class="chip"><label><input type="radio" name="paint_on_site" value="No" disabled><span>No</span></label></li>
-              <li class="chip"><label><input type="radio" name="paint_on_site" value="Not sure" checked disabled><span>Not sure</span></label></li>
-            </ul>
-
-            <!-- The honesty gate, and it is in the data rather than in anyone's
-                 judgement: every tapped place with a count means a price can be
-                 generated with no guessing; one count left to us means NOT QUOTABLE
-                 until we look. -->
-            <p class="gate" data-gate hidden></p>
+          <input type="file" accept="image/*" capture="environment" data-photo-capture hidden aria-hidden="true" tabindex="-1" style="display:none">
+          <ul class="pix" data-photo-list aria-label="Add photos" hidden></ul>
+        </section>
+        <section class="fstep" data-fstep="what" hidden>
+          <p class="v2q">What is it?</p>
+          <p class="v2hint">Pick all that apply</p>
+          <ul class="v2opts">
+            <li><label class="v2opt"><input type="checkbox" name="problem" value="Holes"><span>Holes</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="problem" value="Cracks"><span>Cracks</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="problem" value="Water stain"><span>Water stain</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="problem" value="A patch that shows"><span>A patch that shows</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="problem" value="Just paint"><span>Just paint</span></label></li>
+            <li class="v2last"><label class="v2opt"><input type="checkbox" name="problem" value="Something else"><span>Something else</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="where" hidden>
+          <p class="v2q">Where is it?</p>
+          <p class="v2hint">Pick all that apply</p>
+          <div class="room" aria-hidden="true">
+            <svg viewBox="0 0 320 210" role="img" aria-label="A room seen from inside: ceiling, back wall, side wall, a door and a window">
+              <polygon id="z-ceiling" class="zone" points="10,10 310,10 248,62 72,62"></polygon>
+              <polygon id="z-wall-back" class="zone" points="72,62 248,62 248,150 72,150"></polygon>
+              <polygon id="z-wall-side" class="zone" points="10,10 72,62 72,150 10,200"></polygon>
+              <polygon points="72,150 248,150 310,200 10,200" fill="#D9D2C7" fill-opacity=".5" stroke="#D9D2C7" stroke-width="1.2"></polygon>
+              <rect id="z-open-window" class="zone" x="100" y="80" width="52" height="40" rx="2"></rect>
+              <polygon id="z-open-door" class="zone" points="196,78 232,72 232,150 196,150"></polygon>
+              <g id="z-edges">
+                <path class="edge" d="M72,62 L248,62"></path>
+                <path class="edge" d="M72,62 L72,150"></path>
+                <path class="edge" d="M248,62 L248,150"></path>
+                <path class="edge" d="M10,10 L72,62"></path>
+              </g>
+            </svg>
+          </div>
+          <ul class="v2opts">
+            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Ceiling" data-z="z-ceiling"><span>Ceiling</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Walls" data-z="z-wall-back z-wall-side"><span>Walls</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Corner or edge" data-z="z-edges"><span>Corner or edge</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Door or window" data-z="z-open-door z-open-window"><span>Door or window</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="count-ceiling" hidden>
+          <p class="v2q" data-q-one="How many spots?" data-q-both="How many on the ceiling?">How many on the ceiling?</p>
+          <ul class="v2opts">
+            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="1–5"><span>1–5</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="6–15"><span>6–15</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="16–30"><span>16–30</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="30+"><span>30+</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="Not sure"><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="count-walls" hidden>
+          <p class="v2q" data-q-one="How many spots?" data-q-both="How many on the walls?">How many on the walls?</p>
+          <ul class="v2opts">
+            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="1–5"><span>1–5</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="6–15"><span>6–15</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="16–30"><span>16–30</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="30+"><span>30+</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="Not sure"><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="size" hidden>
+          <p class="v2q">Biggest one?</p>
+          <ul class="v2opts">
+            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Pinhole"><span>Pinhole</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Coin"><span>Coin</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Golf ball"><span>Golf ball</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Fist"><span>Fist</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Basketball"><span>Basketball</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="left" hidden>
+          <p class="v2q">Anything still in them?</p>
+          <p class="v2hint">Pick all that apply</p>
+          <ul class="v2opts">
+            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Nothing"><span>Nothing</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Screws or nails"><span>Screws or nails</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Plastic anchors"><span>Plastic anchors</span></label></li>
+            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Not sure"><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="tex-walls" hidden>
+          <p class="v2q">Wall texture?</p>
+          <ul class="v2opts v2tex">
+            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Smooth"><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Smooth</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Orange peel"><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Orange peel</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Knockdown"><img src="/assets/img/tex-knockdown.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Knockdown</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Popcorn"><img src="/assets/img/tex-popcorn.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Popcorn</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Not sure"><img src="/assets/img/tex-unsure.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="tex-ceiling" hidden>
+          <p class="v2q">Ceiling texture?</p>
+          <ul class="v2opts v2tex">
+            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Smooth"><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Smooth</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Orange peel"><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Orange peel</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Knockdown"><img src="/assets/img/tex-knockdown.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Knockdown</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Popcorn"><img src="/assets/img/tex-popcorn.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Popcorn</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Not sure"><img src="/assets/img/tex-unsure.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="paint" hidden>
+          <p class="v2q">Do you have the leftover paint?</p>
+          <ul class="v2opts">
+            <li><label class="v2opt"><input type="radio" name="paint_on_site" value="Yes"><span>Yes</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="paint_on_site" value="No"><span>No</span></label></li>
+            <li><label class="v2opt"><input type="radio" name="paint_on_site" value="Not sure"><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="name" hidden>
+          <label class="v2field"><span class="v2q">Your name</span><input class="field" type="text" name="name" autocomplete="name" required enterkeyhint="next"></label>
+        </section>
+        <section class="fstep" data-fstep="phone" hidden>
+          <label class="v2field"><span class="v2q">Phone</span><input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next"></label>
+        </section>
+        <section class="fstep" data-fstep="address" hidden>
+          <label class="v2field"><span class="v2q">Address</span><input class="field" type="text" name="address" autocomplete="street-address" enterkeyhint="next"></label>
+        </section>
+        <section class="fstep" data-fstep="notes" hidden>
+          <label class="v2field"><span class="v2q">Anything else?</span><span class="v2hint">Optional</span><textarea class="field" name="what" rows="4"></textarea></label>
+        </section>
+        <section class="fstep" data-fstep="send" hidden>
+          <button class="btn wide" type="submit">Send</button>
+        </section>
+          <!-- one visible answer, both names on the wire (spec §6) -->
+          <div class="v2mirrors" hidden aria-hidden="true" data-v2mirrors>
+            <input type="hidden" name="walls_biggest" value="" data-mirror="ceiling_biggest">
+          </div>
+          <div class="v2nav">
+            <button class="btn ghost v2back" type="button" data-v2back>Back</button>
+            <button class="btn v2next" type="button" data-v2next>Next</button>
           </div>
         </div>
-
-        <p class="fine" style="margin:0">All three fields are required.</p>
-        <label>Your name
-          <input class="field" type="text" name="name" autocomplete="name" required enterkeyhint="next">
-        </label>
-        <label>Your phone <small>So we can text you back within 2 hours.</small>
-          <input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next">
-        </label>
-        <label>Street and city <small>So we know it's in our area.</small><input class="field" type="text" name="address" autocomplete="street-address"></label>
-        <label class="opt"><input type="checkbox" name="idioma" value="español"><span>Prefiero español <small>Optional.</small></span></label>
-        <label><span data-what-label>What's wrong?</span> <small data-what-hint>A sentence is enough. Where it is and what it's doing.</small>
-          <textarea class="field" name="what" rows="4" required></textarea>
-        </label>
-        <!-- R17d · the photo block's final wording. Line 1 is deliberately per-surface
-             rather than "the whole wall or ceiling": it scales the photo count to the
-             size of the job. Line 3 removes the fear of sending too many, which is the
-             thing that actually holds a customer to two photos. -->
-        <p class="hint" style="margin-bottom:.35rem">Turn the light on. The more we can see, the tighter the price — often with no visit at all.</p>
-        <ol class="guide">
-          <li><b>One shot of each wall or ceiling with spots on it.</b> Stand back so the whole surface is in frame.</li>
-          <li><b>A close-up of the worst one.</b> Put a coin or a pen next to it so we can see the size.</li>
-          <li><b>Anything else that helps.</b> More is fine — we would rather have too many than too few.</li>
-        </ol>
-        <label>Photos of the problem <small>Optional, but it gets you a real price faster — often without a visit first.</small>
-          <input class="field file" type="file" name="attachment" accept="image/*" multiple data-photo-input>
-        </label>
-        <div class="photo-actions" data-photo-buttons hidden>
-          <button class="btn ghost" type="button" data-photo-camera><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h3.2l1.4-2h8.8l1.4 2H21a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>Take a photo</button>
-          <button class="btn ghost" type="button" data-photo-library><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.6"/><path d="M3 15.5l4.5-4.2 4 3.6 3.4-3 6.1 5.1"/><circle cx="8.3" cy="9.3" r="1.3"/></svg>Choose photos</button>
-        </div>
-        <input type="file" accept="image/*" capture="environment" data-photo-capture hidden aria-hidden="true" tabindex="-1" style="display:none">
-        <ul class="pix" data-photo-list aria-label="Photos you have added" hidden></ul>
-        <p class="fine" data-shrink-note style="margin:-.5rem 0 0">Your phone's photos are shrunk here before sending, so this works on any connection.</p>
-        <p class="fine" style="margin:0">Your photos and details go to Drew by email through FormSubmit, our mail relay. We don't sell them, we don't post them without asking, and you can tell us to delete them any time.</p>
-
-        <button class="btn wide" type="submit">Send request</button>
-        <p class="fine">Prefer to talk? <a href="tel:+19565566438">Call (956) 556-6438</a> or <a href="sms:+19565566438">text us</a>.</p>
       </form>
+      <p class="fine">Your photos and details go to Drew by email through FormSubmit, our mail relay. We don't sell them, we don't post them without asking, and you can tell us to delete them any time.</p>
+      <p class="fine">Prefer to talk? <a href="tel:+19565566438">Call (956) 556-6438</a> or <a href="sms:+19565566438">text us</a>.</p>
     </div>
   </section>
 </main>

@@ -333,3 +333,68 @@ textarea.field { min-height: 8rem; resize: vertical; }
    are neither, so they are put back to what the approved reference uses. */
 .intake .chip label { display: block; gap: 0; font-weight: 500; }
 .intake .exact label { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 400; }
+
+/* ============================================================================
+   form v2 — the 14-screen intake wizard (INTAKE-FORM-V2-SPEC-2026-09-21)
+   One question per screen, full-width tappable rows, a thin progress line.
+   Nothing above this block is changed; the v1 `.intake` rules are left in place
+   for /assets/umbra-intake.js, which no page references any more.
+   ========================================================================== */
+.v2service { display: none; }
+.intake2 { margin: 0; }
+.intake2 [hidden] { display: none !important; }
+.intake2 .fstep { display: grid; gap: 0.6rem; }
+/* the thin progress line */
+.v2bar { height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 0 0 1.1rem; }
+.v2bar i { display: block; height: 100%; width: 0; background: var(--teal); transition: width 0.18s ease-out; }
+/* the question, and the one short hint under it */
+.intake2 .v2q { font-weight: 600; font-size: 1.25rem; line-height: 1.25; margin: 0; }
+.intake2 .v2hint { font-size: 0.95rem; color: var(--muted); margin: -0.35rem 0 0.2rem; }
+/* full-width option rows, 56px tall, one tap target per answer */
+.v2opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.v2opts li { margin: 0; }
+.req .v2opt { position: relative; display: flex; align-items: center; gap: 0.75rem; width: 100%;
+  min-height: 56px; padding: 0.8rem 1rem; border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--paper); font-weight: 500; cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s; }
+.req .v2opt input { position: absolute; opacity: 0; width: 100%; height: 100%; left: 0; top: 0; margin: 0; cursor: pointer; }
+.req .v2opt span { flex: 1 1 auto; }
+.req .v2opt:has(input:checked), .req .v2opt.on { background: var(--teal); border-color: var(--teal); color: var(--white); }
+.req .v2opt:has(input:focus-visible) { outline: 3px solid var(--tyrian); outline-offset: 2px; }
+/* the tick mark, so a chosen row reads without relying on colour alone */
+.req .v2opt::after { content: ""; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid var(--line); background: var(--white); }
+.req .v2opt:has(input:checked)::after, .req .v2opt.on::after { border-color: var(--white); background: var(--white);
+  box-shadow: inset 0 0 0 5px var(--teal); }
+/* "Something else" sits last, after a divider */
+.v2opts li.v2last { margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--line); }
+/* texture picture chips */
+.v2opts.v2tex { grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr)); }
+.req .v2opts.v2tex .v2opt { flex-direction: column; align-items: flex-start; gap: 0.5rem; min-height: 0; padding: 0.7rem 0.75rem; }
+.v2opts.v2tex img { width: 100%; height: auto; max-width: 76px; border-radius: 8px; border: 1px solid var(--line); background: var(--white); }
+.req .v2opts.v2tex .v2opt::after { position: absolute; top: 0.6rem; right: 0.6rem; }
+/* one-line and multi-line answers */
+.req .intake2 .v2field { display: grid; gap: 0.35rem; font-weight: 600; }
+.intake2 .v2field .field { font-weight: 400; }
+.v2sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.req .intake2 .v2file { display: block; }
+.intake2 .v2cam { flex: 0 0 auto; min-width: 56px; }
+.intake2 .v2cam svg { width: 22px; height: 22px; }
+/* Back · Next */
+.v2nav { display: flex; gap: 0.75rem; margin-top: 1.2rem; }
+.v2nav .btn { flex: 1 1 auto; min-height: 52px; }
+.v2nav .v2back { flex: 0 0 8rem; }
+/* the room: an illustration, never a control (the v1 defect was zones that
+   looked tappable and were not wired at all) */
+.intake2 .room { background: var(--paper-2); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 0.5rem; margin: 0 0 0.2rem; }
+.intake2 .room, .intake2 .room svg, .intake2 .zone, .intake2 .edge { pointer-events: none; }
+.intake2 .room svg { width: 100%; display: block; }
+.intake2 .zone { fill: transparent; stroke: var(--teal); stroke-width: 1.6; vector-effect: non-scaling-stroke; transition: fill 0.15s; }
+.intake2 .zone.on { fill: var(--teal); fill-opacity: 0.3; }
+.intake2 .edge { stroke: var(--teal); stroke-width: 1.6; fill: none; vector-effect: non-scaling-stroke; }
+.intake2 .edge.on { stroke: var(--vermillion-ink); stroke-width: 3.4; }
+@media (max-width: 420px) {
+  .intake2 .v2q { font-size: 1.15rem; }
+  .v2nav .v2back { flex: 0 0 6.5rem; }
+}
