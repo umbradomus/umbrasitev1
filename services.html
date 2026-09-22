@@ -15,7 +15,7 @@
 <script src="/assets/umbra-endpoint.js?v=3"></script>
 <!-- INTAKE v2 · the 14-screen wizard (INTAKE-FORM-V2-SPEC-2026-09-21). The v1 file
      /assets/umbra-intake.js stays in the repo and is no longer referenced. -->
-<script src="/assets/umbra-intake-v2.js?v=1" defer></script>
+<script src="/assets/umbra-intake-v2.js?v=3" defer></script>
 <script src="/assets/umbra-two-channels.js?v=2" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
@@ -147,7 +147,6 @@
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://www.umbradomus.com/request-received">
         <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <input type="hidden" name="idioma" value="">
 
         <!-- INTAKE v2 (INTAKE-FORM-V2-SPEC-2026-09-21 §3-§6). One question per screen,
              photos first, bands only, no per-area repetition. Every visible word is a
@@ -171,7 +170,7 @@
           <div class="v2bar" aria-hidden="true"><i data-v2fill></i></div>
         <section class="fstep" data-fstep="photos" hidden>
           <p class="v2q">Show us the damage</p>
-          <p class="v2hint">Photos beat words</p>
+          <p class="v2hint">Photos beat words &mdash; the more the better</p>
           <label class="v2file"><span class="v2sr">Add photos</span><input class="field file" type="file" name="attachment" accept="image/*" multiple data-photo-input></label>
           <div class="photo-actions" data-photo-buttons hidden>
             <button class="btn ghost v2cam" type="button" data-photo-camera aria-label="Take a photo"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h3.2l1.4-2h8.8l1.4 2H21a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg></button>
@@ -180,110 +179,124 @@
           <input type="file" accept="image/*" capture="environment" data-photo-capture hidden aria-hidden="true" tabindex="-1" style="display:none">
           <ul class="pix" data-photo-list aria-label="Add photos" hidden></ul>
         </section>
-        <section class="fstep" data-fstep="what" hidden>
+        <section class="fstep" data-fstep="what" data-need="1" hidden>
           <p class="v2q">What is it?</p>
           <p class="v2hint">Pick all that apply</p>
           <ul class="v2opts">
-            <li><label class="v2opt"><input type="checkbox" name="problem" value="Holes"><span>Holes</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="problem" value="Cracks"><span>Cracks</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="problem" value="Water stain"><span>Water stain</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="problem" value="A patch that shows"><span>A patch that shows</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="problem" value="Just paint"><span>Just paint</span></label></li>
-            <li class="v2last"><label class="v2opt"><input type="checkbox" name="problem" value="Something else"><span>Something else</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Holes"><i class="v2mark" aria-hidden="true"></i><span>Holes</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Cracks"><i class="v2mark" aria-hidden="true"></i><span>Cracks</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Water stain"><i class="v2mark" aria-hidden="true"></i><span>Water stain</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="A patch that shows"><i class="v2mark" aria-hidden="true"></i><span>A patch that shows</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Just paint"><i class="v2mark" aria-hidden="true"></i><span>Just paint</span></label></li>
+            <li class="v2last"><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Something else"><i class="v2mark" aria-hidden="true"></i><span>Something else</span></label></li>
           </ul>
+          <p class="v2need" role="alert" hidden>Pick at least one</p>
         </section>
-        <section class="fstep" data-fstep="where" hidden>
+        <section class="fstep" data-fstep="where" data-need="1" hidden>
           <p class="v2q">Where is it?</p>
           <p class="v2hint">Pick all that apply</p>
-          <div class="room" aria-hidden="true">
-            <svg viewBox="0 0 320 210" role="img" aria-label="A room seen from inside: ceiling, back wall, side wall, a door and a window">
-              <polygon id="z-ceiling" class="zone" points="10,10 310,10 248,62 72,62"></polygon>
-              <polygon id="z-wall-back" class="zone" points="72,62 248,62 248,150 72,150"></polygon>
-              <polygon id="z-wall-side" class="zone" points="10,10 72,62 72,150 10,200"></polygon>
-              <polygon points="72,150 248,150 310,200 10,200" fill="#D9D2C7" fill-opacity=".5" stroke="#D9D2C7" stroke-width="1.2"></polygon>
-              <rect id="z-open-window" class="zone" x="100" y="80" width="52" height="40" rx="2"></rect>
-              <polygon id="z-open-door" class="zone" points="196,78 232,72 232,150 196,150"></polygon>
-              <g id="z-edges">
-                <path class="edge" d="M72,62 L248,62"></path>
-                <path class="edge" d="M72,62 L72,150"></path>
-                <path class="edge" d="M248,62 L248,150"></path>
-                <path class="edge" d="M10,10 L72,62"></path>
-              </g>
-            </svg>
-          </div>
           <ul class="v2opts">
-            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Ceiling" data-z="z-ceiling"><span>Ceiling</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Walls" data-z="z-wall-back z-wall-side"><span>Walls</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Corner or edge" data-z="z-edges"><span>Corner or edge</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="problem_area" value="Door or window" data-z="z-open-door z-open-window"><span>Door or window</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Ceiling"><i class="v2mark" aria-hidden="true"></i><span>Ceiling</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Walls"><i class="v2mark" aria-hidden="true"></i><span>Walls</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Corner or edge"><i class="v2mark" aria-hidden="true"></i><span>Corner or edge</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Door or window"><i class="v2mark" aria-hidden="true"></i><span>Door or window</span></label></li>
+          </ul>
+          <p class="v2need" role="alert" hidden>Pick at least one</p>
+        </section>
+        <section class="fstep" data-fstep="ceiling-count" data-surface="ceiling" hidden>
+          <p class="v2where" data-surface="ceiling"><span>Ceiling</span></p>
+          <p class="v2q">How many spots?</p>
+          <ul class="v2opts">
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_count_band" value="1–5"><i class="v2mark" aria-hidden="true"></i><span>1–5</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_count_band" value="6–15"><i class="v2mark" aria-hidden="true"></i><span>6–15</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_count_band" value="16–30"><i class="v2mark" aria-hidden="true"></i><span>16–30</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_count_band" value="30+"><i class="v2mark" aria-hidden="true"></i><span>30+</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_count_band" value="Not sure"><i class="v2mark" aria-hidden="true"></i><span>Not sure</span></label></li>
           </ul>
         </section>
-        <section class="fstep" data-fstep="count-ceiling" hidden>
-          <p class="v2q" data-q-one="How many spots?" data-q-both="How many on the ceiling?">How many on the ceiling?</p>
-          <ul class="v2opts">
-            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="1–5"><span>1–5</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="6–15"><span>6–15</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="16–30"><span>16–30</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="30+"><span>30+</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_count_band" value="Not sure"><span>Not sure</span></label></li>
-          </ul>
-        </section>
-        <section class="fstep" data-fstep="count-walls" hidden>
-          <p class="v2q" data-q-one="How many spots?" data-q-both="How many on the walls?">How many on the walls?</p>
-          <ul class="v2opts">
-            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="1–5"><span>1–5</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="6–15"><span>6–15</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="16–30"><span>16–30</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="30+"><span>30+</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_count_band" value="Not sure"><span>Not sure</span></label></li>
-          </ul>
-        </section>
-        <section class="fstep" data-fstep="size" hidden>
+        <section class="fstep" data-fstep="ceiling-size" data-surface="ceiling" hidden>
+          <p class="v2where" data-surface="ceiling"><span>Ceiling</span></p>
           <p class="v2q">Biggest one?</p>
           <ul class="v2opts">
-            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Pinhole"><span>Pinhole</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Coin"><span>Coin</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Golf ball"><span>Golf ball</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Fist"><span>Fist</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_biggest" value="Basketball"><span>Basketball</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_biggest" value="Pinhole"><i class="v2mark" aria-hidden="true"></i><span>Pinhole</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_biggest" value="Coin"><i class="v2mark" aria-hidden="true"></i><span>Coin</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_biggest" value="Golf ball"><i class="v2mark" aria-hidden="true"></i><span>Golf ball</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_biggest" value="Fist"><i class="v2mark" aria-hidden="true"></i><span>Fist</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_biggest" value="Basketball"><i class="v2mark" aria-hidden="true"></i><span>Basketball</span></label></li>
           </ul>
         </section>
-        <section class="fstep" data-fstep="left" hidden>
+        <section class="fstep" data-fstep="ceiling-left" data-surface="ceiling" hidden>
+          <p class="v2where" data-surface="ceiling"><span>Ceiling</span></p>
           <p class="v2q">Anything still in them?</p>
           <p class="v2hint">Pick all that apply</p>
           <ul class="v2opts">
-            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Nothing"><span>Nothing</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Screws or nails"><span>Screws or nails</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Plastic anchors"><span>Plastic anchors</span></label></li>
-            <li><label class="v2opt"><input type="checkbox" name="ceiling_condition" value="Not sure"><span>Not sure</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="ceiling_condition" value="Nothing"><i class="v2mark" aria-hidden="true"></i><span>Nothing</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="ceiling_condition" value="Screws or nails"><i class="v2mark" aria-hidden="true"></i><span>Screws or nails</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="ceiling_condition" value="Plastic anchors"><i class="v2mark" aria-hidden="true"></i><span>Plastic anchors</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="ceiling_condition" value="Not sure"><i class="v2mark" aria-hidden="true"></i><span>Not sure</span></label></li>
           </ul>
         </section>
-        <section class="fstep" data-fstep="tex-walls" hidden>
-          <p class="v2q">Wall texture?</p>
+        <section class="fstep" data-fstep="ceiling-tex" data-surface="ceiling" hidden>
+          <p class="v2where" data-surface="ceiling"><span>Ceiling</span></p>
+          <p class="v2q">Texture?</p>
           <ul class="v2opts v2tex">
-            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Smooth"><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Smooth</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Orange peel"><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Orange peel</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Knockdown"><img src="/assets/img/tex-knockdown.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Knockdown</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Popcorn"><img src="/assets/img/tex-popcorn.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Popcorn</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="walls_surface" value="Not sure"><img src="/assets/img/tex-unsure.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Not sure</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_surface" value="Smooth"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Smooth</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_surface" value="Orange peel"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Orange peel</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_surface" value="Knockdown"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-knockdown.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Knockdown</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_surface" value="Popcorn"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-popcorn.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Popcorn</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="ceiling_surface" value="Not sure"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-unsure.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Not sure</span></label></li>
           </ul>
         </section>
-        <section class="fstep" data-fstep="tex-ceiling" hidden>
-          <p class="v2q">Ceiling texture?</p>
+        <section class="fstep" data-fstep="walls-count" data-surface="walls" hidden>
+          <p class="v2where" data-surface="walls"><span>Walls</span></p>
+          <p class="v2q">How many spots?</p>
+          <ul class="v2opts">
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_count_band" value="1–5"><i class="v2mark" aria-hidden="true"></i><span>1–5</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_count_band" value="6–15"><i class="v2mark" aria-hidden="true"></i><span>6–15</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_count_band" value="16–30"><i class="v2mark" aria-hidden="true"></i><span>16–30</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_count_band" value="30+"><i class="v2mark" aria-hidden="true"></i><span>30+</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_count_band" value="Not sure"><i class="v2mark" aria-hidden="true"></i><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="walls-size" data-surface="walls" hidden>
+          <p class="v2where" data-surface="walls"><span>Walls</span></p>
+          <p class="v2q">Biggest one?</p>
+          <ul class="v2opts">
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_biggest" value="Pinhole"><i class="v2mark" aria-hidden="true"></i><span>Pinhole</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_biggest" value="Coin"><i class="v2mark" aria-hidden="true"></i><span>Coin</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_biggest" value="Golf ball"><i class="v2mark" aria-hidden="true"></i><span>Golf ball</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_biggest" value="Fist"><i class="v2mark" aria-hidden="true"></i><span>Fist</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_biggest" value="Basketball"><i class="v2mark" aria-hidden="true"></i><span>Basketball</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="walls-left" data-surface="walls" hidden>
+          <p class="v2where" data-surface="walls"><span>Walls</span></p>
+          <p class="v2q">Anything still in them?</p>
+          <p class="v2hint">Pick all that apply</p>
+          <ul class="v2opts">
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="walls_condition" value="Nothing"><i class="v2mark" aria-hidden="true"></i><span>Nothing</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="walls_condition" value="Screws or nails"><i class="v2mark" aria-hidden="true"></i><span>Screws or nails</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="walls_condition" value="Plastic anchors"><i class="v2mark" aria-hidden="true"></i><span>Plastic anchors</span></label></li>
+            <li><label class="v2opt v2checkbox"><input type="checkbox" name="walls_condition" value="Not sure"><i class="v2mark" aria-hidden="true"></i><span>Not sure</span></label></li>
+          </ul>
+        </section>
+        <section class="fstep" data-fstep="walls-tex" data-surface="walls" hidden>
+          <p class="v2where" data-surface="walls"><span>Walls</span></p>
+          <p class="v2q">Texture?</p>
           <ul class="v2opts v2tex">
-            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Smooth"><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Smooth</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Orange peel"><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Orange peel</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Knockdown"><img src="/assets/img/tex-knockdown.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Knockdown</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Popcorn"><img src="/assets/img/tex-popcorn.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Popcorn</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="ceiling_surface" value="Not sure"><img src="/assets/img/tex-unsure.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Not sure</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_surface" value="Smooth"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Smooth</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_surface" value="Orange peel"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Orange peel</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_surface" value="Knockdown"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-knockdown.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Knockdown</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_surface" value="Popcorn"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-popcorn.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Popcorn</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="walls_surface" value="Not sure"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-unsure.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Not sure</span></label></li>
           </ul>
         </section>
         <section class="fstep" data-fstep="paint" hidden>
           <p class="v2q">Do you have the leftover paint?</p>
           <ul class="v2opts">
-            <li><label class="v2opt"><input type="radio" name="paint_on_site" value="Yes"><span>Yes</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="paint_on_site" value="No"><span>No</span></label></li>
-            <li><label class="v2opt"><input type="radio" name="paint_on_site" value="Not sure"><span>Not sure</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="paint_on_site" value="Yes"><i class="v2mark" aria-hidden="true"></i><span>Yes</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="paint_on_site" value="No"><i class="v2mark" aria-hidden="true"></i><span>No</span></label></li>
+            <li><label class="v2opt v2radio"><input type="radio" name="paint_on_site" value="Not sure"><i class="v2mark" aria-hidden="true"></i><span>Not sure</span></label></li>
           </ul>
         </section>
         <section class="fstep" data-fstep="name" hidden>
@@ -299,15 +312,13 @@
           <label class="v2field"><span class="v2q">Anything else?</span><span class="v2hint">Optional</span><textarea class="field" name="what" rows="4"></textarea></label>
         </section>
         <section class="fstep" data-fstep="send" hidden>
-          <button class="btn wide" type="submit">Send</button>
+          <p class="v2q">All set?</p>
+          <p class="v2hint">We reply within 2 hours, 7am&ndash;9pm.</p>
         </section>
-          <!-- one visible answer, both names on the wire (spec §6) -->
-          <div class="v2mirrors" hidden aria-hidden="true" data-v2mirrors>
-            <input type="hidden" name="walls_biggest" value="" data-mirror="ceiling_biggest">
-          </div>
           <div class="v2nav">
             <button class="btn ghost v2back" type="button" data-v2back>Back</button>
             <button class="btn v2next" type="button" data-v2next>Next</button>
+            <button class="btn v2send" type="submit" data-v2send hidden>Send</button>
           </div>
         </div>
       </form>
