@@ -34,20 +34,20 @@ L = {
     'Yes': ('Yes', 'Sí'), 'No': ('No', 'No'),
 }
 T = {
-    'photo.q': ('Show us the damage', 'Enséñanos el daño'),
-    'photo.hint': ('Photos beat words &mdash; the more the better', 'Una foto dice más &mdash; entre más, mejor'),
+    'photo.q': ('Show us the problem areas', 'Muéstrenos las áreas con problema'),
+    'photo.hint': ('Photos help us quote accurately &mdash; the more, the better', 'Las fotos nos ayudan a cotizar bien &mdash; entre más, mejor'),
     'photo.add': ('Add photos', 'Agregar fotos'), 'photo.take': ('Take a photo', 'Tomar una foto'),
-    'multi': ('Pick all that apply', 'Puedes escoger más de una'),
-    'need1': ('Pick at least one', 'Escoge por lo menos una'),
-    'what.q': ('What is it?', '¿Qué es?'), 'where.q': ('Where is it?', '¿Dónde está?'),
+    'multi': ('Select all that apply', 'Seleccione todas las que apliquen'),
+    'need1': ('Please select at least one', 'Seleccione por lo menos una'),
+    'what.q': ('What is the issue?', '¿Cuál es el problema?'), 'where.q': ('Where is the issue?', '¿Dónde está el problema?'),
     'ceiling': ('Ceiling', 'Techo'), 'walls': ('Walls', 'Paredes'),
-    'count.q': ('How many spots?', '¿Cuántos son?'), 'size.q': ('Biggest one?', '¿El más grande?'),
-    'left.q': ('Anything still in them?', '¿Todavía tienen algo adentro?'), 'tex.q': ('Texture?', '¿Qué textura?'),
-    'paint.q': ('Do you have the leftover paint?', '¿Tiene la pintura que sobró?'),
+    'count.q': ('How many areas need repair?', '¿Cuántas áreas necesitan reparación?'), 'size.q': ('How large is the biggest one?', '¿De qué tamaño es la más grande?'),
+    'left.q': ('Is anything still in the holes?', '¿Queda algo dentro de los hoyos?'), 'tex.q': ('What is the surface texture?', '¿Qué textura tiene la superficie?'),
+    'paint.q': ('Do you have leftover paint on hand?', '¿Tiene pintura sobrante a la mano?'),
     'name.q': ('Your name', 'Su nombre'), 'phone.q': ('Phone', 'Teléfono'), 'addr.q': ('Address', 'Dirección'),
-    'notes.q': ('Anything else?', '¿Algo más?'), 'opt': ('Optional', 'Opcional'),
-    'send.q': ('All set?', '¿Todo listo?'),
-    'send.hint': ('We reply within 2 hours, 7am&ndash;9pm.', 'Respondemos en menos de 2 horas, de 7am a 9pm.'),
+    'notes.q': ('Anything else we should know?', '¿Algo más que debamos saber?'), 'opt': ('Optional', 'Opcional'),
+    'send.q': ('Ready to send?', '¿Listo para enviar?'),
+    'send.hint': ('We reply within 2 hours, 7am&ndash;9pm, seven days a week.', 'Respondemos en menos de 2 horas, de 7am a 9pm, los siete días.'),
     'back': ('Back', 'Atrás'), 'next': ('Next', 'Siguiente'), 'send': ('Send', 'Enviar'),
 }
 TEX_IMG = {'Smooth': 'tex-smooth', 'Orange peel': 'tex-orange-peel', 'Knockdown': 'tex-knockdown', 'Popcorn': 'tex-popcorn', 'Not sure': 'tex-unsure'}
@@ -162,10 +162,22 @@ def patch(page, lang):
     if not m:
         sys.exit(f'{page}: wizard block not found')
     s = s[:m.start()] + build(lang) + '\n      </form>' + s[m.end():]
-    s = s.replace('/assets/umbra-intake-v2.js?v=1', '/assets/umbra-intake-v2.js?v=3').replace('/assets/umbra-intake-v2.js?v=2', '/assets/umbra-intake-v2.js?v=3')
+    s = re.sub(r'/assets/umbra-intake-v2\.js\?v=\d+', '/assets/umbra-intake-v2.js?v=4', s)
     p.write_text(s, encoding='utf-8')
     print(page, 'ok')
 
 
 patch('services.html', 'en')
 patch('es/servicios.html', 'es')
+
+# THE STYLESHEET VERSION TAG. Vercel serves /assets/site.css with a 7-day cache
+# and the pages linked it with no version, so a phone kept yesterday's rules under
+# today's HTML (measured on Drew's phone 2026-09-22). Every page now asks for
+# site.css?v=N; bump CSS_V whenever site.css changes.
+CSS_V = 3
+for page in list(ROOT.glob('*.html')) + list(ROOT.glob('es/*.html')):
+    h = page.read_text(encoding='utf-8')
+    h2 = re.sub(r'/assets/site\.css(\?v=\d+)?', f'/assets/site.css?v={CSS_V}', h)
+    if h2 != h:
+        page.write_text(h2, encoding='utf-8')
+        print('css tag', page.relative_to(ROOT))

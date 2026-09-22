@@ -10,12 +10,12 @@
 <link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services">
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/services">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/site.css?v=3">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
 <!-- INTAKE v2 · the 14-screen wizard (INTAKE-FORM-V2-SPEC-2026-09-21). The v1 file
      /assets/umbra-intake.js stays in the repo and is no longer referenced. -->
-<script src="/assets/umbra-intake-v2.js?v=3" defer></script>
+<script src="/assets/umbra-intake-v2.js?v=4" defer></script>
 <script src="/assets/umbra-two-channels.js?v=2" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
@@ -166,8 +166,8 @@
         <div class="intake2" data-intake2>
           <div class="v2bar" aria-hidden="true"><i data-v2fill></i></div>
         <section class="fstep" data-fstep="photos" hidden>
-          <p class="v2q">Enséñanos el daño</p>
-          <p class="v2hint">Una foto dice más &mdash; entre más, mejor</p>
+          <p class="v2q">Muéstrenos las áreas con problema</p>
+          <p class="v2hint">Las fotos nos ayudan a cotizar bien &mdash; entre más, mejor</p>
           <label class="v2file"><span class="v2sr">Agregar fotos</span><input class="field file" type="file" name="attachment" accept="image/*" multiple data-photo-input></label>
           <div class="photo-actions" data-photo-buttons hidden>
             <button class="btn ghost v2cam" type="button" data-photo-camera aria-label="Tomar una foto"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h3.2l1.4-2h8.8l1.4 2H21a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg></button>
@@ -177,8 +177,8 @@
           <ul class="pix" data-photo-list aria-label="Agregar fotos" hidden></ul>
         </section>
         <section class="fstep" data-fstep="what" data-need="1" hidden>
-          <p class="v2q">¿Qué es?</p>
-          <p class="v2hint">Puedes escoger más de una</p>
+          <p class="v2q">¿Cuál es el problema?</p>
+          <p class="v2hint">Seleccione todas las que apliquen</p>
           <ul class="v2opts">
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Holes"><i class="v2mark" aria-hidden="true"></i><span>Hoyos</span></label></li>
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Cracks"><i class="v2mark" aria-hidden="true"></i><span>Grietas</span></label></li>
@@ -187,22 +187,22 @@
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Just paint"><i class="v2mark" aria-hidden="true"></i><span>Solo pintura</span></label></li>
             <li class="v2last"><label class="v2opt v2checkbox"><input type="checkbox" name="problem" value="Something else"><i class="v2mark" aria-hidden="true"></i><span>Otra cosa</span></label></li>
           </ul>
-          <p class="v2need" role="alert" hidden>Escoge por lo menos una</p>
+          <p class="v2need" role="alert" hidden>Seleccione por lo menos una</p>
         </section>
         <section class="fstep" data-fstep="where" data-need="1" hidden>
-          <p class="v2q">¿Dónde está?</p>
-          <p class="v2hint">Puedes escoger más de una</p>
+          <p class="v2q">¿Dónde está el problema?</p>
+          <p class="v2hint">Seleccione todas las que apliquen</p>
           <ul class="v2opts">
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Ceiling"><i class="v2mark" aria-hidden="true"></i><span>Techo</span></label></li>
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Walls"><i class="v2mark" aria-hidden="true"></i><span>Paredes</span></label></li>
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Corner or edge"><i class="v2mark" aria-hidden="true"></i><span>Esquina u orilla</span></label></li>
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="problem_area" value="Door or window"><i class="v2mark" aria-hidden="true"></i><span>Puerta o ventana</span></label></li>
           </ul>
-          <p class="v2need" role="alert" hidden>Escoge por lo menos una</p>
+          <p class="v2need" role="alert" hidden>Seleccione por lo menos una</p>
         </section>
         <section class="fstep" data-fstep="ceiling-count" data-surface="ceiling" hidden>
           <p class="v2where" data-surface="ceiling"><span>Techo</span></p>
-          <p class="v2q">¿Cuántos son?</p>
+          <p class="v2q">¿Cuántas áreas necesitan reparación?</p>
           <ul class="v2opts">
             <li><label class="v2opt v2radio"><input type="radio" name="ceiling_count_band" value="1–5"><i class="v2mark" aria-hidden="true"></i><span>1–5</span></label></li>
             <li><label class="v2opt v2radio"><input type="radio" name="ceiling_count_band" value="6–15"><i class="v2mark" aria-hidden="true"></i><span>6–15</span></label></li>
@@ -213,7 +213,7 @@
         </section>
         <section class="fstep" data-fstep="ceiling-size" data-surface="ceiling" hidden>
           <p class="v2where" data-surface="ceiling"><span>Techo</span></p>
-          <p class="v2q">¿El más grande?</p>
+          <p class="v2q">¿De qué tamaño es la más grande?</p>
           <ul class="v2opts">
             <li><label class="v2opt v2radio"><input type="radio" name="ceiling_biggest" value="Pinhole"><i class="v2mark" aria-hidden="true"></i><span>De clavo</span></label></li>
             <li><label class="v2opt v2radio"><input type="radio" name="ceiling_biggest" value="Coin"><i class="v2mark" aria-hidden="true"></i><span>Como un quarter</span></label></li>
@@ -224,8 +224,8 @@
         </section>
         <section class="fstep" data-fstep="ceiling-left" data-surface="ceiling" hidden>
           <p class="v2where" data-surface="ceiling"><span>Techo</span></p>
-          <p class="v2q">¿Todavía tienen algo adentro?</p>
-          <p class="v2hint">Puedes escoger más de una</p>
+          <p class="v2q">¿Queda algo dentro de los hoyos?</p>
+          <p class="v2hint">Seleccione todas las que apliquen</p>
           <ul class="v2opts">
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="ceiling_condition" value="Nothing"><i class="v2mark" aria-hidden="true"></i><span>Nada</span></label></li>
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="ceiling_condition" value="Screws or nails"><i class="v2mark" aria-hidden="true"></i><span>Tornillos o clavos</span></label></li>
@@ -235,7 +235,7 @@
         </section>
         <section class="fstep" data-fstep="ceiling-tex" data-surface="ceiling" hidden>
           <p class="v2where" data-surface="ceiling"><span>Techo</span></p>
-          <p class="v2q">¿Qué textura?</p>
+          <p class="v2q">¿Qué textura tiene la superficie?</p>
           <ul class="v2opts v2tex">
             <li><label class="v2opt v2radio"><input type="radio" name="ceiling_surface" value="Smooth"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Lisa</span></label></li>
             <li><label class="v2opt v2radio"><input type="radio" name="ceiling_surface" value="Orange peel"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Cáscara de naranja</span></label></li>
@@ -246,7 +246,7 @@
         </section>
         <section class="fstep" data-fstep="walls-count" data-surface="walls" hidden>
           <p class="v2where" data-surface="walls"><span>Paredes</span></p>
-          <p class="v2q">¿Cuántos son?</p>
+          <p class="v2q">¿Cuántas áreas necesitan reparación?</p>
           <ul class="v2opts">
             <li><label class="v2opt v2radio"><input type="radio" name="walls_count_band" value="1–5"><i class="v2mark" aria-hidden="true"></i><span>1–5</span></label></li>
             <li><label class="v2opt v2radio"><input type="radio" name="walls_count_band" value="6–15"><i class="v2mark" aria-hidden="true"></i><span>6–15</span></label></li>
@@ -257,7 +257,7 @@
         </section>
         <section class="fstep" data-fstep="walls-size" data-surface="walls" hidden>
           <p class="v2where" data-surface="walls"><span>Paredes</span></p>
-          <p class="v2q">¿El más grande?</p>
+          <p class="v2q">¿De qué tamaño es la más grande?</p>
           <ul class="v2opts">
             <li><label class="v2opt v2radio"><input type="radio" name="walls_biggest" value="Pinhole"><i class="v2mark" aria-hidden="true"></i><span>De clavo</span></label></li>
             <li><label class="v2opt v2radio"><input type="radio" name="walls_biggest" value="Coin"><i class="v2mark" aria-hidden="true"></i><span>Como un quarter</span></label></li>
@@ -268,8 +268,8 @@
         </section>
         <section class="fstep" data-fstep="walls-left" data-surface="walls" hidden>
           <p class="v2where" data-surface="walls"><span>Paredes</span></p>
-          <p class="v2q">¿Todavía tienen algo adentro?</p>
-          <p class="v2hint">Puedes escoger más de una</p>
+          <p class="v2q">¿Queda algo dentro de los hoyos?</p>
+          <p class="v2hint">Seleccione todas las que apliquen</p>
           <ul class="v2opts">
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="walls_condition" value="Nothing"><i class="v2mark" aria-hidden="true"></i><span>Nada</span></label></li>
             <li><label class="v2opt v2checkbox"><input type="checkbox" name="walls_condition" value="Screws or nails"><i class="v2mark" aria-hidden="true"></i><span>Tornillos o clavos</span></label></li>
@@ -279,7 +279,7 @@
         </section>
         <section class="fstep" data-fstep="walls-tex" data-surface="walls" hidden>
           <p class="v2where" data-surface="walls"><span>Paredes</span></p>
-          <p class="v2q">¿Qué textura?</p>
+          <p class="v2q">¿Qué textura tiene la superficie?</p>
           <ul class="v2opts v2tex">
             <li><label class="v2opt v2radio"><input type="radio" name="walls_surface" value="Smooth"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-smooth.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Lisa</span></label></li>
             <li><label class="v2opt v2radio"><input type="radio" name="walls_surface" value="Orange peel"><i class="v2mark" aria-hidden="true"></i><img src="/assets/img/tex-orange-peel.svg?v=1" alt="" width="64" height="64" loading="lazy" decoding="async"><span>Cáscara de naranja</span></label></li>
@@ -289,7 +289,7 @@
           </ul>
         </section>
         <section class="fstep" data-fstep="paint" hidden>
-          <p class="v2q">¿Tiene la pintura que sobró?</p>
+          <p class="v2q">¿Tiene pintura sobrante a la mano?</p>
           <ul class="v2opts">
             <li><label class="v2opt v2radio"><input type="radio" name="paint_on_site" value="Yes"><i class="v2mark" aria-hidden="true"></i><span>Sí</span></label></li>
             <li><label class="v2opt v2radio"><input type="radio" name="paint_on_site" value="No"><i class="v2mark" aria-hidden="true"></i><span>No</span></label></li>
@@ -306,11 +306,11 @@
           <label class="v2field"><span class="v2q">Dirección</span><input class="field" type="text" name="address" autocomplete="street-address" enterkeyhint="next"></label>
         </section>
         <section class="fstep" data-fstep="notes" hidden>
-          <label class="v2field"><span class="v2q">¿Algo más?</span><span class="v2hint">Opcional</span><textarea class="field" name="what" rows="4"></textarea></label>
+          <label class="v2field"><span class="v2q">¿Algo más que debamos saber?</span><span class="v2hint">Opcional</span><textarea class="field" name="what" rows="4"></textarea></label>
         </section>
         <section class="fstep" data-fstep="send" hidden>
-          <p class="v2q">¿Todo listo?</p>
-          <p class="v2hint">Respondemos en menos de 2 horas, de 7am a 9pm.</p>
+          <p class="v2q">¿Listo para enviar?</p>
+          <p class="v2hint">Respondemos en menos de 2 horas, de 7am a 9pm, los siete días.</p>
         </section>
           <div class="v2nav">
             <button class="btn ghost v2back" type="button" data-v2back>Atrás</button>
