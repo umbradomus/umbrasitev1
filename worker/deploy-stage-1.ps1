@@ -121,7 +121,6 @@ function Save-Log {
             $text = $text.Replace($script:AdminKey, '<ADMIN_KEY-hidden>')
             $text = $text.Replace([uri]::EscapeDataString($script:AdminKey), '<ADMIN_KEY-hidden>')
         }
-        if ($script:NtfyTopic) { $text = $text.Replace($script:NtfyTopic, '<NTFY_TOPIC-hidden>') }
     } catch { }
     $header = "================ RUN $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) ================`r`n"
     try {
@@ -582,14 +581,14 @@ window.UMBRA_WORKER_BASE = '';
     T ((Get-WorkerBaseFromJs $js3) -eq 'https://other.workers.dev') 're-running replaces an existing URL' (Get-WorkerBaseFromJs $js3)
     T ($null -eq (Set-WorkerBaseInJs 'nothing here' 'x')) 'refuses a file without the line' ''
 
-    $dv = "ADMIN_KEY=abc123`r`nNTFY_TOPIC=umbra-xyz`r`nALLOW_TEST_HOOKS=false`r`n"
+    $dv = "ADMIN_KEY=abc123`r`nOTHER_NAME=umbra-xyz`r`nALLOW_TEST_HOOKS=false`r`n"
     T ((Get-DevVarValue $dv 'ADMIN_KEY') -eq 'abc123') 'reads an existing ADMIN_KEY (never rotated)' (Get-DevVarValue $dv 'ADMIN_KEY')
-    T ((Get-DevVarValue $dv 'NTFY_TOPIC') -eq 'umbra-xyz') 'reads an existing NTFY_TOPIC' (Get-DevVarValue $dv 'NTFY_TOPIC')
+    T ((Get-DevVarValue $dv 'OTHER_NAME') -eq 'umbra-xyz') 'reads an existing second name' (Get-DevVarValue $dv 'OTHER_NAME')
     T ($null -eq (Get-DevVarValue $dv 'NOPE')) 'a missing name reads as nothing' ''
     T ($null -eq (Get-DevVarValue "ADMIN_KEY=`r`n" 'ADMIN_KEY')) 'an empty value reads as nothing' ''
     $dv2 = Set-DevVarValue $dv 'ADMIN_KEY' 'newvalue'
     T ((Get-DevVarValue $dv2 'ADMIN_KEY') -eq 'newvalue') 'overwrites in place' ''
-    T ((Get-DevVarValue $dv2 'NTFY_TOPIC') -eq 'umbra-xyz') 'without touching its neighbour' ''
+    T ((Get-DevVarValue $dv2 'OTHER_NAME') -eq 'umbra-xyz') 'without touching its neighbour' ''
     $dv3 = Set-DevVarValue '' 'ADMIN_KEY' 'first'
     T ((Get-DevVarValue $dv3 'ADMIN_KEY') -eq 'first') 'creates the file content from nothing' ''
     $dvQ = 'ADMIN_KEY="quoted-value"'
@@ -648,7 +647,7 @@ function Invoke-Exe {
             # [Console]::InputEncoding. On this machine that is UTF-8 *with* a 3-byte
             # preamble, so a piped value reached the child as BOM + text, and
             # PowerShell appends a CRLF on top of that. `wrangler secret put` stores
-            # exactly what it reads and trims nothing, so ADMIN_KEY and NTFY_TOPIC
+            # exactly what it reads and trims nothing, so the secrets
             # went up as BOM + value + CRLF and no key ever matched. Write the bytes
             # onto the raw stream ourselves so the child gets the value and nothing
             # else. Clearing the preamble must happen before the process starts,
@@ -756,7 +755,6 @@ function Invoke-Http {
 $script:Stopped     = $null      # "STEP n: reason"
 $script:WorkerUrl   = $null
 $script:AdminKey    = $null
-$script:NtfyTopic   = $null
 $script:KvId        = $null
 $script:AccountId   = $null
 $script:SiteFlipped = $false
@@ -992,31 +990,23 @@ if (-not $script:Stopped) {
         $dv = ''
         if (Test-Path $DevVarPath) { $dv = [System.IO.File]::ReadAllText($DevVarPath) }
         $script:AdminKey  = Get-DevVarValue $dv 'ADMIN_KEY'
-        $script:NtfyTopic = Get-DevVarValue $dv 'NTFY_TOPIC'
 
+        # ALERTS-01 (2026-09-23): the Stage 1 push topic is retired. The phone's five
+        # alert secrets are his hand, never this script's - worker\ALERTS-SETUP.md.
         $reused = @()
         if ($script:AdminKey -and $script:AdminKey -ne 'change-me-to-something-long-and-random') {
             $reused += 'ADMIN_KEY'
         } else {
             $script:AdminKey = New-UrlSafeSecret 32
         }
-        if ($script:NtfyTopic -and $script:NtfyTopic -ne 'umbra-intake-change-me') {
-            $reused += 'NTFY_TOPIC'
-        } else {
-            # ntfy allows [-_A-Za-z0-9]; trim the ends so it reads as a name and not
-            # as punctuation when he types it into the app.
-            $rand = ((New-UrlSafeSecret 12).ToLower() -replace '[-_]', '')
-            $script:NtfyTopic = 'umbra-' + $rand
-        }
 
         $dv = Set-DevVarValue $dv 'ADMIN_KEY' $script:AdminKey
-        $dv = Set-DevVarValue $dv 'NTFY_TOPIC' $script:NtfyTopic
         if ($null -eq (Get-DevVarValue $dv 'ALLOW_TEST_HOOKS')) {
             $dv = Set-DevVarValue $dv 'ALLOW_TEST_HOOKS' 'false'
         }
         Write-TextFile $DevVarPath (Normalise-Crlf $dv)
 
-        $detail = 'made both'
+        $detail = 'made it'
         if ($reused.Count -gt 0) { $detail = 'reused ' + ($reused -join ' and ') + ' (never rotated on a re-run)' }
         Add-Step 6 'the two passwords, written to worker\.dev.vars' 'PASS' $detail
     }
@@ -1061,18 +1051,16 @@ if (-not $script:Stopped) {
     Log-Head 'STEP 8 - storing the two passwords at Cloudflare'
     Push-Location $WorkerDir
     $s1 = Invoke-Wrangler -CmdArgs @('secret', 'put', 'ADMIN_KEY')  -StdIn $script:AdminKey
-    $s2 = Invoke-Wrangler -CmdArgs @('secret', 'put', 'NTFY_TOPIC') -StdIn $script:NtfyTopic
     Pop-Location
     # Never log the values, only whether it worked.
     Log-Raw ($s1.Out -replace [regex]::Escape($script:AdminKey), '<hidden>')
-    Log-Raw ($s2.Out -replace [regex]::Escape($script:NtfyTopic), '<hidden>')
-    if ($s1.Code -ne 0 -or $s2.Code -ne 0) {
-        Add-Step 8 'passwords stored at Cloudflare' 'FAIL' ('exit ' + $s1.Code + ' / ' + $s2.Code)
+    if ($s1.Code -ne 0) {
+        Add-Step 8 'passwords stored at Cloudflare' 'FAIL' ('exit ' + $s1.Code)
         Log 'Cloudflare would not take the passwords. The reply is in' 'Red'
         Log 'worker\DEPLOY-LOG.txt. Send that file to Claude.' 'Yellow'
         Stop-Here 8 'wrangler secret put failed. See DEPLOY-LOG.txt.'
     } else {
-        Add-Step 8 'passwords stored at Cloudflare' 'PASS' 'ADMIN_KEY and NTFY_TOPIC'
+        Add-Step 8 'passwords stored at Cloudflare' 'PASS' 'ADMIN_KEY (the five alert secrets are his hand: ALERTS-SETUP.md)'
     }
 }
 
@@ -1093,7 +1081,7 @@ if (-not $script:Stopped) {
         Add-Step 9 'the Worker knows its own address' 'FAIL' 'the second upload failed'
         Stop-Here 9 'the second wrangler deploy failed. See DEPLOY-LOG.txt.'
     } else {
-        Add-Step 9 'the Worker knows its own address' 'PASS' 'the 90-minute push will link straight to your list'
+        Add-Step 9 'the Worker knows its own address' 'PASS' 'Pushover can call back here when you tap Acknowledge'
     }
 }
 
@@ -1334,9 +1322,6 @@ if ($script:WorkerUrl) {
 } else {
     [void]$r.Add('| The Worker | not up yet |')
 }
-if ($script:NtfyTopic) {
-    [void]$r.Add('| **Your ntfy topic** - subscribe to this exact name in the ntfy Android app | `' + $script:NtfyTopic + '` |')
-}
 if ($script:KvId)      { [void]$r.Add('| Record store (KV) id | `' + $script:KvId + '` |') }
 if ($script:AccountId) { [void]$r.Add('| Cloudflare account | `' + $script:AccountId + '` |') }
 [void]$r.Add('')
@@ -1349,17 +1334,12 @@ if ($script:AccountId) { [void]$r.Add('| Cloudflare account | `' + $script:Accou
 [void]$r.Add('not need it, and a chat is not a place to keep a password. `DEPLOY-LOG.txt`')
 [void]$r.Add('already has both blanked out, so that one is safe to send as it is.')
 [void]$r.Add('')
-if ($script:NtfyTopic) {
-    [void]$r.Add('## THE ONE THING LEFT FOR YOU')
-    [void]$r.Add('')
-    [void]$r.Add('Install **ntfy** from the Play Store, tap Subscribe, and type in:')
-    [void]$r.Add('')
-    [void]$r.Add('    ' + $script:NtfyTopic)
-    [void]$r.Add('')
-    [void]$r.Add('That is where the 90-minute nudge lands. Until you do that, the clock still')
-    [void]$r.Add('runs and the list still works - you just will not be poked.')
-    [void]$r.Add('')
-}
+[void]$r.Add('## THE ONE THING LEFT FOR YOU')
+[void]$r.Add('')
+[void]$r.Add('Set up the phone alerts: follow `worker\ALERTS-SETUP.md` (Pushover, the Telegram')
+[void]$r.Add('bot, the Gmail filter). Until you do that, the clock still runs and the list still')
+[void]$r.Add('works - you just will not be poked.')
+[void]$r.Add('')
 [void]$r.Add('---')
 [void]$r.Add('')
 [void]$r.Add('## EVERY STEP')
@@ -1428,8 +1408,7 @@ if (-not $script:Stopped) {
     Log 'Your list, with the password in it - bookmark it on your phone:' 'White'
     Log ('  ' + $adminUrlFull) 'Green'
     Log ''
-    Log 'Your ntfy topic - subscribe to this exact name in the ntfy app:' 'White'
-    Log ('  ' + $script:NtfyTopic) 'Green'
+    Log 'Phone alerts: follow worker\ALERTS-SETUP.md.' 'White'
     Log ''
     if (-not $script:SiteLive) {
         Log 'umbradomus.com had not picked up the change yet. Usually just slow;' 'Yellow'

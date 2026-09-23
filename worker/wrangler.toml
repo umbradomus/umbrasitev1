@@ -1,5 +1,6 @@
 #  UMBRA DOMUS · INTAKE WORKER · STAGE 1
-#  Nothing secret lives in this file. ADMIN_KEY and NTFY_TOPIC are set with
+#  Nothing secret lives in this file. ADMIN_KEY and the five alert secrets (PUSHOVER_TOKEN,
+#  PUSHOVER_USER, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, HOOK_SECRET — see ALERTS-SETUP.md) are set with
 #  `wrangler secret put` once, and read from worker/.dev.vars when running locally.
 #  worker/.dev.vars is git-ignored and must never be committed.
 
@@ -17,14 +18,12 @@ rules = [
 [vars]
 # The site the confirmation and status links point at.
 SITE_BASE_URL = "https://www.umbradomus.com"
-# The Worker's own public address — used for the link inside the 90-minute push.
-# Fill this in after the first `wrangler deploy` prints the workers.dev URL.
+# The Worker's own public address — Pushover calls back here when he taps Acknowledge.
+# No alert carries a link (R25); this is only the callback's address.
 PUBLIC_BASE_URL = "https://umbra-intake.umbradomus.workers.dev"
 # The last job id already used on paper. U-0001 and U-0002 exist, so the first
 # record this Worker creates is U-0003.
 SEED_LAST_ID = "2"
-# "false" sends a bare /admin link in the push instead of one carrying the key.
-NUDGE_LINK_INCLUDES_KEY = "true"
 
 # --- THE RECORD STORE -------------------------------------------------------
 # Create with:  npx wrangler kv namespace create RECORDS
@@ -39,10 +38,12 @@ id = "6ee39a58edfc419c9a61ec3b7d11dd99"
 binding = "PHOTOS"
 bucket_name = "umbra-job-photos"
 
-# --- THE NUDGE --------------------------------------------------------------
-# Every 15 minutes. Anything still unquoted at 90 minutes gets one push.
+# --- THE ALERTS -------------------------------------------------------------
+# Every 5 minutes (ALERTS-01; was every 15). The ladder: +15 business minutes one
+# priority-2 push, then every 30, one OVERDUE at the due time; 9 PM-7 AM held to
+# one 7:00 AM summary. src/alerts.js.
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/5 * * * *"]
 
 [observability]
 enabled = true

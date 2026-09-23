@@ -14,6 +14,8 @@
      POST /api/job/:id/event?k=        the taps               (admin key)
      GET  /api/export/:id.md?k=        the record as vault markdown (admin key)
      GET  /admin?k=                    the aging list as a page
+     POST /admin/seen/:id?k=           "I have it" — acknowledges the alerts (admin key; 401 without)
+     POST /hooks/pushover/:secret      Pushover's Acknowledge callback (path secret + a receipt we issued)
      GET  /health                      liveness
 */
 
@@ -26,7 +28,9 @@ import {
   allocateId, getRecord, putRecord, listRecords, addEvent, minutesOpen, sortForAdmin,
 } from './store.js';
 import { forwardToFormSubmit } from './forward.js';
-import { sendNudge } from './notify.js';
+import {
+  initialAlerts, sendIntakeAlert, runAlerts, acknowledge, acknowledgeReceipt,
+} from './alerts.js';
 import { renderJobMarkdown } from './export.js';
 
 /* Caps. A submit that breaks one of these is refused out loud, never trimmed quietly. */
@@ -37,7 +41,24 @@ const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 const HONEYPOT = '_honey';
 const PHOTO_FIELD = /^attachment(\d*)$/;
 
-const NUDGE_AFTER_MINUTES = 90;
+/* THE SAME REQUEST TWICE. A double tap, a Back-and-resend, or a phone that retried the post: the same
+   words and the same photos inside ten minutes are one request — one record, one alert, one email.
+   The browser's own copy id and timings differ between two posts and are left out of the match. */
+const DEDUP_WINDOW_MS = 10 * 60000;
+const DEDUP_IGNORE = /^(email_sent|email_copy_id|email_copy_ms|_next)$/;
+
+/** The moment this request is handled. A test may name it, and only when test hooks are on. */
+function nowFor(request, env) {
+  const t = request.headers.get('x-umbra-test-now');
+  if (t && String(env.ALLOW_TEST_HOOKS) === 'true' && !isNaN(Date.parse(t))) return new Date(t).toISOString();
+  return new Date().toISOString();
+}
+
+async function fingerprint(fields, photos) {
+  const keep = Object.keys(fields).filter((k) => !DEDUP_IGNORE.test(k)).sort().map((k) => [k, fields[k]]);
+  const ph = photos.map((p) => [p.field, p.file.name || '', p.file.size]);
+  return sha256hex(new TextEncoder().encode(JSON.stringify([keep, ph])));
+}
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -164,8 +185,25 @@ async function handleIntake(request, env, ctx) {
     );
   }
 
-  const received_at = new Date().toISOString();
+  const received_at = nowFor(request, env);
   const nextValue = typeof fields._next === 'string' ? fields._next : '';
+
+  /* 0 · the same request twice inside ten minutes is the first one: same confirmation, nothing new. */
+  let dupKey = null;
+  try {
+    dupKey = 'dup:' + await fingerprint(fields, photos);
+    const seen = await env.RECORDS.get(dupKey);
+    if (seen) {
+      const s = JSON.parse(seen);
+      const age = Date.parse(received_at) - Date.parse(s.at);
+      if (s.id && s.token && age >= 0 && age <= DEDUP_WINDOW_MS) {
+        console.log('duplicate submission folded into', s.id, 'after', Math.round(age / 1000), 's');
+        return Response.redirect(confirmationUrl(env, nextValue, s.id, s.token), 303);
+      }
+    }
+  } catch (err) {
+    /* KV unreachable: carry on — the email must still go */
+  }
 
   /* 1 · the id and the token. If KV is unreachable the record cannot exist —
      the email still must. */
@@ -175,6 +213,11 @@ async function handleIntake(request, env, ctx) {
     token = newToken();
   } catch (err) {
     allocError = String(err && err.message || err);
+  }
+  if (id && dupKey) {
+    try {
+      await env.RECORDS.put(dupKey, JSON.stringify({ id, token, at: received_at }), { expirationTtl: DEDUP_WINDOW_MS / 1000 });
+    } catch (err) { /* the record matters more than the fold */ }
   }
 
   const status_link = id ? statusUrl(env, nextValue, id, token) : '';
@@ -273,7 +316,8 @@ async function handleIntake(request, env, ctx) {
       questions_asked: [],
       scope: null,
       outcome: null,
-      nudged_at: null,
+      /* ALERTS-01: the phone's ladder for this request — see alerts.js */
+      alerts: initialAlerts(received_at),
       forwarded_at: forward.ok ? new Date().toISOString() : null,
       forward_failed: !forward.ok,
       /* which leg carried it, so a 429 can never again be invisible */
@@ -323,12 +367,21 @@ async function handleIntake(request, env, ctx) {
     for (const p of stored) {
       if (p.store_failed) addEvent(rec, 'photo_store_failed', { key: p.key, detail: p.store_failed });
     }
+    let kept = false;
     try {
       await putRecord(env, rec);
+      kept = true;
     } catch (err) {
       /* The email has already gone. Losing the record is bad; losing the
          request is the failure with no fix, and it did not happen. */
       console.error('record write failed for', id, err);
+    }
+    /* 5 · THE PHONE. After the record is kept, off the customer's clock. Outside 7 AM–9 PM the record is
+       born `held` and nothing goes until the 7:00 AM summary. If this send dies with the request, the
+       cron picks the record up two minutes later. */
+    if (kept && rec.alerts.stage === 'intake') {
+      const p = sendIntakeAlert(env, id, rec.alerts.claim, received_at).catch((err) => console.error('intake alert failed for', id, err));
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
     }
   } else {
     console.error('no record created (id allocation failed):', allocError, 'forward ok:', forward.ok);
@@ -408,7 +461,12 @@ function adminRow(rec, nowIso) {
     scheduled_for: rec.scheduled_for,
     done_at: rec.done_at,
     quote_amount: rec.quote_amount,
-    nudged_at: rec.nudged_at,
+    /* ALERTS-01: where the phone's ladder stands for this request */
+    alerts: rec.alerts ? {
+      first_at: rec.alerts.first_at, count: rec.alerts.count, next_at: rec.alerts.next_at,
+      ack_at: rec.alerts.ack_at, ack_by: rec.alerts.ack_by || null, stage: rec.alerts.stage,
+      due_at: rec.alerts.due_at || null, channels: rec.alerts.channels || [],
+    } : null,
     forward_failed: Boolean(rec.forward_failed),
     /* EMAIL-01: which leg was tried, which channel owned the email, and whether any email went at all */
     forwarded_by: rec.forwarded_by || null,
@@ -495,7 +553,35 @@ async function handleEvent(request, env, url, id) {
 
   addEvent(rec, type, detail, at);
   await putRecord(env, rec);
+  /* The Quoted tap (and Scheduled or Done, which imply it) is also "I have it": the alerts stop. */
+  if (type === 'quoted' || type === 'scheduled' || type === 'done') {
+    await acknowledge(env, rec.id, 'tap:' + type, at);
+  }
   return json({ ok: true, id: rec.id, status: rec.status, quoted_at: rec.quoted_at, minutes_to_quote: rec.minutes_to_quote });
+}
+
+async function handleSeen(request, env, url, id) {
+  if (!adminOk(env, url)) return json({ error: 'unauthorized' }, 401);
+  const rec = await getRecord(env, id);
+  if (!rec) return notFound();
+  const acked = await acknowledge(env, id, 'seen', nowFor(request, env), rec);
+  const back = await getRecord(env, id);
+  return json({ ok: true, id, acknowledged_now: acked, ack_at: back && back.alerts ? back.alerts.ack_at : null });
+}
+
+async function handlePushoverHook(request, env, secret) {
+  /* A wrong path and an unknown receipt answer identically, and neither writes anything. */
+  if (!env.HOOK_SECRET || !safeEqual(secret, env.HOOK_SECRET)) return notFound();
+  let receipt = '';
+  try {
+    const fd = await request.formData();
+    receipt = String(fd.get('receipt') || '');
+  } catch (err) {
+    return notFound();
+  }
+  const done = await acknowledgeReceipt(env, receipt, nowFor(request, env));
+  if (done === null) return notFound();
+  return json({ ok: true, acknowledged: done });
 }
 
 async function handleExport(env, url, id) {
@@ -509,51 +595,6 @@ async function handleExport(env, url, id) {
       'content-disposition': `inline; filename="${rec.id}-00-JOB.md"`,
     },
   });
-}
-
-/* -------------------------------------------------------------- the nudge */
-
-async function runNudge(env, nowIso = new Date().toISOString()) {
-  const all = await listRecords(env);
-  const sent = [];
-  for (const rec of all) {
-    if (rec.status !== 'received') continue;
-    if (rec.nudged_at) continue;                       /* never twice */
-    const open = minutesOpen(rec, nowIso);
-    if (open == null || open < NUDGE_AFTER_MINUTES) continue;
-
-    const link = adminLink(env);
-    const who = (rec.fields || {}).name || 'someone';
-    const what = ((rec.fields || {}).what || '').slice(0, 120);
-    const res = await sendNudge(env, {
-      title: `${rec.id} · ${open} minutes open`,
-      body: `${who} — ${(rec.fields || {}).service || 'request'}\n${what}\nNot quoted yet. The promise is 2 hours.`,
-      clickUrl: link,
-    });
-
-    /* The stamp is set on a delivered push only. A push that failed will be
-       retried at the next tick rather than lost. */
-    if (res.ok) {
-      rec.nudged_at = nowIso;
-      addEvent(rec, 'nudged', { channel: 'ntfy', minutes_open: open }, nowIso);
-      await putRecord(env, rec);
-      sent.push(rec.id);
-    } else {
-      console.error('nudge failed for', rec.id, res);
-    }
-  }
-  return sent;
-}
-
-function adminLink(env) {
-  const base = (env.PUBLIC_BASE_URL || '').replace(/\/+$/, '');
-  if (!base) return '';
-  /* GUESS (coder, 2026-09-17): the admin key rides in the nudge link so the push
-     is one tap from the Quoted button. The ntfy topic name is itself a secret and
-     is the outer gate. Set NUDGE_LINK_INCLUDES_KEY = "false" to send a bare
-     /admin link instead and paste the key by hand. */
-  if (String(env.NUDGE_LINK_INCLUDES_KEY || 'true') === 'false' || !env.ADMIN_KEY) return base + '/admin';
-  return base + '/admin?k=' + encodeURIComponent(env.ADMIN_KEY);
 }
 
 /* ------------------------------------------------------------------- router */
@@ -593,19 +634,27 @@ export default {
       return handleExport(env, url, m[1]);
     }
 
-    /* A test hook, never reachable in production: the cron body on demand so the
-       nudge can be exercised without waiting fifteen minutes. Gated on the admin
-       key AND on ALLOW_TEST_HOOKS, which is only ever set in .dev.vars. */
-    if (path === '/__run-nudge' && method === 'POST') {
+    if ((m = /^\/admin\/seen\/(U-\d{4,6})$/.exec(path)) && method === 'POST') {
+      return handleSeen(request, env, url, m[1]);
+    }
+    if ((m = /^\/hooks\/pushover\/([^/]{1,200})$/.exec(path)) && method === 'POST') {
+      return handlePushoverHook(request, env, decodeURIComponent(m[1]));
+    }
+
+    /* A test hook, never reachable in production: the cron body on demand, at a named moment, so the
+       ladder can be exercised without waiting. Gated on the admin key AND on ALLOW_TEST_HOOKS, which is
+       only ever set in a test's .dev.vars. */
+    if (path === '/__run-alerts' && method === 'POST') {
       if (String(env.ALLOW_TEST_HOOKS) !== 'true' || !adminOk(env, url)) return adminDenied();
       const now = url.searchParams.get('now') || new Date().toISOString();
-      return json({ nudged: await runNudge(env, now) });
+      const pause = Math.min(5000, parseInt(url.searchParams.get('pause') || '0', 10) || 0);
+      return json(await runAlerts(env, now, { pauseAfterReadMs: pause }));
     }
 
     return notFound();
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runNudge(env, new Date(event.scheduledTime || Date.now()).toISOString()));
+    ctx.waitUntil(runAlerts(env, new Date(event.scheduledTime || Date.now()).toISOString()));
   },
 };

@@ -1,8 +1,9 @@
 /* ============================================================================
    THE TESTS. Real, headless, against a real `wrangler dev` with local KV and R2.
-   Nothing here is mocked except the two things we must not call for real:
-   FormSubmit (Drew's inbox) and ntfy (Drew's phone). Both are stood up as real
-   servers and the bytes that reach them are parsed, not trusted.
+   Nothing here is mocked except the things we must not call for real:
+   FormSubmit (Drew's inbox), and Pushover and Telegram (Drew's phone). All are
+   stood up as real local servers and the bytes that reach them are parsed, not
+   trusted. Every alert secret below is a FAKE made fresh for the run.
 
    Run:  cd worker && npm test
    ========================================================================== */
@@ -17,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { captureServer, staticServer, close } from './lib/servers.mjs';
 import { parseMultipart, fieldValue, files as filesOf } from './lib/multipart.mjs';
+import { suiteAlerts } from './suite-d-alerts.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -30,17 +32,26 @@ const TMP = path.join(HERE, '.tmp');
    The override stays in front: the next machine will differ again. */
 const ORIGINAL_SITE = process.env.UMBRA_ORIGINAL_SITE || REPO_DIR;
 
+/* ALERTS-01 (2026-09-23) moved the five stand-ins from 8788–8792 to 4771–4775: several rounds share
+   this PC and that is the range this Worker's tests were given. The Worker itself stays on 8787. */
 const PORT = {
   worker: 8787,
-  formsubmitTls: 8788,      /* https, reached as https://formsubmit.co via a host-resolver rule */
-  siteWorker: 8789,         /* the modified site, constant flipped to the Worker */
-  stub: 8790,               /* http, what the Worker itself calls: FormSubmit + ntfy */
-  siteNew: 8791,            /* the modified site, constant left on FormSubmit */
-  siteOld: 8792,            /* the site exactly as it was before this round */
+  formsubmitTls: 4771,      /* https, reached as https://formsubmit.co via a host-resolver rule */
+  siteWorker: 4772,         /* the modified site, constant flipped to the Worker */
+  stub: 4773,               /* http, what the Worker itself calls: FormSubmit + Pushover + Telegram */
+  siteNew: 4774,            /* the modified site, constant left on FormSubmit */
+  siteOld: 4775,            /* the site exactly as it was before this round */
 };
 
 const ADMIN_KEY = 'test-admin-key-' + crypto.randomBytes(9).toString('hex');
-const NTFY_TOPIC = 'umbra-test-' + crypto.randomBytes(5).toString('hex');
+/* FAKE alert secrets, fresh each run, so a grep of any message can prove none of them leaked. */
+const FAKE = {
+  PUSHOVER_TOKEN: 'FAKEpotok' + crypto.randomBytes(8).toString('hex'),
+  PUSHOVER_USER: 'FAKEpouser' + crypto.randomBytes(8).toString('hex'),
+  TELEGRAM_BOT_TOKEN: '000000:FAKE' + crypto.randomBytes(8).toString('hex'),
+  TELEGRAM_CHAT_ID: '-100' + String(crypto.randomInt(1e9)),
+  HOOK_SECRET: 'FAKEhook' + crypto.randomBytes(10).toString('hex'),
+};
 /** The Chrome that puppeteer-core drives. CHROME_PATH wins; otherwise the first
     of the usual install locations that exists on this machine. No Chrome is a
     loud stop, never a silent skip. */
@@ -254,8 +265,9 @@ async function main() {
   /* --- wrangler dev ------------------------------------------------------ */
   const devVars = [
     `ADMIN_KEY=${ADMIN_KEY}`,
-    `NTFY_TOPIC=${NTFY_TOPIC}`,
-    `NTFY_BASE=http://127.0.0.1:${PORT.stub}/ntfy`,
+    ...Object.entries(FAKE).map(([k, v]) => `${k}=${v}`),
+    `PUSHOVER_API_BASE=http://127.0.0.1:${PORT.stub}/pushover`,
+    `TELEGRAM_API_BASE=http://127.0.0.1:${PORT.stub}/telegram`,
     `FORMSUBMIT_ENDPOINT=http://127.0.0.1:${PORT.stub}/formsubmit`,
     `SITE_BASE_URL=http://127.0.0.1:${PORT.siteWorker}`,
     `PUBLIC_BASE_URL=http://127.0.0.1:${PORT.worker}`,
@@ -275,7 +287,6 @@ rules = [ { type = "Text", globs = ["**/*.html"], fallthrough = false } ]
 
 [vars]
 SEED_LAST_ID = "2"
-NUDGE_LINK_INCLUDES_KEY = "true"
 
 [[kv_namespaces]]
 binding = "RECORDS"
@@ -286,7 +297,7 @@ binding = "PHOTOS"
 bucket_name = "umbra-job-photos-test"
 
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/5 * * * *"]
 `);
 
   console.log('starting wrangler dev…');
@@ -375,7 +386,6 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB }
   page.on('dialog', async (d) => { lastDialog = d.message(); await d.dismiss(); });
   const forwards = () => stub.captured.filter((c) => c.url.startsWith('/formsubmit') && c.method === 'POST');
   const relayPosts = () => relay.captured.filter((c) => c.method === 'POST');
-  const nudges = () => stub.captured.filter((c) => c.url.startsWith('/ntfy') && c.method === 'POST');
 
   const json = async (url, init) => {
     const r = await fetch(url, init);
@@ -729,51 +739,11 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB }
   }
 
   /* ====================================================================== D */
-  suite('D · the 90-minute nudge');
+  /* ALERTS-01: the phone. The Stage 1 nudge suite was retired with its push service; the thirteen
+     readings live in suite-d-alerts.mjs and are written to .tmp/readings.json for the round's close. */
   {
-    /* A request of its own, so nothing another suite taps can change the answer. */
-    const fd = new FormData();
-    fd.set('name', 'Waiting Wanda');
-    fd.set('phone', '9565550177');
-    fd.set('service', 'Drywall & Paint');
-    fd.set('what', 'Nobody has answered me yet.');
-    const made = await fetch(`${W}/intake`, { method: 'POST', body: fd, redirect: 'manual' });
-    const nudgeId = new URL(made.headers.get('location')).searchParams.get('id');
-    ok(nudgeId, 'a fresh unquoted request exists to nudge on', nudgeId);
-    const recBrow = (await json(`${W}/api/jobs?k=${ADMIN_KEY}`)).body.jobs.find((j) => j.id === nudgeId);
-    const t0 = Date.parse(recBrow.received_at);
-    const early = new Date(t0 + 89 * 60000).toISOString();
-    const late = new Date(t0 + 91 * 60000).toISOString();
-
-    const beforeN = nudges().length;
-    const r0 = await json(`${W}/__run-nudge?k=${ADMIN_KEY}&now=${encodeURIComponent(early)}`, { method: 'POST' });
-    eq(r0.status, 200, 'the cron body runs');
-    eq(r0.body.nudged.length, 0, 'at 89 minutes nothing is pushed');
-    eq(nudges().length, beforeN, 'and no push left the Worker');
-
-    const r1 = await json(`${W}/__run-nudge?k=${ADMIN_KEY}&now=${encodeURIComponent(late)}`, { method: 'POST' });
-    ok(r1.body.nudged.includes(nudgeId), 'at 91 minutes the unquoted request is pushed', JSON.stringify(r1.body.nudged));
-    const sent = nudges().slice(beforeN);
-    eq(sent.length, r1.body.nudged.length, 'exactly one ntfy POST per nudged request');
-    if (sent.length) {
-      eq(sent[0].method, 'POST', 'the push is a POST');
-      ok(sent[0].url.includes(NTFY_TOPIC), 'to the configured topic', sent[0].url);
-      ok(/U-000\d/.test(sent[0].headers.title || ''), 'the title names the job', sent[0].headers.title);
-      ok(/\d+ minutes open/.test(sent[0].headers.title || ''), 'and how long it has been open', sent[0].headers.title);
-      ok((sent[0].headers.click || '').includes('/admin'), 'and it links straight to the admin list', sent[0].headers.click);
-    }
-
-    const r2 = await json(`${W}/__run-nudge?k=${ADMIN_KEY}&now=${encodeURIComponent(new Date(t0 + 200 * 60000).toISOString())}`, { method: 'POST' });
-    eq(r2.body.nudged.length, 0, 'a second run nudges nothing');
-    eq(nudges().length, beforeN + sent.length, 'and fires no second push');
-
-    const row = (await json(`${W}/api/jobs?k=${ADMIN_KEY}`)).body.jobs.find((j) => j.id === nudgeId);
-    ok(row.nudged_at, 'nudged_at is stamped on the record', row.nudged_at);
-    const md = await (await fetch(`${W}/api/export/${nudgeId}.md?k=${ADMIN_KEY}`)).text();
-    ok(md.includes('`nudged_at`'), 'and the nudge appears in the markdown clock');
-
-    const quotedRow = (await json(`${W}/api/jobs?k=${ADMIN_KEY}`)).body.jobs.find((j) => j.id === recA);
-    ok(!quotedRow.nudged_at, 'a request that was already quoted is never nudged');
+    const readings = await suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep });
+    fs.writeFileSync(path.join(TMP, 'readings.json'), JSON.stringify(readings, null, 2));
   }
 
   /* ====================================================================== E */

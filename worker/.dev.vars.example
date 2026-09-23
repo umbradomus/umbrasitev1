@@ -1,16 +1,25 @@
 # Copy this file to worker/.dev.vars and fill it in. .dev.vars is git-ignored.
-# These two are the only secrets the Worker has.
+# Every value below is a placeholder. Real values live only in the file Drew pastes
+# (see ALERTS-SETUP.md) and at Cloudflare as `wrangler secret put` secrets.
 
 # Anything long and random. This is the only thing between the internet and
 # Drew's list of customers. Generate one you will not have to remember:
 #   node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
 ADMIN_KEY=change-me-to-something-long-and-random
 
-# The ntfy.sh topic the 90-minute nudge is pushed to. The topic name IS the
-# password — anyone who knows it can read the pushes. Make it long and odd,
-# e.g. umbra-intake-7f3k9qz2x. Subscribe to the same name in the ntfy Android app.
-NTFY_TOPIC=umbra-intake-change-me
+# --- THE PHONE (ALERTS-01) ---------------------------------------------------
+# Pushover: the application's API token and his user key (pushover.net).
+PUSHOVER_TOKEN=change-me
+PUSHOVER_USER=change-me
+# Telegram: the bot's token from @BotFather and the chat id read once with getUpdates.
+TELEGRAM_BOT_TOKEN=change-me
+TELEGRAM_CHAT_ID=change-me
+# The secret path Pushover calls back on when he taps Acknowledge. Long and random, like ADMIN_KEY.
+HOOK_SECRET=change-me-to-something-long-and-random
 
 # --- local testing only, never set in production ----------------------------
-# Opens POST /__run-nudge so the cron body can be fired on demand.
+# Opens POST /__run-alerts (the cron body at a named moment) and the x-umbra-test-now header.
 ALLOW_TEST_HOOKS=false
+# Point the two senders at a local fake instead of the real services.
+# PUSHOVER_API_BASE=http://127.0.0.1:4773/pushover
+# TELEGRAM_API_BASE=http://127.0.0.1:4773/telegram

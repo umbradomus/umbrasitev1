@@ -28,8 +28,11 @@ form in:
    plus two extra lines: the job number and the customer's status link.
 4. It sends the customer to the confirmation page, which now tells them their number and
    gives them a private link they can reopen any time.
-5. **It pushes your phone at 90 minutes** if the request is still unquoted. That push is
-   the whole point. A screen you have to remember to open is not.
+5. **It pushes your phone the minute a request lands** (Pushover, with Telegram as the
+   backup) and keeps at it until you acknowledge: one urgent alert at 15 minutes that rings
+   until you tap Acknowledge, a reminder every 30 minutes, one OVERDUE at the 2-hour mark.
+   Nothing between 9 PM and 7 AM; one summary at 7:00. That push is the whole point. A screen
+   you have to remember to open is not. Setting it up: `ALERTS-SETUP.md` (ALERTS-01).
 6. It gives you one page — `/admin` — with the oldest unquoted request on top, the minutes
    showing, and three buttons on each job: **Quoted · Scheduled · Done.**
 7. It can hand any job back as a markdown file in the same shape as
@@ -43,16 +46,19 @@ the email still goes. If FormSubmit is down the record is still kept and marked
 
 ---
 
-## THE THREE SECRETS — and there are only two
+## THE SECRETS
 
 | name | what it is |
 |---|---|
 | `ADMIN_KEY` | A long random string. It is the only thing between the internet and your list of customers. It goes in the address bar of the admin page: `/admin?k=THEKEY`. Bookmark that URL on your phone. |
-| `NTFY_TOPIC` | The name of the channel your 90-minute push goes to. **The name is the password** — anyone who knows it can read your pushes, so make it long and odd, like `umbra-intake-7f3k9qz2x`. |
+| `PUSHOVER_TOKEN` · `PUSHOVER_USER` · `TELEGRAM_BOT_TOKEN` · `TELEGRAM_CHAT_ID` · `HOOK_SECRET` | The phone's alerts (ALERTS-01). What each one is and where it comes from is in `ALERTS-SETUP.md`. They go into a file you paste from; no seat ever sees them. |
 
-Nothing else. No API keys, no email password, no third party holding money or records.
+No email password, no third party holding money or records.
 
-**The one-click script makes both of them for you** and never changes them once they exist.
+**The one-click script makes the admin key for you** and never changes it once it exists.
+(It was written for Stage 1, before the alerts: it also stores the retired push service's
+secret. For any change after Stage 1, deploy with `npx wrangler deploy` instead — see the
+close of round ALERTS-01.)
 Doing it by hand instead, the admin key comes from:
 
 ```
@@ -76,7 +82,7 @@ go back to the black window. It carries on from there.
 It makes the record store, makes the photo bucket, makes both passwords, stores them at
 Cloudflare, puts the Worker up, checks that it answers, switches the website over, commits
 and pushes. Then it writes **`worker\DEPLOY-RESULT.md`** with your list's address (password
-included), your ntfy topic, and a PASS or FAIL line for every step.
+included) and a PASS or FAIL line for every step.
 
 Things worth knowing:
 
@@ -146,8 +152,9 @@ npx wrangler r2 bucket create umbra-job-photos
 
 ```
 npx wrangler secret put ADMIN_KEY
-npx wrangler secret put NTFY_TOPIC
 ```
+
+and the five alert secrets, exactly as `ALERTS-SETUP.md` step F says.
 
 Each one asks for the value and stores it at Cloudflare. **They are never written into any
 file in this folder.**
@@ -163,12 +170,13 @@ It prints an address like `https://umbra-intake.SOMETHING.workers.dev`. **Write 
 **6 · Tell it its own address**
 
 Open `wrangler.toml`, put that address into `PUBLIC_BASE_URL`, and run `npx wrangler deploy`
-again. That is what makes the link inside the 90-minute push open the admin page.
+again. Pushover calls back on that address when you tap Acknowledge. (No alert carries a
+link: the request waits for you on the computer.)
 
-**7 · Install ntfy on the phone**
+**7 · Set up the phone**
 
-Get "ntfy" from the Play Store, tap Subscribe, and type in the exact `NTFY_TOPIC` you chose.
-Test it by opening `https://ntfy.sh/YOUR-TOPIC` in a browser and sending yourself a message.
+Follow `ALERTS-SETUP.md`: Pushover, the Telegram bot, and the Gmail filter that makes the
+form's email ring the phone even when the Worker is down.
 
 **8 · Check it before pointing the site at it**
 
@@ -245,8 +253,8 @@ npm run dev
 `.dev.vars` is git-ignored and must never be committed.
 
 To run the tests — a real `wrangler dev` with local storage, a real headless browser driving
-the real `services.html`, and stand-in servers for FormSubmit and ntfy so neither your inbox
-nor your phone is touched:
+the real `services.html`, and stand-in servers for FormSubmit, Pushover and Telegram so neither
+your inbox nor your phone is touched (every alert secret in the run is a fresh fake):
 
 ```
 npm test
@@ -265,7 +273,9 @@ npm test
 | `GET /api/jobs?k=…` | Drew | the same list as data |
 | `POST /api/job/U-NNNN/event?k=…` | Drew | the taps: `quoted`, `scheduled`, `done`, `note` |
 | `GET /api/export/U-NNNN.md?k=…` | the vault | the job as markdown, fixed slots, blanks visible |
-| *(every 15 minutes)* | Drew's phone | anything unquoted at 90 minutes gets one push, once |
+| `POST /admin/seen/U-NNNN?k=…` | Drew, the FC | "I have it": stops the alerts for that request (401 without the key) |
+| `POST /hooks/pushover/SECRET` | Pushover | the Acknowledge tap; only a receipt the Worker issued is accepted |
+| *(every 5 minutes)* | Drew's phone | the alert ladder in `src/alerts.js`: +15 urgent, every 30, OVERDUE at due; 9 PM–7 AM held to one 7:00 summary |
 
 A wrong link and a link to a job that never existed answer identically, so a stranger
 guessing cannot learn that a job exists.
@@ -276,13 +286,11 @@ guessing cannot learn that a job exists.
 
 **GUESSES — reversible in one sentence each:**
 
-- **ntfy.sh is the push channel.** Free, no account, an Android app, and the topic name is
-  the only credential. The sender is one function in `src/notify.js` — swapping it for
-  Pushover, Telegram or email changes nothing else.
-- **The admin key rides inside the push's link**, so the push is one tap from the Quoted
-  button. Set `NUDGE_LINK_INCLUDES_KEY = "false"` in `wrangler.toml` for a bare `/admin`
-  link instead.
-- **90 minutes** is the nudge point, against a 2-hour promise. One constant in `src/index.js`.
+- **Pushover first, Telegram second** (ALERTS-01, from the research on
+  `Bridge\SUPE\FLUX-UX-v1-2026-09-23.md` §5). Both senders are in `src/notify.js`; the
+  ladder's minutes are constants at the top of `src/alerts.js`.
+- **No link in any alert, and never the admin key** (R25). The Stage 1 push carried the key
+  inside its link; that is gone.
 - **10 MB per photo, 25 MB per request.** The page already shrinks photos to about 1600px,
   so a real phone photo lands far under this.
 - **Ids are `U-NNNN`**, matching the job folders on disk (`U-0002-wills-ceiling`). The design
@@ -290,9 +298,9 @@ guessing cannot learn that a job exists.
 
 **NOT TESTED, and honestly so:**
 
-- **The real FormSubmit and the real ntfy.** Both were stood up as local servers and the
-  bytes they received were read and checked; neither the live relay nor a real phone was
-  touched.
+- **The real FormSubmit, the real Pushover and the real Telegram.** All were stood up as
+  local servers and the bytes they received were read and checked; neither the live relay
+  nor a real phone was touched.
 - **Real Cloudflare KV and R2.** Everything ran on the local emulation that ships with
   wrangler.
 - **The cron firing on its own schedule.** The local runtime does not run schedules, so the
@@ -303,7 +311,7 @@ guessing cannot learn that a job exists.
   browser, not a handset.
 - **KV's list is eventually consistent** on the real edge. A brand-new request may take up to
   a minute to appear in `/api/jobs`. It is on the record immediately — only the *list* lags.
-  Nothing depends on it inside 90 minutes.
+  The intake alert does not depend on it; the alert ladder's next run is 5 minutes later.
 - **There is no Spanish status page.** `es/recibido.html` links to the English `/status`,
   because `es/estado.html` does not exist. One line in `src/index.js` routes it when it does.
 - **Job ids are allocated without a lock.** KV cannot increment atomically, so the allocator

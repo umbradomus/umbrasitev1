@@ -4,6 +4,34 @@
    stays the source of truth — the KV copy is derived from it, not the other way. */
 
 import { mdCell, minutesBetween } from './util.js';
+import { bizMinutes, replyDue, clock, chicagoDay, REPLY_MIN } from './biztime.js';
+
+/* R32 · THE 2-HOUR WINDOW IS BUSINESS TIME. The promise is "within 2 hours, 7am–9pm", so a request at
+   8:30 PM quoted at 8:30 AM met it (30 + 90 business minutes), and one at 10:15 PM is due 9:00 AM. The
+   register counts it with the Flux Capacitor's rule (biztime.js); `minutes_to_quote` stays the raw clock. */
+function windowCell(rec) {
+  const r = Date.parse(rec.received_at), q = Date.parse(rec.quoted_at);
+  if (!isFinite(r) || !isFinite(q)) return null;
+  const biz = bizMinutes(r, q);
+  return `${biz <= REPLY_MIN ? 'YES' : 'NO'} — ${biz} business min`;
+}
+
+function dueCell(rec) {
+  const r = Date.parse(rec.received_at);
+  if (!isFinite(r)) return null;
+  const due = replyDue(r);
+  return `${chicagoDay(due)} ${clock(due)} Central`;
+}
+
+function alertsCell(rec) {
+  const a = rec.alerts;
+  if (!a) return null;
+  const bits = [`${a.count || 0} sent`];
+  if (a.first_at) bits.push('first ' + a.first_at);
+  if (a.channels && a.channels.length) bits.push('via ' + a.channels.join(' + '));
+  bits.push(a.ack_at ? `acknowledged ${a.ack_at} (${a.ack_by || '?'})` : 'not acknowledged');
+  return bits.join(' · ');
+}
 
 function title(rec) {
   const f = rec.fields || {};
@@ -69,7 +97,7 @@ export function renderJobMarkdown(rec, opts = {}) {
   const mtq = rec.minutes_to_quote != null
     ? rec.minutes_to_quote
     : (rec.quoted_at ? minutesBetween(rec.received_at, rec.quoted_at) : null);
-  const metWindow = mtq == null ? null : (mtq <= 120 ? `YES — ${mtq} min` : `NO — ${mtq} min`);
+  const metWindow = windowCell(rec);
 
   const L = [];
   L.push(`# ${rec.id} · ${title(rec)}`);
@@ -162,9 +190,11 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`questions_sent_at\` | ${mdCell(rec.questions_sent_at)} |`);
   L.push(`| \`answers_in_at\` | ${mdCell(rec.answers_in_at)} |`);
   L.push(`| \`quoted_at\` | ${mdCell(rec.quoted_at)} ← the tap |`);
-  L.push(`| \`minutes_to_quote\` | ${mdCell(mtq)} |`);
-  L.push(`| \`nudged_at\` | ${mdCell(rec.nudged_at)} ← the 90-minute push |`);
-  L.push(`| **2-hour window met?** | ${mdCell(metWindow)} — *ruled 09-17: "we know we will miss it." Recorded, not chased.* |`);
+  L.push(`| \`minutes_to_quote\` | ${mdCell(mtq)} ← clock minutes |`);
+  L.push(`| \`quote due\` | ${mdCell(dueCell(rec))} ← 2 business hours, 7 AM–9 PM (R32) |`);
+  L.push(`| \`alerts\` | ${mdCell(alertsCell(rec))} ← the phone (ALERTS-01) |`);
+  if (rec.nudged_at) L.push(`| \`nudged_at\` | ${mdCell(rec.nudged_at)} ← the retired Stage 1 push |`);
+  L.push(`| **2-hour window met?** | ${mdCell(metWindow)} — *business minutes (R32). Ruled 09-17: "we know we will miss it." Recorded, not chased.* |`);
   L.push('');
 
   L.push('## E · ACCEPTANCE → SCHEDULE');

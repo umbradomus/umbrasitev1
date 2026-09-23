@@ -1,7 +1,8 @@
 /* The three stand-ins the tests need:
      · a capture server that plays FormSubmit (over TLS, so the browser really
        posts to https://formsubmit.co after a host-resolver rule points that
-       name at us) and ntfy (over plain http, called by the Worker)
+       name at us), and the fake Pushover and Telegram the Worker's alerts reach
+       (plain http, pointed at by PUSHOVER_API_BASE / TELEGRAM_API_BASE)
      · a static server for the site under test
    Nothing here ships. */
 
@@ -10,6 +11,7 @@ import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -44,30 +46,53 @@ export function makeSelfSigned(dir) {
 }
 
 /**
- * Plays FormSubmit and ntfy. Every request is pushed onto `captured`.
+ * Plays FormSubmit, Pushover and Telegram. Every request is pushed onto `captured`.
  * `mode` can be flipped to 'fail' to prove the Worker keeps the record anyway.
+ * `pushover` / `telegram` can be set to '500' or '400' to prove the retry rules.
+ * A priority-2 Pushover call is answered with a fresh receipt, kept on the capture.
  */
 export function captureServer({ port, tls, tlsDir }) {
   const captured = [];
-  const state = { mode: 'ok' };
+  const state = { mode: 'ok', pushover: 'ok', telegram: 'ok' };
 
   const handler = async (req, res) => {
     const body = await readBody(req);
-    captured.push({
+    const cap = {
       at: Date.now(),
       method: req.method,
       url: req.url,
       headers: { ...req.headers },
       body,
-    });
+    };
+    captured.push(cap);
+    if (/^\/pushover\//.test(req.url)) {
+      const code = state.pushover === 'ok' ? 200 : parseInt(state.pushover, 10);
+      cap.answered = code;
+      if (code !== 200) {
+        res.writeHead(code, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ status: 0, errors: ['fake pushover ' + code], request: 'fake' }));
+        return;
+      }
+      const out = { status: 1, request: 'fake-' + crypto.randomBytes(6).toString('hex') };
+      const p = new URLSearchParams(body.toString('utf8'));
+      if (/messages\.json$/.test(req.url) && p.get('priority') === '2') {
+        out.receipt = crypto.randomBytes(15).toString('hex');
+        cap.receipt = out.receipt;
+      }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(out));
+      return;
+    }
+    if (/^\/telegram\//.test(req.url)) {
+      const code = state.telegram === 'ok' ? 200 : parseInt(state.telegram, 10);
+      cap.answered = code;
+      res.writeHead(code, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(code === 200 ? { ok: true, result: { message_id: captured.length } } : { ok: false, description: 'fake telegram ' + code }));
+      return;
+    }
     if (state.mode === 'fail') {
       res.writeHead(500, { 'content-type': 'text/plain' });
       res.end('stub failure');
-      return;
-    }
-    if (/^\/ntfy/.test(req.url)) {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ id: 'stub', topic: req.url.replace(/^\/ntfy\//, '') }));
       return;
     }
     /* FormSubmit answers a browser post by sending it on to _next. The stub
