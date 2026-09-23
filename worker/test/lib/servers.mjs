@@ -111,10 +111,36 @@ export function captureServer({ port, tls, tlsDir }) {
   });
 }
 
-/** Serves a directory with Vercel's cleanUrls behaviour. */
-export function staticServer({ port, root }) {
+/**
+ * ACCEPT-PAGE-02: the site's one rewrite, played locally — vercel.json sends /q/* to the Worker as an external
+ * rewrite, which is a proxy: the browser stays on the site's origin, the Worker answers. Method, headers
+ * (Origin and Sec-Fetch-* included) and body go through; the answer comes back as it is — a 303's relative
+ * Location is never followed or rewritten. Every request is pushed onto `log` with the headers it carried.
+ */
+function proxyTo(target, log, req, res) {
+  const t = new URL(target);
+  const headers = { ...req.headers, host: t.host, 'x-forwarded-host': req.headers.host || '' };
+  const entry = { at: Date.now(), method: req.method, url: req.url, headers: { ...req.headers } };
+  log.push(entry);
+  const up = http.request({ host: t.hostname, port: t.port, method: req.method, path: req.url, headers }, (r) => {
+    entry.status = r.statusCode;
+    entry.response_headers = { ...r.headers };
+    res.writeHead(r.statusCode, r.headers);
+    r.pipe(res);
+  });
+  up.on('error', (err) => { entry.error = String(err); if (!res.headersSent) res.writeHead(502, { 'content-type': 'text/plain' }); res.end('proxy error'); });
+  /* a client that hangs up mid-request must never take the site server down with it */
+  req.on('error', (err) => { entry.client_error = String(err); up.destroy(); });
+  res.on('error', (err) => { entry.client_error = String(err); });
+  req.pipe(up);
+}
+
+/** Serves a directory with Vercel's cleanUrls behaviour; with `proxy`, /q and /q/* go to that Worker. */
+export function staticServer({ port, root, proxy = null }) {
+  const proxyLog = [];
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
+    if (proxy && (url.pathname === '/q' || url.pathname.startsWith('/q/'))) { proxyTo(proxy, proxyLog, req, res); return; }
     let p = decodeURIComponent(url.pathname);
     if (p.endsWith('/')) p += 'index.html';
     let file = path.join(root, p);
@@ -128,7 +154,7 @@ export function staticServer({ port, root }) {
     res.end(fs.readFileSync(file));
   });
   return new Promise((resolve) => {
-    server.listen(port, '127.0.0.1', () => resolve({ server, port, root }));
+    server.listen(port, '127.0.0.1', () => resolve({ server, port, root, proxyLog }));
   });
 }
 

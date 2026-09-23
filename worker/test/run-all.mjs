@@ -21,6 +21,7 @@ import { parseMultipart, fieldValue, files as filesOf } from './lib/multipart.mj
 import { suiteAlerts } from './suite-d-alerts.mjs';
 import { suiteWindows } from './suite-g-windows.mjs';
 import { suiteBook } from './suite-h-book.mjs';
+import { suitePage } from './suite-i-page.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -260,7 +261,8 @@ async function main() {
   /* --- servers ----------------------------------------------------------- */
   const stub = await captureServer({ port: PORT.stub, tls: false });
   const relay = await captureServer({ port: PORT.formsubmitTls, tls: true, tlsDir: TMP });
-  const sw = await staticServer({ port: PORT.siteWorker, root: siteWorker });
+  /* ACCEPT-PAGE-02: this copy of the site also plays vercel.json's rewrite, /q/* to the Worker under test */
+  const sw = await staticServer({ port: PORT.siteWorker, root: siteWorker, proxy: `http://127.0.0.1:${PORT.worker}` });
   const sn = await staticServer({ port: PORT.siteNew, root: siteNew });
   const so = await staticServer({ port: PORT.siteOld, root: siteOld });
 
@@ -372,7 +374,7 @@ new_sqlite_classes = ["QuoteBook"]
   };
 
   try {
-    await runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, wlogRef: () => wlog });
+    await runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, wlogRef: () => wlog, sw, siteWorker });
   } finally {
     await cleanup();
   }
@@ -392,7 +394,7 @@ new_sqlite_classes = ["QuoteBook"]
 
 /* ------------------------------------------------------------------- suites */
 
-async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, wlogRef }) {
+async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, wlogRef, sw, siteWorker }) {
   const SITE = `http://127.0.0.1:${PORT.siteWorker}`;
   let lastDialog = null;
   const page = await browser.newPage();
@@ -836,6 +838,14 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
   {
     const readings = await suiteBook({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, wlogRef });
     fs.writeFileSync(path.join(TMP, 'book-readings.json'), JSON.stringify(readings, null, 2));
+  }
+
+  /* ====================================================================== I */
+  /* ACCEPT-PAGE-02: the customer's page at /q/<code>, through the site's own /q proxy. Readings go to
+     .tmp/page-readings.json and its pictures to .tmp/page-pictures/. */
+  {
+    const readings = await suitePage({ browser, W, stub, sw, siteWorker, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, PORT, TMP, WORKER_DIR, REPO_DIR, wlogRef });
+    fs.writeFileSync(path.join(TMP, 'page-readings.json'), JSON.stringify(readings, null, 2));
   }
 
   await page.close();

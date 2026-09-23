@@ -27,6 +27,11 @@ SEED_LAST_ID = "2"
 # ACCEPT-PAGE-01: the quote link at the end of the text is QUOTE_LINK_BASE + "/q/" + <22-character code>.
 # The shortest form of our own domain, for a text message; the site rewrites /q/* to this Worker.
 QUOTE_LINK_BASE = "https://umbradomus.com"
+# ACCEPT-PAGE-02: the before-you-accept notices on the customer's page (src/notices.js).
+# The lighting paragraph shows by default. The Texas Property Code §53.255 disclosure shows only when
+# NOTICE_53255 is "true" — his one-word call at his look: BOTH / LIGHTING ONLY / WAIT.
+NOTICE_LIGHTING = "true"
+NOTICE_53255 = "false"
 
 # --- THE BOOK (ACCEPT-PAGE-01) ----------------------------------------------
 # The quotes, their holds and one booking per time: a Durable Object with SQLite storage, reached as

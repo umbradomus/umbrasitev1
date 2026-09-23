@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [{ "source": "/q/:path*", "destination": "https://umbra-intake.umbradomus.workers.dev/q/:path*" }],
   "headers": [
     {
       "source": "/assets/fonts/(.*)",

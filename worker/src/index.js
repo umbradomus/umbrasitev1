@@ -22,8 +22,11 @@
      POST /admin/quote/:id/accept?k=   a texted YES he marks — the same booking step as the page, by "text"
      POST /admin/quote/:id/cancel?k=   withdraws a version; a booked one frees its time
      GET  /admin/quote/:id?k=          every version's state for the Flux Capacitor (never the code)
+     GET  /q/:code                     the customer's quote page — opening it changes nothing but the visit count (page.js)
+     POST /q/:code  ·  /q/:code/none   Accept & confirm · None of these times work — same-origin forms, then 303 back
      GET  /health                      liveness
    The book behind the quote link is a Durable Object (quotebook.js, binding BOOK); quotes.js is the rest.
+   The site reaches /q/* through its own rewrite (vercel.json), so the page lives on umbradomus.com.
 */
 
 import ADMIN_HTML from '../admin.html';
@@ -32,7 +35,7 @@ import {
   json, notFound, text, html, extFor,
 } from './util.js';
 import {
-  allocateId, getRecord, putRecord, listRecords, addEvent, minutesOpen, sortForAdmin,
+  allocateId, getRecord, putRecord, listRecords, addEvent, minutesOpen, sortForAdmin, jobKey,
 } from './store.js';
 import { forwardToFormSubmit } from './forward.js';
 import {
@@ -45,6 +48,7 @@ import {
   readQuoteBody, createQuote, markSent, cancelQuote, quoteState, bookByJob,
   bookByCode, markNone, viewByCode, reconcile, bookDump,
 } from './quotes.js';
+import { handleQuotePage } from './page.js';
 
 /* ACCEPT-PAGE-01: the book's class rides the main module beside the default export (wrangler.toml
    binds it as BOOK; its migration is new_sqlite_classes, the only kind the Workers Free plan takes). */
@@ -747,6 +751,11 @@ export default {
       return handlePushoverHook(request, env, decodeURIComponent(m[1]));
     }
 
+    /* ACCEPT-PAGE-02: the customer's page. Everything under /q answers from page.js with its own headers. */
+    if (path === '/q' || path.startsWith('/q/')) {
+      return handleQuotePage(request, env, url, path.slice(3), method, nowFor(request, env));
+    }
+
     /* A test hook, never reachable in production: the cron body on demand, at a named moment, so the
        ladder can be exercised without waiting. Gated on the admin key AND on ALLOW_TEST_HOOKS, which is
        only ever set in a test's .dev.vars. */
@@ -773,6 +782,14 @@ export default {
       if (hook[1] === 'book-by-code') return json(await bookByCode(env, b.code, b.version, b.window, b.by || 'page', now));
       if (hook[1] === 'none-by-code') return json(await markNone(env, b.code, b.version, now));
       return json(await viewByCode(env, b.code, now));
+    }
+
+    /* ACCEPT-PAGE-02's one test hook, the same gate: the job's KV record exactly as stored, so a reading can
+       prove a visit left it byte-identical. */
+    if ((m = /^\/__record\/(U-\d{4,6})$/.exec(path))) {
+      if (method !== 'POST' || !testHookOk(env, url)) return adminDenied();
+      const raw = await env.RECORDS.get(jobKey(m[1]));
+      return raw === null ? notFound() : new Response(raw, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
     }
 
     return notFound();
