@@ -1074,6 +1074,8 @@ new_sqlite_classes = ["QuoteBook"]
     await p.close();
     return { ...g, fonts };
   };
+  /* Q3 (3) opens here, so the qp3 Worker's own 'came up' check is counted in Q3, not in (21) */
+  suite('I · Q3 (3) the page stays short: Accept high enough at 390, the folded statute costs ≤ 250 px');
   const gOneOff = await geo(SITE, mOne.code, at(18, 0));
   const gTwoOff = await geo(SITE, mTwo.code, at(18, 1));
 
@@ -1086,7 +1088,6 @@ new_sqlite_classes = ["QuoteBook"]
     const tTwoEn = await quoted('Ines Okafor', 'Patch where a shelf pulled out of the kitchen wall', [win('2026-12-04', '08:00', '10:00'), win('2026-12-05', '13:00', '15:00')], { base: TB });
 
     /* ------------------------------------------------ Q3 · (3) */
-    suite('I · Q3 (3) the page stays short: Accept high enough at 390, the folded statute costs ≤ 250 px');
     {
       const gOneOn = await geo(TS, tOne.code, at(18, 2));
       const gTwoOn = await geo(TS, tTwo.code, at(18, 3));
