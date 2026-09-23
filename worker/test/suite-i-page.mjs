@@ -675,7 +675,8 @@ export async function suitePage(ctx) {
     const SENT = String.fromCharCode(1);
     const seen = {};
     const expectIn = (label, h, keys, fillers = {}) => {
-      const t = textOf(h);
+      /* the §53.255 block is the statute's own English on every page (lang="en"): it is not a page string */
+      const t = textOf(String(h || '').replace(/<div class="q53" id="notice-53255" lang="en">[\s\S]*?<\/div>/g, ' '));
       for (const k of keys) {
         const es = S[k].replace(/\{(\w+)\}/g, (_, x) => fillers[x] ?? '\u0000');
         const en = E[k].replace(/\{(\w+)\}/g, (_, x) => fillers[x] ?? '\u0000');
