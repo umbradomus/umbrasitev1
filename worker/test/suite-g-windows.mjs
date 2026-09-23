@@ -47,7 +47,7 @@ export async function suiteWindows(ctx) {
   const rowsNamed = async (base, name) => (await json(`${base}/api/jobs?k=${ADMIN_KEY}`)).body.jobs.filter((j) => j.name === name);
 
   /* ------------------------------------------------------------ page helpers */
-  async function newPage({ now = T, width = 390, tz = null } = {}) {
+  async function newPage({ now = T, width = 390, tz = null, noConfig = false } = {}) {
     const page = await browser.newPage();
     await page.setViewport({ width, height: width <= 420 ? 844 : 900 });
     if (tz) await page.emulateTimezone(tz);
@@ -67,6 +67,7 @@ export async function suiteWindows(ctx) {
     }, Date.parse(now));
     await page.setRequestInterception(true);
     page.on('request', (r) => {
+      if (noConfig && /\/api\/windows$/.test(r.url())) { r.abort(); return; }
       if (r.method() === 'POST' && /\/intake$/.test(r.url())) {
         r.continue({ headers: { ...r.headers(), 'x-umbra-test-now': clock.now } });
       } else r.continue();
@@ -211,6 +212,16 @@ export async function suiteWindows(ctx) {
       ok(consent.privacy === '#privacy' && await page.$('#privacy'), `${lang}: with the privacy link beside it`, consent.privacy);
       const promo = await page.$$eval('input[type="checkbox"]', (b) => b.map((x) => x.name).filter((n) => /promo|market|offer|news/i.test(n)));
       eq(promo.length, 0, `${lang}: no promotional box anywhere on the form`);
+      /* the page's own default, when the Worker cannot be asked: still no Sundays */
+      const off = await newPage({ noConfig: true });
+      await openAt(off, url, 'times', who('Offline ' + lang));
+      await off.waitForSelector('.wday');
+      await sleep(300);
+      const offDates = await chipDates(off);
+      const offCfg = await off.$eval('.wbox', (e) => e.getAttribute('data-config'));
+      eq(offDates.join(','), EXPECT_DAYS.join(','), `${lang}: with /api/windows unreachable the page still offers the same 12, no Sunday`);
+      eq(offCfg, null, `${lang}: (and the config really was not loaded)`);
+      await off.close();
       R['2'][lang] = { title: q, chips: dates.length, first: texts[0], last: texts[texts.length - 1], chip_texts: texts, blocks: bl, flexible_checked: flex.checked, flexible_label: flex.label, consent_checked: consent.checked, consent_required: consent.required, consent_screen: consent.screen, consent_words: consent.words };
       await page.close();
     }
