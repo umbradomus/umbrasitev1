@@ -496,13 +496,13 @@ export async function suitePage(ctx) {
     await shot(p, '5-taken.png');
     const booked = await clickAndWait(p, 'button.qgo');
     eq(stateOf(booked), 'booked', 'and tapping it books the free window');
-    eq((await record(P6.id)).accept.window.date, '2026-10-20', 'window 2 (10/20)');
+    eq((await record(P6.id)).accept?.window?.date, '2026-10-20', 'window 2 (10/20)');
     await p.close();
     const g8 = await getQ(P8.code, CT(...WED, 12, 10));
     eq(stateOf(g8.text), 'taken', 'a quote whose only time overlaps it → TAKEN');
     ok(textOf(g8.text).includes("That time was just booked.") && textOf(g8.text).includes("Reply to our text and we'll find you another time."), 'with no time free: "Reply to our text and we\'ll find you another time."');
     eq(/<form/.test(g8.text), false, 'and no button');
-    R['9'] = { job: P6.id, other_job: P7.id, page: stateOf(g.text), offered: t.match(/(Mon|Tue), Oct \d+ · arrival between [^.]*?(AM|PM)/g), then_booked: (await record(P6.id)).accept.window, no_free_job: P8.id, no_free_page: stateOf(g8.text), no_free_text: textOf(g8.text) };
+    R['9'] = { job: P6.id, other_job: P7.id, page: stateOf(g.text), offered: t.match(/(Mon|Tue), Oct \d+ · arrival between [^.]*?(AM|PM)/g), then_booked: (await record(P6.id)).accept?.window ?? null, no_free_job: P8.id, no_free_page: stateOf(g8.text), no_free_text: textOf(g8.text) };
   }
 
   /* ============================================================ (10) */
@@ -636,11 +636,13 @@ export async function suitePage(ctx) {
       if (focus === 'qgo') break;
     }
     eq(focus, 'qgo', 'Tab reaches Accept & confirm');
-    await Promise.all([p.waitForNavigation({ waitUntil: 'load' }), p.keyboard.press('Enter')]);
+    try {
+      await Promise.all([p.waitForNavigation({ waitUntil: 'load', timeout: 15000 }), p.keyboard.press('Enter')]);
+    } catch (err) { ok(false, 'Enter on Accept & confirm completed a navigation', err.message); }
     keys.push('Enter');
     const after = await html(p);
     eq(stateOf(after), 'booked', 'keyboard alone booked it');
-    eq((await record(P14.id)).accept.window.date, '2026-10-29', 'the time the keyboard chose (10/29)');
+    eq((await record(P14.id)).accept?.window?.date, '2026-10-29', 'the time the keyboard chose (10/29)');
     await p.close();
     /* the stylesheet blocked */
     const nc = await tab(CT(...WED, 14, 20), { blockCss: true });
