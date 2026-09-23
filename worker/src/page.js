@@ -6,6 +6,8 @@
                            link previews and mail scanners open links by themselves, so opening must be harmless.
      POST /q/<code>        Accept & confirm → bookByCode(…, "page") → 303 back to GET, which then says BOOKED.
      POST /q/<code>/none   None of these times work → markNone → 303 back to GET, which then says RECEIVED.
+     GET  /q/<code>/calendar.ics   QUOTE-PAGE-03: a BOOKED quote's visit as an .ics file (else NOT VALID, 404).
+                           Like the page's GET it moves only the visit count; a POST to it answers 405.
 
    THE SEAM (the ignite's AMENDMENT 2, E1): this file calls only ACCEPT-PAGE-01's viewByCode, bookByCode and
    markNone, which already count, stamp and push. It never writes KV and never pushes by itself.
@@ -18,7 +20,8 @@
    URL would leave the site (and form-action 'self' would block the next post), and Response.redirect() throws
    on a relative one in workerd. So: new Response(null, { status: 303, headers: { Location: '/q/' + code } }). */
 
-import { viewByCode, bookByCode, markNone } from './quotes.js';
+import { viewByCode, bookByCode, markNone, codeHash, windowStartMs } from './quotes.js';
+import { chicagoWall } from './biztime.js';
 import { LIGHTING_EN, NOTICE_53255 } from './notices.js';
 import { WORDS, LIGHTING_ES } from './page-words.js';
 
@@ -109,30 +112,122 @@ function money(n) {
 
 /* ------------------------------------------------------------------ the page frame */
 
+/* QUOTE-PAGE-03: the look of 1SUPE5's mock (Bridge/SUPE/QUOTE-PAGE-03-MOCK-2026-09-23/make_mock.py), with every
+   colour written out, so the page stays right when site.css does not load (or on workers.dev):
+   teal #0D7471 · teal-deep #0A5C5A · line #D9D2C7 · paper #F6F3EE · paper-2 #ECE7DF · muted #4E4960 ·
+   ink #0F0B1A · focus #2F6BB0 · rust #92310E · prussian #003153. The class names avoid site.css's own
+   .top, .note and .inc, which collide. */
 const STYLE = `
+body{background:#F6F3EE;color:#0F0B1A}
 .qtop{background:#fff;border-bottom:1px solid #D9D2C7;padding:.7rem 0}
 .qbrand{display:flex;align-items:center;gap:.6rem;margin:0;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:1rem}
 .qbrand img{width:34px;height:auto;display:block}
-.q{padding:1.6rem 0 3rem}
-.q h1{font-size:clamp(1.9rem,6vw,2.6rem)}
-.q h2{font-size:1.25rem;letter-spacing:0;margin:1.6rem 0 .5rem}
-.q ul{padding-left:1.2rem;margin:0 0 1rem}
-.qprice{font-size:2.1rem;font-weight:600;line-height:1.1;margin:0 0 .35rem}
-.qbox{background:#fff;border:1px solid #D9D2C7;border-radius:14px;padding:.9rem 1.1rem;margin:0 0 1rem}
-.qpick{border:2px solid #0D7471;border-radius:14px;padding:.6rem 1rem .8rem;margin:0 0 1rem;min-width:0}
-.qpick legend{font-weight:600;padding:0 .3rem}
-.qpick label{display:flex;align-items:center;gap:.75rem;min-height:48px;padding:.25rem 0;cursor:pointer}
-.qpick input{width:24px;height:24px;margin:0;flex:none;accent-color:#0D7471}
+.q{padding:1.1rem 0 3rem}
+.q svg{width:1.25em;height:1.25em;flex:none}
+.qsteps{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0 0 1.4rem;padding:0}
+.qsteps li{position:relative;display:grid;justify-items:center;gap:.35rem;font-size:.78rem;font-weight:500;color:#4E4960;text-align:center}
+.qsteps li::before{content:"";position:absolute;top:13px;left:-50%;right:50%;height:2px;background:#D9D2C7;z-index:0}
+.qsteps li:first-child::before{display:none}
+.qsteps li.done::before,.qsteps li.now::before{background:#0D7471}
+.qsteps .dot{position:relative;z-index:1;display:grid;place-items:center;width:28px;height:28px;box-sizing:border-box;border-radius:50%;background:#F6F3EE;border:2px solid #D9D2C7;color:#fff}
+.qsteps .dot svg{width:15px;height:15px}
+.qsteps li.done .dot{background:#0D7471;border-color:#0D7471}
+.qsteps li.now .dot{border-color:#0D7471;box-shadow:0 0 0 4px rgba(13,116,113,.16)}
+.qsteps li.now .dot::after{content:"";width:10px;height:10px;border-radius:50%;background:#0D7471}
+.qsteps li.done,.qsteps li.now{color:#0F0B1A}
+.q h1{font-size:clamp(1.9rem,7vw,2.4rem);line-height:1.05;margin:0 0 .3rem}
+.qhi{font-size:1.15rem;margin:0 0 1.1rem;color:#4E4960}
+.q h2{font-size:1.1rem;letter-spacing:0;margin:1.5rem 0 .6rem}
+.qticket{background:#fff;border:1px solid #D9D2C7;border-radius:18px;box-shadow:0 10px 30px rgba(15,11,26,.07);overflow:hidden;margin:0 0 1.2rem}
+.qticket .qtt{padding:1.1rem 1.2rem .95rem}
+.qtl{font-size:.74rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#0D7471;margin:0 0 .25rem}
+.qprice{font-size:2.7rem;font-weight:600;line-height:1;margin:0 0 .35rem;letter-spacing:-.01em}
+.qticket .qtn{margin:0;color:#4E4960}
+.qticket .qti{display:flex;gap:.45rem;align-items:flex-start;margin:.55rem 0 0;font-size:.95rem}
+.qticket .qti svg{color:#0D7471;margin-top:.1em}
+.qticket .qtear{height:0;border-top:2px dashed #D9D2C7;margin:0 1.2rem;position:relative}
+.qticket .qtear::before,.qticket .qtear::after{content:"";position:absolute;top:-11px;width:20px;height:20px;border-radius:50%;background:#F6F3EE;border:1px solid #D9D2C7}
+.qticket .qtear::before{left:-31px}.qticket .qtear::after{right:-31px}
+.qticket .qtw{display:flex;gap:.8rem;align-items:flex-start;padding:.95rem 1.2rem 1.1rem}
+.qticket .qtw svg{color:#0D7471;width:1.6em;height:1.6em;margin-top:.1em}
+.qticket .qtd{font-weight:600;font-size:1.15rem;margin:0}
+.qticket .qtwin{margin:0}
+.qhold{display:flex;gap:.5rem;align-items:flex-start;font-size:.93rem;color:#4E4960;margin:0 0 1.2rem}
+.qhold svg{margin-top:.1em}
+.qwork{list-style:none;padding:0;margin:0 0 1rem;display:grid;gap:.55rem}
+.qwork li{display:grid;grid-template-columns:26px 1fr;gap:.6rem;align-items:start}
+.qwork .ck{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:rgba(13,116,113,.12);color:#0D7471}
+.qwork .ck svg{width:15px;height:15px}
+.qtrust{list-style:none;margin:0 0 .4rem;padding:.2rem .95rem;background:#fff;border:1px solid #D9D2C7;border-radius:14px}
+.qtrust li{display:flex;gap:.65rem;align-items:flex-start;padding:.6rem 0;font-size:.95rem}
+.qtrust li+li{border-top:1px solid #ECE7DF}
+.qtrust svg{color:#0D7471;width:1.4em;height:1.4em}
 .qerr{border-left:5px solid #b83622;background:#fff;padding:.6rem .9rem;font-weight:600;margin:0 0 1rem}
-.qnote{font-size:.97rem}
-.q53{font-size:.9rem;background:#fff;border:1px solid #D9D2C7;border-radius:14px;padding:.9rem 1.1rem;margin:0 0 1rem}
-.q53 p{margin:0 0 .7em}
-.qgo{display:block;width:100%;min-height:56px;margin:1.2rem 0 .8rem;padding:.8rem 1.2rem;font:inherit;font-size:1.15rem;font-weight:600;border-radius:14px;border:2px solid #0D7471;background:#0D7471;color:#fff;cursor:pointer}
+.qpick{border:0;padding:0;margin:0 0 1rem;min-width:0}
+.qpick legend{font-weight:600;font-size:1.1rem;padding:0;margin:0 0 .6rem}
+.qopt{display:flex;align-items:center;gap:.9rem;min-height:64px;box-sizing:border-box;padding:.8rem 1rem;margin:0 0 .6rem;background:#fff;border:2px solid #D9D2C7;border-radius:16px;cursor:pointer}
+.qopt input{width:24px;height:24px;margin:0;flex:none;accent-color:#0D7471}
+.qopt .qod{display:block;font-weight:600;font-size:1.05rem}
+.qopt .qot{display:block;color:#4E4960}
+.qopt:has(input:checked){border-color:#0D7471;background:#EFF7F6;box-shadow:0 0 0 3px rgba(13,116,113,.14)}
+.qopt input:focus-visible{outline:3px solid #2F6BB0;outline-offset:2px}
+@supports selector(:has(a)){.qopt input:focus-visible{outline:none}.qopt:has(input:focus-visible){outline:3px solid #2F6BB0;outline-offset:3px}}
+.qnotebox{display:flex;gap:.7rem;align-items:flex-start;background:#fff;border:1px solid #D9D2C7;border-radius:14px;padding:.8rem .95rem;font-size:.93rem;margin:0 0 .7rem}
+.qnotebox svg{color:#92310E;width:1.4em;height:1.4em;margin-top:.1em}
+.qnote{margin:0}
+.qlaw{background:#fff;border:1px solid #D9D2C7;border-radius:14px;margin:0 0 .7rem}
+.qlaw summary{display:flex;gap:.7rem;align-items:center;min-height:52px;box-sizing:border-box;padding:.55rem .95rem;cursor:pointer;font-weight:600;font-size:.97rem;list-style:none}
+.qlaw summary::-webkit-details-marker{display:none}
+.qlaw summary svg:first-child{color:#003153;width:1.4em;height:1.4em}
+.qlaw .qlt{display:grid;gap:.05rem}
+.qlaw .qlh{font-weight:600}
+.qlaw .qlp{font-weight:400;font-size:.88rem;color:#4E4960}
+.qlaw summary .chev{margin-left:auto;display:flex;transition:transform .15s}
+.qlaw[open] summary .chev{transform:rotate(180deg)}
+.qlaw summary:focus-visible{outline:3px solid #2F6BB0;outline-offset:2px;border-radius:12px}
+.qlaw .qlb{border-top:1px solid #D9D2C7;padding:.8rem .95rem;font-size:.86rem}
+.qlaw .qlin{margin:0 0 .65em;font-style:italic}
+.qlaw .q53{max-height:55vh;overflow:auto;margin:0}
+.qlaw .q53 p{margin:0 0 .65em}
+.qgo{display:block;width:100%;min-height:58px;margin:1.1rem 0 .7rem;padding:.8rem 1.2rem;font:inherit;font-size:1.15rem;font-weight:600;border-radius:16px;border:2px solid #0D7471;background:#0D7471;color:#fff;cursor:pointer;box-shadow:0 8px 20px rgba(13,116,113,.25)}
 .qgo:hover{background:#0A5C5A;border-color:#0A5C5A}
-.qalt{display:block;width:100%;min-height:48px;margin:0 0 1rem;padding:.6rem 1.2rem;font:inherit;font-size:1rem;font-weight:500;border-radius:14px;border:2px solid #4E4960;background:transparent;color:#0F0B1A;cursor:pointer}
-.qgo:focus-visible,.qalt:focus-visible,.qpick input:focus-visible{outline:3px solid #2F6BB0;outline-offset:3px}
-.qsmall{font-size:.95rem;color:#4E4960}
+.qalt{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;min-height:50px;box-sizing:border-box;margin:0 0 1rem;padding:.6rem 1.2rem;font:inherit;font-size:1rem;font-weight:500;border-radius:16px;border:2px solid #D9D2C7;background:#fff;color:#0F0B1A;cursor:pointer;text-decoration:none}
+.qgo:focus-visible,.qalt:focus-visible{outline:3px solid #2F6BB0;outline-offset:3px}
+.qsmall{font-size:.9rem;color:#4E4960;text-align:center;margin:.2rem 0 0}
+.qwords .qsmall{text-align:left}
+.qok{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:#0D7471;color:#fff;margin:.4rem 0 .9rem;box-shadow:0 10px 24px rgba(13,116,113,.28)}
+.q .qok svg{width:34px;height:34px}
+@keyframes qpop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+.qok{animation:qpop .45s ease-out both}
+@media (prefers-reduced-motion:reduce){.qok{animation:none}.qlaw summary .chev{transition:none}}
 `;
+
+/* The mock's icons. Decoration only: every one is aria-hidden, and the words beside it carry the meaning. */
+const ICON = {
+  check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5.5c0 4.3-2.9 7.9-7 9.5-4.1-1.6-7-5.2-7-9.5V6l7-3z"/><path d="M8.8 12.2l2.2 2.2 4.3-4.4"/></svg>',
+  redo: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.35-5.65"/><path d="M20 4.5V9h-4.5"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>',
+  law: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v17M7 20.5h10M4 7.5h16M6.5 7.5L4 13.5a3 3 0 0 0 5 0L6.5 7.5zM17.5 7.5L15 13.5a3 3 0 0 0 5 0l-2.5-6z"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10l4 4 4-4"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>',
+};
+
+/** The four steps. `done` are ticked; `now` (an index, or -1) is the current one. */
+function stepsHtml(w, done, now) {
+  return `<ol class="qsteps" aria-label="${esc(w.steps_label)}">` + w.steps.map((label, i) => {
+    const cls = i < done ? 'done' : i === now ? 'now' : '';
+    return `<li${cls ? ` class="${cls}"` : ''}${cls === 'now' ? ' aria-current="step"' : ''}><span class="dot">${cls === 'done' ? ICON.check : ''}</span>${esc(label)}</li>`;
+  }).join('') + '</ol>';
+}
+
+/** The ticket's time half: the calendar icon, a small label, the day, and "Arrival between …". */
+function whenHtml(label, x, lang, w) {
+  return `<div class="qtw">${ICON.cal}<div><p class="qtl">${esc(label)}</p><p class="qtd">${esc(lineDay(x.date, lang))}</p>` +
+    `<p class="qtwin">${esc(fill(w.when_line, { window: windowSpan(x, lang) }))}</p></div></div>`;
+}
 
 function frame(lang, state, inner, { bilingual = false } = {}) {
   const w = WORDS[lang] || WORDS.en;
@@ -167,15 +262,16 @@ function page(status, lang, state, inner, opts) {
 /** A state that is only words: a heading, a line, and where questions go. */
 function wordsPage(status, lang, state, head, line, withQuestions = true) {
   const w = WORDS[lang] || WORDS.en;
+  /* QUOTE-PAGE-03: the new frame and type, and no strip — these states have nothing to count. */
   return page(status, lang, state,
-    `<h1>${esc(head)}</h1>\n<p class="lead">${esc(line)}</p>\n${withQuestions && line !== w.questions ? `<p class="qsmall">${esc(w.questions)}</p>` : ''}`);
+    `<div class="qwords">\n<h1>${esc(head)}</h1>\n<p class="qhi">${esc(line)}</p>\n${withQuestions && line !== w.questions ? `<p class="qsmall">${esc(w.questions)}</p>` : ''}\n</div>`);
 }
 
 /** The same page in both languages — for a link we cannot tie to a quote, so we cannot know its language. */
 function bothPage(status, state, hk, lk) {
   const inner = ['en', 'es'].map((l) => `<section${l === 'es' ? ' lang="es"' : ''} style="padding:0 0 1.2rem">
 <h1>${esc(WORDS[l][hk])}</h1>
-<p class="lead">${esc(WORDS[l][lk])}</p>
+<p class="qhi">${esc(WORDS[l][lk])}</p>
 </section>`).join('\n');
   return page(status, 'en', state, inner, { bilingual: true });
 }
@@ -191,10 +287,15 @@ function noticesHtml(env, lang) {
   if (!light && !law) return '';
   const L = lang === 'es' ? LIGHTING_ES : LIGHTING_EN;
   let out = `<h2>${esc(w.h_notices)}</h2>\n`;
-  if (light) out += `<p class="qnote" id="notice-lighting"><strong>${esc(L.lead)}</strong> ${esc(L.text)}</p>\n`;
+  /* The paragraph keeps its own opening tag and bytes; the card and the sun go around it. */
+  if (light) out += `<div class="qnotebox">${ICON.sun}<p class="qnote" id="notice-lighting"><strong>${esc(L.lead)}</strong> ${esc(L.text)}</p></div>\n`;
   if (law) {
-    out += `<p class="qnote">${esc(w.statute_intro)}</p>\n<div class="q53" id="notice-53255" lang="en">\n` +
-      NOTICE_53255.map((p) => `<p>${esc(p)}</p>`).join('\n') + '\n</div>\n';
+    /* QUOTE-PAGE-03: the whole statute is in the page, folded behind one line — never `open` in the markup, so it
+       costs one row until it is tapped, and <details> opens with no JavaScript. Its block keeps today's tag. */
+    out += `<details class="qlaw"><summary>${ICON.law}<span class="qlt"><span class="qlh">${esc(w.law_title)}</span>` +
+      `<span class="qlp">${esc(w.law_hint)}</span></span><span class="chev">${ICON.chev}</span></summary>\n` +
+      `<div class="qlb">\n<p class="qlin">${esc(w.statute_intro)}</p>\n<div class="q53" id="notice-53255" lang="en">\n` +
+      NOTICE_53255.map((p) => `<p>${esc(p)}</p>`).join('\n') + '\n</div>\n</div>\n</details>\n';
   }
   return out;
 }
@@ -215,42 +316,46 @@ function openPage(env, v, code, nowIso, pickError) {
   const offer = taken ? free : all;
   const plural = offer.length > 1;
   const parts = [];
+  parts.push(stepsHtml(w, 1, 1));
   if (taken) parts.push(`<p class="qerr" role="status">${esc(w.h_taken)} ${esc(w.taken_other)}</p>`);
-  parts.push(`<h1>${esc(w.title)}</h1>`);
-  parts.push(`<p class="lead">${esc(b.first_name ? fill(w.hi_name, { name: b.first_name }) : w.hi)}</p>`);
+  parts.push(`<h1>${esc(w.h1_quote)}</h1>`);
+  parts.push(`<p class="qhi">${esc(b.first_name ? fill(w.hi_name, { name: b.first_name }) : w.hi)}</p>`);
 
-  parts.push(`<h2>${esc(w.h_work)}</h2>`);
-  parts.push('<ul>' + (b.scope || []).map((s) => `<li>${esc(s)}</li>`).join('') + '</ul>');
-
-  parts.push(`<h2>${esc(w.h_price)}</h2>`);
-  parts.push('<div class="qbox">' +
-    `<p class="qprice">${esc(money(b.price))}</p>` +
-    (b.price_note ? `<p>${esc(b.price_note)}</p>` : '') +
-    (b.included ? `<p style="margin:0">${esc(b.included)}</p>` : '') + '</div>');
-  if (b.guarantee) parts.push(`<p>${esc(b.guarantee)}</p>`);
-  if (b.insurance) parts.push(`<p>${esc(b.insurance)}</p>`);
+  /* the ticket: the price, and — with one time offered — the time, below the tear */
+  parts.push('<div class="qticket"><div class="qtt">' +
+    `<p class="qtl">${esc(w.h_price)}</p><p class="qprice">${esc(money(b.price))}</p>` +
+    (b.price_note ? `<p class="qtn">${esc(b.price_note)}</p>` : '') +
+    (b.included ? `<p class="qti">${ICON.plus}<span>${esc(b.included)}</span></p>` : '') + '</div>' +
+    (plural ? '' : `<div class="qtear" aria-hidden="true"></div>${whenHtml(w.h_when, offer[0], lang, w)}`) + '</div>');
 
   const form = [];
   form.push(`<form method="post" action="/q/${esc(code)}">`);
   form.push(`<input type="hidden" name="v" value="${esc(v.version)}">`);
-  form.push(`<h2 id="when">${esc(w.h_when)}</h2>`);
   if (plural) {
     if (pickError) form.push(`<p class="qerr" id="pick-error">${esc(w.pick_error)}</p>`);
     form.push(`<fieldset class="qpick"${pickError ? ' aria-describedby="pick-error"' : ''}><legend>${esc(w.pick_legend)}</legend>`);
     for (const x of offer) {
-      form.push(`<label><input type="radio" name="w" value="${esc(x.n)}" required> <span>${esc(fill(w.when, { day: lineDay(x.date, lang), window: windowSpan(x, lang) }))}</span></label>`);
+      form.push(`<label class="qopt"><input type="radio" name="w" value="${esc(x.n)}" required><span><span class="qod">${esc(lineDay(x.date, lang))}</span>` +
+        `<span class="qot">${esc(fill(w.when_line, { window: windowSpan(x, lang) }))}</span></span></label>`);
     }
     form.push('</fieldset>');
-  } else {
-    const x = offer[0];
-    form.push(`<p class="qbox" style="font-weight:600">${esc(fill(w.when, { day: lineDay(x.date, lang), window: windowSpan(x, lang) }))}</p>`);
+  } else if (all.length > 1) {
     /* One window of two left free: name it, so the book never has to guess. One window of one: nothing to say. */
-    if (all.length > 1) form.push(`<input type="hidden" name="w" value="${esc(x.n)}">`);
+    form.push(`<input type="hidden" name="w" value="${esc(offer[0].n)}">`);
   }
   const holdEnded = v.state === 'hold_ended' || (v.hold_until && Date.parse(nowIso) >= Date.parse(v.hold_until));
-  form.push(`<p>${esc(holdEnded
+  form.push(`<p class="qhold">${ICON.clock}<span>${esc(holdEnded
     ? (plural ? w.hold_ended_two : w.hold_ended_one)
-    : fill(plural ? w.hold_two : w.hold_one, { at: momentLabel(v.hold_until, lang) }))}</p>`);
+    : fill(plural ? w.hold_two : w.hold_one, { at: momentLabel(v.hold_until, lang) }))}</span></p>`);
+
+  form.push(`<h2>${esc(w.h_work)}</h2>`);
+  form.push('<ul class="qwork">' + (b.scope || []).map((s) => `<li><span class="ck">${ICON.check}</span><span>${esc(s)}</span></li>`).join('') + '</ul>');
+  /* his promise and his insurance: each only if the quote carries it; with neither, no card */
+  const trust = [];
+  if (b.guarantee) trust.push(`<li>${ICON.redo}<span>${esc(b.guarantee)}</span></li>`);
+  if (b.insurance) trust.push(`<li>${ICON.shield}<span>${esc(b.insurance)}</span></li>`);
+  if (trust.length) form.push(`<ul class="qtrust">${trust.join('')}</ul>`);
+
   form.push(noticesHtml(env, lang));
   form.push(`<button type="submit" class="qgo">${esc(w.accept)}</button>`);
   form.push('</form>');
@@ -263,21 +368,72 @@ function openPage(env, v, code, nowIso, pickError) {
   return page(200, lang, state + (pickError ? ' pick' : ''), parts.join('\n'));
 }
 
-function bookedPage(v) {
+/** The window a booked quote holds (the one accepted, else its only one). */
+const bookedWindow = (v) => (v.windows || []).find((y) => y.n === v.accepted_window) || (v.windows || [])[0];
+
+function bookedPage(v, code) {
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
-  const x = (v.windows || []).find((y) => y.n === v.accepted_window) || (v.windows || [])[0];
+  const x = bookedWindow(v);
   const inner = [
+    stepsHtml(w, 3, -1),
+    `<div class="qok" aria-hidden="true">${ICON.check}</div>`,
     `<h1>${esc(w.h_booked)}</h1>`,
-    '<div class="qbox">',
-    x ? `<p class="lead" style="font-weight:600;margin:0 0 .3rem">${esc(lineDay(x.date, lang))}</p>` : '',
-    x ? `<p style="margin:0 0 .3rem">${esc(fill(w.booked_window, { window: windowSpan(x, lang) }))}</p>` : '',
-    `<p class="qprice" style="margin:0">${esc(money(v.body && v.body.price))}</p>`,
-    '</div>',
-    `<p class="lead">${esc(w.booked_confirm)}</p>`,
+    `<p class="qhi">${esc(w.booked_confirm)}</p>`,
+    '<div class="qticket">' + (x ? whenHtml(w.lbl_visit, x, lang, w) + '<div class="qtear" aria-hidden="true"></div>' : '') +
+      `<div class="qtt"><p class="qtl">${esc(w.h_price)}</p><p class="qprice" style="font-size:2.1rem">${esc(money(v.body && v.body.price))}</p></div></div>`,
+    x ? `<a class="qalt" href="/q/${esc(code)}/calendar.ics">${ICON.cal}<span>${esc(w.add_calendar)}</span></a>` : '',
     `<p class="qsmall">${esc(w.questions)}</p>`,
   ].join('\n');
   return page(200, lang, 'booked', inner);
+}
+
+/* ------------------------------------------------------------------ the calendar file (QUOTE-PAGE-03) */
+
+/** RFC 5545 TEXT: backslash, semicolon, comma and newline escaped. */
+const icsText = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+
+/** Fold a content line at 75 octets, never inside a UTF-8 character: each continuation starts with one space. */
+function icsFold(line) {
+  const out = [];
+  let cur = '', octets = 0, limit = 75;
+  for (const ch of line) {
+    const n = new TextEncoder().encode(ch).length;
+    if (octets + n > limit) { out.push(cur); cur = ' '; octets = 1; limit = 75; }
+    cur += ch; octets += n;
+  }
+  out.push(cur);
+  return out.join('\r\n');
+}
+
+/** 20260929T130000Z */
+const icsUtc = (ms) => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+/** The booked visit as one VEVENT. No name, phone, address or price: the day, the window and a line of words. */
+async function calendarFile(v, code, nowIso) {
+  const lang = v.lang === 'es' ? 'es' : 'en';
+  const w = WORDS[lang];
+  const x = bookedWindow(v);
+  const [y, mo, d] = String(x.date).split('-').map(Number);
+  const [eh, em] = String(x.end).split(':').map(Number);
+  /* the UID is never the code itself: the first 32 hex of sha256(code), with no @ in it */
+  const uid = 'umbradomus-' + (await codeHash(code)).slice(0, 32);
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Umbra Domus//Quote page//EN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:' + uid,
+    'DTSTAMP:' + icsUtc(Date.parse(nowIso)),
+    'DTSTART:' + icsUtc(windowStartMs(x)),
+    'DTEND:' + icsUtc(chicagoWall(y, mo, d, eh, em)),
+    'SUMMARY:' + icsText(w.ics_title),
+    'DESCRIPTION:' + icsText(fill(w.ics_desc, { window: windowSpan(x, lang) })),
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ];
+  return lines.map(icsFold).join('\r\n') + '\r\n';
 }
 
 function statePage(env, v, code, nowIso, pickError) {
@@ -289,7 +445,7 @@ function statePage(env, v, code, nowIso, pickError) {
     case 'hold_ended':
     case 'taken':
       return openPage(env, v, code, nowIso, pickError);
-    case 'booked': return bookedPage(v);
+    case 'booked': return bookedPage(v, code);
     case 'too_close': return wordsPage(200, lang, 'too_close', w.h_too_close, w.too_close);
     case 'updating': return wordsPage(200, lang, 'updating', w.h_updating, w.updating);
     case 'replaced': return wordsPage(200, lang, 'replaced', w.h_replaced, w.replaced);
@@ -334,13 +490,16 @@ const seeOther = (code, query = '') => new Response(null, {
  * nowFor, so the tests can name the moment (only ever with ALLOW_TEST_HOOKS).
  */
 export async function handleQuotePage(request, env, url, rest, method, nowIso) {
-  const m = /^([^/]*)(\/none)?$/.exec(rest);
+  const m = /^([^/]*)(\/none|\/calendar\.ics)?$/.exec(rest);
   const code = m ? m[1] : '';
-  const isNone = Boolean(m && m[2]);
+  const isNone = Boolean(m && m[2] === '/none');
+  const isCal = Boolean(m && m[2] === '/calendar.ics');
 
   if (method === 'POST') {
     /* FIRST, before the code is looked up: a post from another site writes nothing. */
     if (foreignPost(request, env)) return bothPage(403, 'forbidden', 'h_forbidden', 'forbidden');
+    /* QUOTE-PAGE-03: the calendar file is read-only. Its path must never fall through to bookByCode below. */
+    if (isCal) return notAllowed('GET, HEAD');
     if (!m || !CODE_SHAPE.test(code)) return notValid();
     let form = null;
     try { form = await request.formData(); } catch (err) { form = null; }
@@ -362,11 +521,27 @@ export async function handleQuotePage(request, env, url, rest, method, nowIso) {
   if (method === 'GET' || method === 'HEAD') {
     if (!m || isNone || !CODE_SHAPE.test(code)) return head(method, notValid());
     const v = await viewByCode(env, code, nowIso);
+    if (isCal) {
+      /* QUOTE-PAGE-03: only a BOOKED quote has a visit to put in a calendar; anything else is NOT VALID. */
+      if (!v || v.state !== 'booked' || !bookedWindow(v)) return head(method, notValid());
+      return head(method, new Response(await calendarFile(v, code, nowIso), {
+        status: 200,
+        headers: {
+          ...PAGE_HEADERS,
+          'Content-Type': 'text/calendar; charset=utf-8; method=PUBLISH',
+          'Content-Disposition': 'attachment; filename="umbra-domus-visit.ics"',
+        },
+      }));
+    }
     return head(method, statePage(env, v, code, nowIso, url.searchParams.get('pick') === '1'));
   }
 
+  return notAllowed(isCal ? 'GET, HEAD' : 'GET, HEAD, POST');
+}
+
+function notAllowed(allow) {
   const r = notValid(405);
-  r.headers.set('Allow', 'GET, HEAD, POST');
+  r.headers.set('Allow', allow);
   return r;
 }
 

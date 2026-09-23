@@ -29,9 +29,10 @@ SEED_LAST_ID = "2"
 QUOTE_LINK_BASE = "https://umbradomus.com"
 # ACCEPT-PAGE-02: the before-you-accept notices on the customer's page (src/notices.js).
 # The lighting paragraph shows by default. The Texas Property Code §53.255 disclosure shows only when
-# NOTICE_53255 is "true" — his one-word call at his look: BOTH / LIGHTING ONLY / WAIT.
+# NOTICE_53255 is "true". His call (QUOTE-PAGE-03, 2026-09-23): BOTH, with the disclosure collapsed behind one
+# line so the page stays short ("make the disclosure there but collapsed"). The code's own default stays "false".
 NOTICE_LIGHTING = "true"
-NOTICE_53255 = "false"
+NOTICE_53255 = "true"
 
 # --- THE BOOK (ACCEPT-PAGE-01) ----------------------------------------------
 # The quotes, their holds and one booking per time: a Durable Object with SQLite storage, reached as

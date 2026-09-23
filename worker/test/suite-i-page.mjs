@@ -228,7 +228,7 @@ export async function suitePage(ctx) {
     eq(JSON.stringify(contact), JSON.stringify({ phone: false, email: false, address: false, customer_last_name: false }), 'no phone number, email or address in the page text (grep)', JSON.stringify(contact));
     ok(t.includes('Hi Rosalind,'), '"Hi <first name>," — the first name only');
     ok(t.includes("We're holding this time for you until Fri, Sep 25 at 10:00 AM."), 'the hold line reads the quote\'s hold_until in words');
-    ok(t.includes('Mon, Oct 12 · arrival between 8 and 10 AM'), 'the one window, in words');
+    ok(t.includes('Mon, Oct 12 Arrival between 8 and 10 AM'), 'the one window, in words');
     ok(t.includes('$225') && t.includes('5 hours at $45') && t.includes('Primer, paint and cleanup included.'), 'the one price, its note and the included line');
     ok(t.includes('Accept & confirm') && t.includes('None of these times work'), 'both buttons');
     ok(t.includes('Accepting books this visit at the price above. Questions? Reply to our text.'), 'the small print');
@@ -301,13 +301,13 @@ export async function suitePage(ctx) {
     await p.goto(qurl(P2.code), { waitUntil: 'load' });
     await second.goto(qurl(P2.code), { waitUntil: 'load' });
     const before = textOf(await html(p));
-    ok(before.includes('Tue, Sep 29 · arrival between 8 and 10 AM'), '"Tue, Sep 29 · arrival between 8 and 10 AM"');
+    ok(before.includes('Tue, Sep 29 Arrival between 8 and 10 AM'), '"Tue, Sep 29 Arrival between 8 and 10 AM"');
     const posts0 = proxied(P2.code, 'POST').length;
     const after = await clickAndWait(p, 'button.qgo');
     const post = proxied(P2.code, 'POST')[posts0];
     eq(stateOf(after), 'booked', 'the page after the tap is BOOKED');
     const at = textOf(after);
-    ok(at.includes("You're booked.") && at.includes('Tue, Sep 29') && at.includes('arrival between 8 and 10 AM') && at.includes('$225') && at.includes("We'll text you to confirm."),
+    ok(at.includes("You're booked.") && at.includes('Tue, Sep 29') && at.includes('Arrival between 8 and 10 AM') && at.includes('$225') && at.includes("We'll text you to confirm."),
       'BOOKED names the day, the window, the price and "We\'ll text you to confirm."');
     eq(post && post.status, 303, 'the tap was one POST answered 303');
     eq(post && post.response_headers.location, '/q/' + P2.code, 'with the relative Location /q/<code>');
@@ -468,7 +468,7 @@ export async function suitePage(ctx) {
     await tap(p, 'input[type=radio][name=w][value="2"]');
     const booked = await clickAndWait(p, 'button.qgo');
     eq(stateOf(booked), 'booked', 'choosing the 2nd → BOOKED');
-    ok(textOf(booked).includes('Fri, Oct 16') && textOf(booked).includes('arrival between 1 and 3 PM'), 'BOOKED names window 2: Fri, Oct 16, 1–3 PM');
+    ok(textOf(booked).includes('Fri, Oct 16') && textOf(booked).includes('Arrival between 1 and 3 PM'), 'BOOKED names window 2: Fri, Oct 16, 1–3 PM');
     const rec = await record(P5.id);
     eq(rec.accept && rec.accept.window && rec.accept.window.date, '2026-10-16', 'the record: accept.window is the 2nd (10/16)');
     eq((await bookingsOn('2026-10-15')).length, 0, 'nothing on the 1st window\'s day');
@@ -488,7 +488,7 @@ export async function suitePage(ctx) {
     eq(stateOf(g.text), 'taken', 'the other quote\'s plain GET → TAKEN');
     const t = textOf(g.text);
     ok(t.includes('That time was just booked.'), '"That time was just booked."');
-    ok(t.includes('Tue, Oct 20 · arrival between 8 and 10 AM') && !t.includes('Mon, Oct 19'), 'only the free window (Tue 10/20) is offered');
+    ok(t.includes('Tue, Oct 20 Arrival between 8 and 10 AM') && !t.includes('Mon, Oct 19'), 'only the free window (Tue 10/20) is offered');
     eq((g.text.match(/type="radio"/g) || []).length, 0, 'no choice to make: no radio');
     ok(/<input type="hidden" name="w" value="2">/.test(g.text), 'the form names window 2');
     const p = await tab(CT(...WED, 12, 6));
@@ -502,7 +502,7 @@ export async function suitePage(ctx) {
     eq(stateOf(g8.text), 'taken', 'a quote whose only time overlaps it → TAKEN');
     ok(textOf(g8.text).includes("That time was just booked.") && textOf(g8.text).includes("Reply to our text and we'll find you another time."), 'with no time free: "Reply to our text and we\'ll find you another time."');
     eq(/<form/.test(g8.text), false, 'and no button');
-    R['9'] = { job: P6.id, other_job: P7.id, page: stateOf(g.text), offered: t.match(/(Mon|Tue), Oct \d+ · arrival between [^.]*?(AM|PM)/g), then_booked: (await record(P6.id)).accept?.window ?? null, no_free_job: P8.id, no_free_page: stateOf(g8.text), no_free_text: textOf(g8.text) };
+    R['9'] = { job: P6.id, other_job: P7.id, page: stateOf(g.text), offered: t.match(/(Mon|Tue), Oct \d+ Arrival between [^.]*?(AM|PM)/g), then_booked: (await record(P6.id)).accept?.window ?? null, no_free_job: P8.id, no_free_page: stateOf(g8.text), no_free_text: textOf(g8.text) };
   }
 
   /* ============================================================ (10) */
@@ -649,7 +649,8 @@ export async function suitePage(ctx) {
     await nc.goto(qurl(P1.code), { waitUntil: 'load' });
     const m2 = await measure(nc);
     const order = await nc.evaluate(() => document.body.textContent.replace(/\s+/g, ' '));
-    const seq = ['Umbra Domus', 'Your quote from Umbra Domus', 'Hi Rosalind,', "What we'll do", 'Price', '$225', 'When', 'Mon, Oct 12', "We're holding this time", 'Before you accept', 'Accept & confirm', 'None of these times work', 'Accepting books this visit'];
+    /* QUOTE-PAGE-03: the strip, then the H1 "Your quote", the ticket (price, then the time), the hold, the work */
+    const seq = ['Umbra Domus', 'Received', 'Quoted', 'Your quote', 'Hi Rosalind,', 'Price', '$225', 'When', 'Mon, Oct 12', "We're holding this time", "What we'll do", 'Before you accept', 'Accept & confirm', 'None of these times work', 'Accepting books this visit'];
     const pos = seq.map((s) => order.indexOf(s));
     ok(nc._blocked.length >= 1, 'the stylesheet request was blocked', JSON.stringify(nc._blocked));
     ok(pos.every((x, i) => x >= 0 && (i === 0 || x > pos[i - 1])), 'with no stylesheet the page still reads in order', JSON.stringify(seq.map((s, i) => [s, pos[i]])));
@@ -670,34 +671,35 @@ export async function suitePage(ctx) {
     price_note: '5 horas a $45', lang: 'es',
   };
   const P15 = await quoted('Rocío Almanza', 'Hoyos en el techo de la sala, tamaño moneda', [win('2026-10-30', '08:00', '10:00'), win('2026-10-31', '11:00', '13:00')], { extra: ES });
+  /* QUOTE-PAGE-03: E, S, seen and expectIn are the suite's, so the Spanish its readings see (on the notices Worker and
+     in the calendar file) counts toward "every Spanish string seen", which now runs at the end of those readings. */
+  const E = WORDS.en, S = WORDS.es;
+  const SENT = String.fromCharCode(1);
+  const seen = {};
+  const expectIn = (label, h, keys, fillers = {}) => {
+    /* the §53.255 block is the statute's own English on every page (lang="en"): it is not a page string */
+    const t = textOf(String(h || '').replace(/<div class="q53" id="notice-53255" lang="en">[\s\S]*?<\/div>/g, ' '));
+    for (const k of keys) {
+      const es = S[k].replace(/\{(\w+)\}/g, (_, x) => fillers[x] ?? '\u0000');
+      const en = E[k].replace(/\{(\w+)\}/g, (_, x) => fillers[x] ?? '\u0000');
+      const parts = es.split('\u0000').filter(Boolean);
+      const enParts = en.split('\u0000').filter(Boolean);
+      const has = parts.every((x) => t.includes(x.trim()));
+      const hasEn = enParts.some((x) => x.trim().length > 3 && t.includes(x.trim()));
+      seen[k] = (seen[k] || []).concat(label);
+      ok(has && !hasEn, `${label}: ${k} is Spanish ("${S[k]}")`, has ? `English still there: "${E[k]}"` : 'Spanish missing');
+    }
+  };
   {
-    const E = WORDS.en, S = WORDS.es;
-    const SENT = String.fromCharCode(1);
-    const seen = {};
-    const expectIn = (label, h, keys, fillers = {}) => {
-      /* the §53.255 block is the statute's own English on every page (lang="en"): it is not a page string */
-      const t = textOf(String(h || '').replace(/<div class="q53" id="notice-53255" lang="en">[\s\S]*?<\/div>/g, ' '));
-      for (const k of keys) {
-        const es = S[k].replace(/\{(\w+)\}/g, (_, x) => fillers[x] ?? '\u0000');
-        const en = E[k].replace(/\{(\w+)\}/g, (_, x) => fillers[x] ?? '\u0000');
-        const parts = es.split('\u0000').filter(Boolean);
-        const enParts = en.split('\u0000').filter(Boolean);
-        const has = parts.every((x) => t.includes(x.trim()));
-        const hasEn = enParts.some((x) => x.trim().length > 3 && t.includes(x.trim()));
-        seen[k] = (seen[k] || []).concat(label);
-        ok(has && !hasEn, `${label}: ${k} is Spanish ("${S[k]}")`, has ? `English still there: "${E[k]}"` : 'Spanish missing');
-      }
-    };
     const open = await getQ(P15.code, CT(...WED, 15, 0));
     eq(/<html lang="es">/.test(open.text), true, '<html lang="es">');
     eq(titleOf(open.text), S.title, 'the title is the Spanish generic line');
-    expectIn('OPEN', open.text, ['title', 'hi_name', 'h_work', 'h_price', 'h_when', 'pick_legend', 'hold_two', 'h_notices', 'accept', 'none', 'small'], { name: 'Rocío' });
+    expectIn('OPEN', open.text, ['title', 'h1_quote', 'hi_name', 'h_work', 'h_price', 'pick_legend', 'when_line', 'hold_two', 'h_notices', 'accept', 'none', 'small'], { name: 'Rocío', window: 'las 8 y las 10 a.m.' });
     const ot = textOf(open.text);
-    ok(ot.includes('Viernes 30 de octubre · llegada entre las 8 y las 10 a.m.'), 'the first time in Spanish: "Viernes 30 de octubre · llegada entre las 8 y las 10 a.m."');
-    ok(ot.includes('Sábado 31 de octubre · llegada entre las 11 a.m. y la 1 p.m.'), 'across noon: "Sábado 31 de octubre · llegada entre las 11 a.m. y la 1 p.m."');
+    ok(ot.includes('Viernes 30 de octubre Llegada entre las 8 y las 10 a.m.'), 'the first time in Spanish: "Viernes 30 de octubre Llegada entre las 8 y las 10 a.m."');
+    ok(ot.includes('Sábado 31 de octubre Llegada entre las 11 a.m. y la 1 p.m.'), 'across noon: "Sábado 31 de octubre Llegada entre las 11 a.m. y la 1 p.m."');
     ok(ot.includes('hasta el viernes 25 de septiembre a las 10:00 a.m.'), 'the hold in Spanish: "hasta el viernes 25 de septiembre a las 10:00 a.m."');
     eq((ot.match(/\.\.(?!\.)/g) || []).length, 0, 'no doubled period anywhere ("a.m." ends its own sentence)');
-    seen.when = ['OPEN'];
     ok(ot.includes(LIGHTING_ES.lead + ' ' + LIGHTING_ES.text) && !ot.includes(LIGHTING_EN.text.slice(0, 40)), 'the lighting paragraph in Spanish, not English');
     const p = await tab(CT(...WED, 15, 1));
     await p.goto(qurl(P15.code), { waitUntil: 'load' });
@@ -707,11 +709,11 @@ export async function suitePage(ctx) {
     expectIn('OPEN · no time picked', (await req('GET', qurl(P15.code, '?pick=1'), { headers: { 'x-umbra-test-now': CT(...WED, 15, 3) } })).text, ['pick_error']);
     /* P16: the one-window and the words-only states, in Spanish */
     const P16 = await quoted('Joaquín Ferrán', 'Grietas finas en la esquina del pasillo', [win('2026-10-30', '14:00', '16:00')], { extra: ES });
-    expectIn('OPEN · one time', (await getQ(P16.code, CT(...WED, 15, 4))).text, ['hold_one']);
+    expectIn('OPEN · one time', (await getQ(P16.code, CT(...WED, 15, 4))).text, ['hold_one', 'h_when', 'when_line'], { window: 'las 2 y las 4 p.m.' });
     expectIn('HOLD ENDED · one time', (await getQ(P16.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_one']);
     expectIn('HOLD ENDED · two times', (await getQ(P15.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_two']);
     await postQ(P15.code, { v: 1, w: 2 }, CT(...WED, 15, 5));
-    expectIn('BOOKED', (await getQ(P15.code, CT(...WED, 15, 6))).text, ['h_booked', 'booked_window', 'booked_confirm', 'questions'], { window: 'las 11 a.m. y la 1 p.m.' });
+    expectIn('BOOKED', (await getQ(P15.code, CT(...WED, 15, 6))).text, ['h_booked', 'lbl_visit', 'when_line', 'booked_confirm', 'add_calendar', 'questions'], { window: 'las 11 a.m. y la 1 p.m.' });
     /* P15 booked 10/31, not 10/30 2–4: P16 is still open; book 10/30 2–4 by text for another job to show TAKEN */
     const P17 = await quoted('Nora Echeverría', 'Parche en la pared de la cocina', [win('2026-10-30', '14:00', '16:00')], { extra: ES });
     await acceptText(P17.id, 1, 1, CT(...WED, 15, 8));
@@ -737,9 +739,9 @@ export async function suitePage(ctx) {
     for (const k of ['h_not_valid', 'not_valid', 'h_forbidden', 'forbidden']) seen[k] = (seen[k] || []).concat('bilingual page');
     const keys = Object.keys(E);
     const missingEs = keys.filter((k) => !(k in S));
-    const unexercised = keys.filter((k) => !seen[k] && k !== 'hi' && k !== 'statute_intro');
     eq(missingEs.length, 0, 'every English string has its Spanish');
-    eq(unexercised.length, 0, 'every Spanish string was seen on a page (hi and statute_intro are checked in (16) and by hand)', unexercised.join(', '));
+    /* "every Spanish string seen" runs at the end of QUOTE-PAGE-03's readings (Q3 (7)), once the notices Worker's
+       Spanish (law_title, law_hint) and the calendar file's (ics_title, ics_desc) have been read. */
     const review = keys.map((k) => ({ key: k, en: E[k], es: S[k] })).concat([{ key: 'lighting (READY-4, translated)', en: LIGHTING_EN.lead + ' ' + LIGHTING_EN.text, es: LIGHTING_ES.lead + ' ' + LIGHTING_ES.text }]);
     fs.writeFileSync(path.join(TMP, 'page-spanish-review.json'), JSON.stringify(review, null, 1));
     R['15'] = { jobs: [P15.id, P16.id, P17.id, P18.id, P19.id], strings: keys.length + 1, seen, review_file: '.tmp/page-spanish-review.json' };
@@ -755,43 +757,24 @@ export async function suitePage(ctx) {
   };
   let statuteEs = null;
 
-  /* ============================================================ (16) */
-  suite('I · (16) the notices: 53255 "false" hides it; lighting matches READY-4 byte for byte; the flags flip each');
-  {
-    /* the main Worker runs the defaults: NOTICE_LIGHTING unset → "true", NOTICE_53255 unset → "false" */
-    const g = await getQ(P1.code, CT(...WED, 16, 0));
-    const m = /<p class="qnote" id="notice-lighting"><strong>([^<]*)<\/strong> ([^<]*)<\/p>/.exec(g.text);
-    const shown = m ? decode(m[1]) + ' ' + decode(m[2]) : null;
-    eq(shown, LIGHTING_EN.lead + ' ' + LIGHTING_EN.text, 'the lighting paragraph shows, exactly the constant');
-    eq(crypto.createHash('sha256').update(shown || '').digest('hex'), LIGHTING_SHA256, 'its sha256 is the constant\'s');
-    let ready4 = null;
-    if (fs.existsSync(READY4)) {
-      const src = fs.readFileSync(READY4, 'utf8');
-      const r = /<p><strong>Light\.<\/strong> ([^<]*)<\/p>/.exec(src);
-      ready4 = r ? 'Light. ' + r[1] : null;
-      eq(Buffer.compare(Buffer.from(shown || '', 'utf8'), Buffer.from(ready4 || '', 'utf8')), 0, "the page's lighting paragraph equals READY-4's, byte for byte");
-    } else {
-      ok(true, `na() — READY-4 is not on this machine (${READY4}); the constant's sha256 stands in`);
-    }
-    eq(/id="notice-53255"/.test(g.text), false, 'NOTICE_53255 "false" (the default): the §53.255 block is absent');
-
-    /* two more Workers, one after the other on the same ports: the flags are read from env, so each is its own boot */
-    const runNotice = async (name, vars) => {
-      const DIR = path.join(TMP, 'notice-' + name);
-      fs.rmSync(DIR, { recursive: true, force: true });
-      fs.mkdirSync(DIR, { recursive: true });
-      const WN = `http://127.0.0.1:${PORT_NOTICE_WORKER}`;
-      const SN = `http://127.0.0.1:${PORT_NOTICE_SITE}`;
-      fs.writeFileSync(path.join(DIR, '.dev.vars'), [
-        `ADMIN_KEY=${ADMIN_KEY}`,
-        `FORMSUBMIT_ENDPOINT=http://127.0.0.1:${stub.port}/formsubmit`,
-        `PUSHOVER_API_BASE=http://127.0.0.1:${stub.port}/pushover-notice`,
-        `TELEGRAM_API_BASE=http://127.0.0.1:${stub.port}/telegram-notice`,
-        `PUBLIC_BASE_URL=${WN}`, `QUOTE_LINK_BASE=${SN}`,
-        'IGNORE_NEXT_ORIGIN=true', 'ALLOW_TEST_HOOKS=true', ...vars, '',
-      ].join('\n'));
-      const cfg = path.join(DIR, 'wrangler.notice.toml');
-      fs.writeFileSync(cfg, `
+  /* A notices Worker (reading (16) and QUOTE-PAGE-03's readings), one at a time on the same ports: the flags are read
+     from env, so each is its own boot. */
+  const runNotice = async (name, vars) => {
+    const DIR = path.join(TMP, 'notice-' + name);
+    fs.rmSync(DIR, { recursive: true, force: true });
+    fs.mkdirSync(DIR, { recursive: true });
+    const WN = `http://127.0.0.1:${PORT_NOTICE_WORKER}`;
+    const SN = `http://127.0.0.1:${PORT_NOTICE_SITE}`;
+    fs.writeFileSync(path.join(DIR, '.dev.vars'), [
+      `ADMIN_KEY=${ADMIN_KEY}`,
+      `FORMSUBMIT_ENDPOINT=http://127.0.0.1:${stub.port}/formsubmit`,
+      `PUSHOVER_API_BASE=http://127.0.0.1:${stub.port}/pushover-notice`,
+      `TELEGRAM_API_BASE=http://127.0.0.1:${stub.port}/telegram-notice`,
+      `PUBLIC_BASE_URL=${WN}`, `QUOTE_LINK_BASE=${SN}`,
+      'IGNORE_NEXT_ORIGIN=true', 'ALLOW_TEST_HOOKS=true', ...vars, '',
+    ].join('\n'));
+    const cfg = path.join(DIR, 'wrangler.notice.toml');
+    fs.writeFileSync(cfg, `
 name = "umbra-intake-notice-test"
 main = ${JSON.stringify(path.join(WORKER_DIR, 'src', 'index.js'))}
 base_dir = ${JSON.stringify(WORKER_DIR)}
@@ -817,20 +800,41 @@ class_name = "QuoteBook"
 tag = "v1"
 new_sqlite_classes = ["QuoteBook"]
 `);
-      const wr = spawn(process.execPath,
-        [path.join(WORKER_DIR, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
-          'dev', '--config', cfg, '--port', String(PORT_NOTICE_WORKER), '--ip', '127.0.0.1',
-          '--inspector-port', String(PORT_NOTICE_INSPECTOR),
-          '--local', '--log-level', 'warn', '--persist-to', path.join(DIR, 'state')],
-        { cwd: WORKER_DIR, env: { ...process.env, CLOUDFLARE_API_TOKEN: '', WRANGLER_SEND_METRICS: 'false', NO_COLOR: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
-      let wlog = '';
-      wr.stdout.on('data', (d) => { wlog += d; }); wr.stderr.on('data', (d) => { wlog += d; });
-      let up = false;
-      for (let i = 0; i < 120 && !up; i++) { try { up = (await fetch(WN + '/health')).ok; } catch (e) { /* not yet */ } if (!up) await sleep(500); }
-      ok(up, `the ${name} Worker came up on ${PORT_NOTICE_WORKER} (pid ${wr.pid})`, up ? '' : wlog.slice(-600));
-      const ss = await staticServer({ port: PORT_NOTICE_SITE, root: siteWorker, proxy: WN });
-      return { WN, SN, wr, ss, pid: wr.pid, logRef: () => wlog, stop: async () => { await close(ss); wr.kill('SIGTERM'); await new Promise((r) => (wr.exitCode !== null ? r() : wr.once('exit', r))); } };
-    };
+    const wr = spawn(process.execPath,
+      [path.join(WORKER_DIR, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
+        'dev', '--config', cfg, '--port', String(PORT_NOTICE_WORKER), '--ip', '127.0.0.1',
+        '--inspector-port', String(PORT_NOTICE_INSPECTOR),
+        '--local', '--log-level', 'warn', '--persist-to', path.join(DIR, 'state')],
+      { cwd: WORKER_DIR, env: { ...process.env, CLOUDFLARE_API_TOKEN: '', WRANGLER_SEND_METRICS: 'false', NO_COLOR: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let wlog = '';
+    wr.stdout.on('data', (d) => { wlog += d; }); wr.stderr.on('data', (d) => { wlog += d; });
+    let up = false;
+    for (let i = 0; i < 120 && !up; i++) { try { up = (await fetch(WN + '/health')).ok; } catch (e) { /* not yet */ } if (!up) await sleep(500); }
+    ok(up, `the ${name} Worker came up on ${PORT_NOTICE_WORKER} (pid ${wr.pid})`, up ? '' : wlog.slice(-600));
+    const ss = await staticServer({ port: PORT_NOTICE_SITE, root: siteWorker, proxy: WN });
+    return { WN, SN, wr, ss, pid: wr.pid, logRef: () => wlog, stop: async () => { await close(ss); wr.kill('SIGTERM'); await new Promise((r) => (wr.exitCode !== null ? r() : wr.once('exit', r))); } };
+  };
+
+  /* ============================================================ (16) */
+  suite('I · (16) the notices: 53255 "false" hides it; lighting matches READY-4 byte for byte; the flags flip each');
+  {
+    /* the main Worker runs the defaults: NOTICE_LIGHTING unset → "true", NOTICE_53255 unset → "false" */
+    const g = await getQ(P1.code, CT(...WED, 16, 0));
+    const m = /<p class="qnote" id="notice-lighting"><strong>([^<]*)<\/strong> ([^<]*)<\/p>/.exec(g.text);
+    const shown = m ? decode(m[1]) + ' ' + decode(m[2]) : null;
+    eq(shown, LIGHTING_EN.lead + ' ' + LIGHTING_EN.text, 'the lighting paragraph shows, exactly the constant');
+    eq(crypto.createHash('sha256').update(shown || '').digest('hex'), LIGHTING_SHA256, 'its sha256 is the constant\'s');
+    let ready4 = null;
+    if (fs.existsSync(READY4)) {
+      const src = fs.readFileSync(READY4, 'utf8');
+      const r = /<p><strong>Light\.<\/strong> ([^<]*)<\/p>/.exec(src);
+      ready4 = r ? 'Light. ' + r[1] : null;
+      eq(Buffer.compare(Buffer.from(shown || '', 'utf8'), Buffer.from(ready4 || '', 'utf8')), 0, "the page's lighting paragraph equals READY-4's, byte for byte");
+    } else {
+      ok(true, `na() — READY-4 is not on this machine (${READY4}); the constant's sha256 stands in`);
+    }
+    eq(/id="notice-53255"/.test(g.text), false, 'NOTICE_53255 "false" (the default): the §53.255 block is absent');
+
 
     /* BOTH: NOTICE_53255 "true", lighting left to its default. SITE_BASE_URL is production's own value here, so
        the www/apex twin rule is read exactly as it will run live. */
@@ -909,7 +913,7 @@ new_sqlite_classes = ["QuoteBook"]
 
     const t1 = textOf((await getQ(S1.code, CT(...WED, 16, 40))).text);
     read.one_window = t1;
-    ok(t1.includes('Martes 10 de noviembre · llegada entre las 8 y las 10 a.m.'), '(5) one window: "Martes 10 de noviembre · llegada entre las 8 y las 10 a.m."', t1.slice(0, 400));
+    ok(t1.includes('Martes 10 de noviembre Llegada entre las 8 y las 10 a.m.'), '(5) one window: "Martes 10 de noviembre Llegada entre las 8 y las 10 a.m."', t1.slice(0, 400));
     ok(t1.includes('Le apartamos este horario hasta el viernes 25 de septiembre a las 10:00 a.m.'), '(5) the hold: "Le apartamos este horario hasta el viernes 25 de septiembre a las 10:00 a.m."');
     ok(t1.includes('Ninguno de estos horarios me acomoda'), '(5) R75 none: "Ninguno de estos horarios me acomoda"');
     ok(t1.includes('Al aceptar, queda programada esta visita al precio de arriba. ¿Preguntas? Responda a nuestro mensaje de texto.'), '(5) R76 small: "Al aceptar, queda programada esta visita al precio de arriba. …"');
@@ -918,15 +922,15 @@ new_sqlite_classes = ["QuoteBook"]
 
     const t2 = textOf((await getQ(S2.code, CT(...WED, 16, 41))).text);
     read.two_windows = t2;
-    ok(t2.includes('Miércoles 11 de noviembre · llegada entre las 8 y las 10 a.m.'), '(5) two windows, the first: "Miércoles 11 de noviembre · llegada entre las 8 y las 10 a.m."');
-    ok(t2.includes('Viernes 13 de noviembre · llegada entre las 11 a.m. y la 1 p.m.'), '(5) two windows, across noon: "Viernes 13 de noviembre · llegada entre las 11 a.m. y la 1 p.m."');
+    ok(t2.includes('Miércoles 11 de noviembre Llegada entre las 8 y las 10 a.m.'), '(5) two windows, the first: "Miércoles 11 de noviembre Llegada entre las 8 y las 10 a.m."');
+    ok(t2.includes('Viernes 13 de noviembre Llegada entre las 11 a.m. y la 1 p.m.'), '(5) two windows, across noon: "Viernes 13 de noviembre Llegada entre las 11 a.m. y la 1 p.m."');
     ok(t2.includes('Le apartamos estos horarios hasta el viernes 25 de septiembre a la 1:00 p.m.'), '(5) a hold at 1 PM: "… hasta el viernes 25 de septiembre a la 1:00 p.m."');
     noDots('two windows', t2); noOld('two windows', t2);
 
     const t3 = textOf((await getQ(S3.code, CT(...WED, 16, 42))).text);
     read.noon_and_one = t3;
-    ok(t3.includes('Jueves 12 de noviembre · llegada entre las 12 y las 2 p.m.'), '(5) starting at 12: "Jueves 12 de noviembre · llegada entre las 12 y las 2 p.m."');
-    ok(t3.includes('Sábado 14 de noviembre · llegada entre la 1 y las 3 p.m.'), '(5) starting at 1: "Sábado 14 de noviembre · llegada entre la 1 y las 3 p.m."');
+    ok(t3.includes('Jueves 12 de noviembre Llegada entre las 12 y las 2 p.m.'), '(5) starting at 12: "Jueves 12 de noviembre Llegada entre las 12 y las 2 p.m."');
+    ok(t3.includes('Sábado 14 de noviembre Llegada entre la 1 y las 3 p.m.'), '(5) starting at 1: "Sábado 14 de noviembre Llegada entre la 1 y las 3 p.m."');
     noDots('12 and 1', t3); noOld('12 and 1', t3);
 
     /* in the browser: the two-window page, then tap the second and book it */
@@ -936,7 +940,7 @@ new_sqlite_classes = ["QuoteBook"]
     await tap(p, 'input[type=radio][name=w][value="2"]');
     const booked = await clickAndWait(p, 'button.qgo');
     eq(stateOf(booked), 'booked', '(5) tapping the second → BOOKED');
-    const dateLine = /<p class="lead" style="font-weight:600;margin:0 0 \.3rem">([^<]*)<\/p>/.exec(booked || '');
+    const dateLine = /<p class="qtd">([^<]*)<\/p>/.exec(booked || '');
     eq(dateLine && decode(dateLine[1]), 'Viernes 13 de noviembre', '(5) BOOKED: the date line starts with a capital: "Viernes 13 de noviembre"');
     const tb = textOf(booked);
     read.booked = tb;
@@ -1001,26 +1005,27 @@ new_sqlite_classes = ["QuoteBook"]
     enHash('NOT VALID · the English section', (await getQ('AAAAAAAAAAAAAAAAAAAAAA', at(17, 25))).text, true);
     enHash('FORBIDDEN · the English section', (await postQ(E6.code, { v: 1 }, at(17, 26), { origin: 'https://evil.example' })).text, true);
 
-    /* Pinned from this same reading run on the base's own src (645c32d), before any edit of this round. */
+    /* Pinned from this same reading run on the base's own src (645c32d), before any edit of SPANISH-FIX-01; re-pinned by
+       QUOTE-PAGE-03 (the new look changes every English page by design) from its own first run on its tip's src. */
     const EN_BASE = {
-      "OPEN · both notices (NOTICE_53255 \"true\")": 'f218e620bb08b6ab5e6c171e76f4cff364cef5b436b0f79b1dab8caf82a51eb3',
-      "OPEN · one time": 'b67ec41cf3f2966ef7595f349458d9bb743dbf1f77b62a0acbbeba6f111e36c6',
-      "OPEN · two times, one across noon": 'a3f8bc40e3ac218983557a9e440f9a28d571cb3059d5088688a415381e6acfd4',
-      "OPEN · from 12 and from 1, hold at 1 PM": 'b1f8633ff38215c29158a785661ebf57823a6bdce90d9c7e9bf153e9d72ce17b',
-      "OPEN · no time picked (?pick=1)": '2d5f2a9963fa265ac932ac521ad7629e7b7816740830057cc62f2a6a6aef8ab9',
-      "HOLD ENDED · one time": '60adb7d670dd859d56540fda2c77f57922ac9243f62c2bd9d4aa4ca936a10d14',
-      "HOLD ENDED · two times": '047c7f07a6e2ae1a90cde15102999ad0fc97af047d97445f960bcb5e88649600',
-      "TOO CLOSE": '4a79f25d8ad4c565e1b860fc1295f7cd62cacadc8d5604ab07a61631062740c4',
-      "TAKEN · one time free": '85eb4bf50de4a8e22ff85ec6ed1bded3487eddbc2ebac8f17b13802d95965a58',
-      "TAKEN · no time free": '68953ae0008ef2a0e20485efac4efb4d0db6f7c315c149f2f94315f09bc8f27d',
-      "BOOKED · one time": '6e131e503905188ddcdd36b0015296d1e5a048e5058efeefe115aadc829b8d05',
-      "BOOKED · the second of two, across noon": 'a985b1a9268f93ba6c9d9ae6bf4a95dbbde6018b047bca4eb22caaa9f6e0ac59',
-      "UPDATING": 'c7b2183011667d1c0e18d014ec5d42f4c7d8fd528d0745cf0d91cc52a9c21ea8',
-      "REPLACED": '983fee5359cd082a38bacb2962ae316fad8e918a999effe5095859cecdb27b35',
-      "RECEIVED": '0ebfa0ae6598372e7b92268a0603c1363eaa70daa952a4444277d62b9e3ac219',
-      "WITHDRAWN": '1752b48efbb6c5cbcdd7691f91a8b65f4c0f115c915d9b5e45ebad4cb7952a9c',
-      "NOT VALID · the English section": 'f802f204b88bda4c28acf51e4a72e7fa170adc0d68c7d10e8fdc05ebd3fdf4c3',
-      "FORBIDDEN · the English section": 'e620d2d4181e9062a6ecd0122ca639046d8e010acadd2b974631672a6b21f8c6',
+      "OPEN · both notices (NOTICE_53255 \"true\")": '9dffd17264ddf9d9ff5cd62df67eed6fa3b5f3f8b48f92c35361b425ed217493',
+      "OPEN · one time": 'b30b5e6be1bf0e8680f3e8728121abf9ec091a0b202179b2fe371e82514513c4',
+      "OPEN · two times, one across noon": 'fe35a8a5831bf90a434b6f06585b80139bfc58b80742f08656c11869490196a2',
+      "OPEN · from 12 and from 1, hold at 1 PM": 'ec2b91cac1d79c9c94ad1a1da3f7ee1e6ad349528d97dc6ac1fa72642aebecf0',
+      "OPEN · no time picked (?pick=1)": '87c0cb09b34f4fa962abd5e0c8c05cd2d94d2fa69d2ac9f7eeef2877b69fd41d',
+      "HOLD ENDED · one time": '9d369bb86117628d1713db8db40c510067ef7ecad455212e983cb5d6b2b832b7',
+      "HOLD ENDED · two times": '4e8beaf92237cb5a2de96fa9a370e42187ac3d36dddd5d13953ca62dc6dde554',
+      "TOO CLOSE": '8775a7d08bd35aa00315c5909c4632ef5fba18bedd42762efac34c95b1a159c5',
+      "TAKEN · one time free": '02e371304c000664e453ba3ee44a3ed52a97cd9c61c9b2abf0f6d85cf525c0ea',
+      "TAKEN · no time free": '67cb72806d32c7b3b652e8b15da66ef4f304a8754eba8a40d47354acc9b7bb4a',
+      "BOOKED · one time": '47d429d2cae2808ec69786adff5ab994b352ac696578e3dde4e9e3c7d0ace33e',
+      "BOOKED · the second of two, across noon": 'cd6af8e437435e1e8ec1c39b9e66ccaf0f4338ad7e01161dd75d708c416351ea',
+      "UPDATING": '3f511a950cf1f85f63f435017e63e2f8eb6659215016bdc7279d21bb67a6d9bc',
+      "REPLACED": '3aede732c18877a9831173f63addaa0bccc207df3ec9b05d3201348e972bbe7b',
+      "RECEIVED": 'f8ab4b5c437809014c3727ea3e4783e3fca1719cd97d971ed752f2666f0a4d09',
+      "WITHDRAWN": 'd4762d5281fe5ceffea2d7f2080bb9c551d6f4ea94615c6ee9ad4df9c247aa09',
+      "NOT VALID · the English section": '138000509adc7aa28e633ed18b2acea71fabadac9edf01dfb0c5e5f455b8bd30',
+      "FORBIDDEN · the English section": '469ce356233913d669a7349f17b212818d5e950eb22cc96ee6f61a32c46aa181',
     };
     fs.writeFileSync(path.join(TMP, 'english-pages.json'), JSON.stringify(enPages, null, 1));
     const labels = Object.keys(enPages);
@@ -1029,8 +1034,447 @@ new_sqlite_classes = ["QuoteBook"]
       eq(labels.length, Object.keys(EN_BASE).length, `as many English states as at the base (${labels.length})`);
       for (const k of Object.keys(EN_BASE)) eq(enPages[k], EN_BASE[k], `(5) English ${k}: byte-identical to the base`);
     }
-    R['21'] = { base: '645c32d29d1c7ba7558ace2e50f1932b9d541a6f', states: labels.length, pages: enPages, base_pages: EN_BASE };
+    R['21'] = { base: 'QUOTE-PAGE-03 tip src (re-pinned; was 645c32d)', states: labels.length, pages: enPages, base_pages: EN_BASE };
   }
+
+  /* ============================================================ QUOTE-PAGE-03 */
+  /* The quote page, better (2026-09-23): the mock's look, the §53.255 statement folded behind one line, and an
+     Add-to-calendar file once booked. Readings Q3 · (2)–(10); (1), (11) and (12) are the tally, the diff and (19).
+     Every day below is this block's own: 12/1–12/22, never a Sunday. The notices Worker ("qp3", NOTICE_53255 "true",
+     its own fresh book) is booted once on 4779/4776/4778 and stopped at the end of the block. */
+  const QP = path.join(TMP, 'quote-page-03-pictures');
+  fs.rmSync(QP, { recursive: true, force: true });
+  fs.mkdirSync(QP, { recursive: true });
+  const qShot = async (p, file) => { await p.bringToFront(); await sleep(600); await p.screenshot({ path: path.join(QP, file), fullPage: true }); return file; };
+  const fontsReady = (p) => p.evaluate(async () => { await document.fonts.ready; return document.fonts.status; });
+  const Q3 = {};
+  /* the calendar file: unfold (RFC 5545 3.1), then read one property */
+  const unfold = (t) => String(t).replace(/\r\n[ \t]/g, '');
+  const icsProp = (t, name) => { const m = new RegExp('^' + name + '(?:;[^:\\r\\n]*)?:(.*)$', 'm').exec(unfold(t).replace(/\r\n/g, '\n')); return m ? m[1] : null; };
+  const icsUnesc = (v) => (v == null ? v : v.replace(/\\n/gi, '\n').replace(/\\([\\;,])/g, '$1'));
+  const noLaw = (h) => String(h || '').replace(/<div class="q53" id="notice-53255" lang="en">[\s\S]*?<\/div>/g, ' ');
+  const calUrl = (code, base = SITE) => qurl(code, '/calendar.ics', base);
+  const getCal = (code, now, base = SITE, method = 'GET') => req(method, calUrl(code, base), { headers: { 'x-umbra-test-now': now } });
+  const T_ADMIN = (id, action, body, now, base) => admin('POST', `/admin/quote/${id}/${action}`, body, now, base);
+  const at = (h, mi) => CT(...WED, h, mi);
+
+  /* the same two quotes on both Workers: the main one (NOTICE_53255 unset → "false") and qp3 ("true") */
+  const ONE_EN = [win('2026-12-01', '08:00', '10:00')];
+  const TWO_ES = [win('2026-12-02', '08:00', '10:00'), win('2026-12-03', '11:00', '13:00')];
+  const mOne = await quoted('Wren Albright', 'Soft drywall under the den window', ONE_EN);
+  const mTwo = await quoted('Ximena Robles', 'Hoyos en la pared de la sala', TWO_ES, { extra: ES });
+  const geo = async (base, code, now) => {
+    const p = await tab(now);
+    await p.goto(qurl(code, '', base), { waitUntil: 'load' });
+    const fonts = await fontsReady(p);
+    const g = await p.evaluate(() => {
+      const b = document.querySelector('button.qgo');
+      return { accept_top: Math.round(b.getBoundingClientRect().top + scrollY), page_height: document.documentElement.scrollHeight, width: innerWidth };
+    });
+    await p.close();
+    return { ...g, fonts };
+  };
+  const gOneOff = await geo(SITE, mOne.code, at(18, 0));
+  const gTwoOff = await geo(SITE, mTwo.code, at(18, 1));
+
+  const TQ = await runNotice('qp3', ['SITE_BASE_URL=http://127.0.0.1:' + PORT_NOTICE_SITE, 'NOTICE_53255=true']);
+  try {
+    const TB = TQ.WN, TS = TQ.SN;
+    const trecord = async (id) => JSON.parse(await rawRecord(id, TB));
+    const tOne = await quoted('Wren Albright', 'Soft drywall under the den window', ONE_EN, { base: TB });
+    const tTwo = await quoted('Ximena Robles', 'Hoyos en la pared de la sala', TWO_ES, { base: TB, extra: ES });
+    const tTwoEn = await quoted('Ines Okafor', 'Patch where a shelf pulled out of the kitchen wall', [win('2026-12-04', '08:00', '10:00'), win('2026-12-05', '13:00', '15:00')], { base: TB });
+
+    /* ------------------------------------------------ Q3 · (3) */
+    suite('I · Q3 (3) the page stays short: Accept high enough at 390, the folded statute costs ≤ 250 px');
+    {
+      const gOneOn = await geo(TS, tOne.code, at(18, 2));
+      const gTwoOn = await geo(TS, tTwo.code, at(18, 3));
+      ok(gOneOn.accept_top <= 1400, `ONE TIME, English, NOTICE_53255 "true": Accept's top ${gOneOn.accept_top} px ≤ 1,400 (the mock: 1,284)`);
+      ok(gTwoOn.accept_top <= 1560, `TWO TIMES, Spanish, NOTICE_53255 "true": Accept's top ${gTwoOn.accept_top} px ≤ 1,560 (the mock: 1,451)`);
+      const d1 = gOneOn.page_height - gOneOff.page_height, d2 = gTwoOn.page_height - gTwoOff.page_height;
+      ok(d1 <= 250, `ONE TIME: ${gOneOn.page_height} px with the statute folded, ${gOneOff.page_height} px without it: +${d1} ≤ 250`);
+      ok(d2 <= 250, `TWO TIMES: ${gTwoOn.page_height} px with the statute folded, ${gTwoOff.page_height} px without it: +${d2} ≤ 250`);
+      Q3['3'] = { one_time_en: { notice_true: gOneOn, notice_false: gOneOff, taller_by: d1 }, two_times_es: { notice_true: gTwoOn, notice_false: gTwoOff, taller_by: d2 } };
+    }
+
+    /* ------------------------------------------------ Q3 · (4) */
+    suite('I · Q3 (4) the disclosure: folded, whole, byte-identical, opens by click, Enter and Space, with JavaScript off');
+    {
+      const g = await getQ(tOne.code, at(18, 10), {}, TS);
+      const dtag = /<details class="qlaw"[^>]*>/.exec(g.text);
+      eq(dtag && dtag[0], '<details class="qlaw">', 'the <details> carries no `open` in the markup');
+      const blk = /<div class="q53" id="notice-53255" lang="en">([\s\S]*?)<\/div>/.exec(g.text);
+      const paras = blk ? [...blk[1].matchAll(/<p>([^<]*)<\/p>/g)].map((x) => decode(x[1])) : [];
+      const sha = crypto.createHash('sha256').update(paras.join('\n')).digest('hex');
+      eq(paras.length, NOTICE_53255.length, `the whole statute is in the HTML: ${NOTICE_53255.length} paragraphs`);
+      eq(sha, NOTICE_53255_SHA256, `byte-identical to NOTICE_53255 (sha256 ${sha.slice(0, 8)}…${sha.slice(-4)})`);
+      ok(/<details class="qlaw">[\s\S]*<div class="q53" id="notice-53255" lang="en">[\s\S]*<\/details>/.test(g.text), 'the statute block sits inside the <details> and carries lang="en"');
+      const p = await tab(at(18, 11));
+      await p.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
+      const isOpen = () => p.$eval('details.qlaw', (d) => d.open);
+      const steps = [['at load', await isOpen()]];
+      await tap(p, 'details.qlaw summary'); steps.push(['click', await isOpen()]);
+      await tap(p, 'details.qlaw summary'); steps.push(['click again', await isOpen()]);
+      await p.focus('details.qlaw summary');
+      await p.keyboard.press('Enter'); steps.push(['Enter on the focused summary', await isOpen()]);
+      await p.keyboard.press('Space'); steps.push(['Space on the focused summary', await isOpen()]);
+      eq(JSON.stringify(steps.map((s) => s[1])), JSON.stringify([false, true, false, true, false]), 'closed at load; a click opens it and a click closes it; Enter opens it; Space closes it', JSON.stringify(steps));
+      const box = await p.evaluate(() => { const b = document.querySelector('.q53'); const cs = getComputedStyle(b); return { max_height: cs.maxHeight, overflow_y: cs.overflowY, vh55: Math.round(innerHeight * 0.55 * 10) / 10 }; });
+      ok(parseFloat(box.max_height) <= box.vh55 + 0.5 && box.overflow_y === 'auto', `the statute scrolls in a box no taller than 55vh (max-height ${box.max_height}, 55vh = ${box.vh55}px, overflow-y ${box.overflow_y})`);
+      await p.close();
+      const nj = await tab(at(18, 12), { js: false });
+      await nj.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
+      const nj0 = await nj.$eval('details.qlaw', (d) => d.open);
+      await tap(nj, 'details.qlaw summary');
+      const nj1 = await nj.$eval('details.qlaw', (d) => d.open);
+      eq(JSON.stringify([nj0, nj1]), JSON.stringify([false, true]), 'with JavaScript off, a click on the summary opens it');
+      await nj.close();
+      const gs = await getQ(tTwo.code, at(18, 13), {}, TS);
+      Q3.spanish_open_two = noLaw(gs.text);                /* for Q3 (7), before the pictures book it */
+      const sum = /<summary>([\s\S]*?)<\/summary>/.exec(gs.text);
+      const sumText = sum ? textOf(sum[1]) : '';
+      eq(sumText, `${S.law_title} ${S.law_hint}`, `in Spanish, the summary reads "${S.law_title}" and "${S.law_hint}"`);
+      expectIn('OPEN · NOTICE_53255 "true"', gs.text, ['law_title', 'law_hint', 'statute_intro']);
+      Q3['4'] = { details_tag: dtag && dtag[0], statute_paragraphs: paras.length, statute_sha256: sha, toggles: steps, box, javascript_off: [nj0, nj1], summary_es: sumText };
+    }
+
+    /* ------------------------------------------------ Q3 · (8) */
+    suite('I · Q3 (8) /assets/site.css blocked: Accept teal with white text, the ticket white on the paper colour');
+    {
+      const nc = await tab(at(18, 20), { blockCss: true });
+      await nc.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
+      const c = await nc.evaluate(() => {
+        const cs = (s, pr) => getComputedStyle(document.querySelector(s))[pr];
+        return { accept_background: cs('button.qgo', 'backgroundColor'), accept_color: cs('button.qgo', 'color'), ticket_background: cs('.qticket', 'backgroundColor'), body_background: cs('body', 'backgroundColor'), scrollWidth: document.documentElement.scrollWidth };
+      });
+      ok(nc._blocked.length >= 1, 'the stylesheet request was blocked', JSON.stringify(nc._blocked));
+      eq(c.accept_background, 'rgb(13, 116, 113)', "Accept's computed background");
+      eq(c.accept_color, 'rgb(255, 255, 255)', "Accept's computed text colour");
+      eq(c.ticket_background, 'rgb(255, 255, 255)', "the ticket's computed background");
+      eq(c.body_background, 'rgb(246, 243, 238)', "the page's computed background (the paper colour)");
+      await nc.close();
+      Q3['8'] = { blocked: nc._blocked.map((u) => u.replace(/^https?:\/\/[^/]+/, '')), computed: c };
+    }
+
+    /* ------------------------------------------------ Q3 · (2) + (5): the pictures, the cards */
+    suite('I · Q3 (2)+(5) the pictures; the cards: no default, the teal state, keyboard alone books the chosen time');
+    {
+      const p = await tab(at(18, 30));
+      await p.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
+      await fontsReady(p);
+      await qShot(p, '1-open.png');
+      await tap(p, 'details.qlaw summary');
+      await qShot(p, '2-open-law-open.png');
+      await p.setViewport({ width: 1280, height: 900 });
+      await p.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
+      await fontsReady(p);
+      await qShot(p, '7-open-1280.png');
+      await p.setViewport({ width: 390, height: 844 });
+      await p.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
+      const booked = await clickAndWait(p, 'button.qgo');
+      eq(stateOf(booked), 'booked', 'ONE TIME: Accept → BOOKED');
+      await fontsReady(p);
+      await qShot(p, '4-booked.png');
+      await p.close();
+
+      const k = await tab(at(18, 31));
+      await k.goto(qurl(tTwoEn.code, '', TS), { waitUntil: 'load' });
+      const h0 = await html(k);
+      const cards = await k.evaluate(() => [...document.querySelectorAll('label.qopt')].map((l) => {
+        const i = l.querySelector('input[type=radio]'); const cs = getComputedStyle(i); const r = i.getBoundingClientRect();
+        return { value: i.value, required: i.required, checked: i.checked, visible: cs.display !== 'none' && cs.visibility === 'visible' && cs.opacity === '1' && r.width >= 20 && r.height >= 20, input_px: [Math.round(r.width), Math.round(r.height)], card_h: Math.round(l.getBoundingClientRect().height), text: l.textContent.trim() };
+      }));
+      eq(cards.length, 2, 'two cards, one per time');
+      eq(cards.filter((c) => c.checked).length, 0, 'no default: none is checked');
+      ok(!/\bchecked\b/.test(noLaw(h0).replace(/<style[\s\S]*?<\/style>/, '')), 'the markup carries no "checked"');
+      ok(cards.every((c) => c.required), 'every radio is required');
+      ok(cards.every((c) => c.visible), 'the radio input stays visible in each card (so a browser without :has still works)', JSON.stringify(cards));
+      await k.bringToFront();
+      await k.focus('body');
+      const keys = [];
+      let focus = '';
+      for (let i = 0; i < 12; i++) {
+        await k.keyboard.press('Tab'); keys.push('Tab');
+        focus = await k.evaluate(() => { const a = document.activeElement; return a ? a.tagName + (a.type ? ':' + a.type : '') + (a.value ? '=' + a.value : '') : ''; });
+        if (/radio/.test(focus)) break;
+      }
+      ok(/radio/.test(focus), 'Tab reaches the group', focus);
+      await k.keyboard.press('ArrowDown'); keys.push('ArrowDown');
+      const chosen = await k.evaluate(() => { const c = document.querySelector('input[name=w]:checked'); return c ? c.value : null; });
+      eq(chosen, '2', 'the arrow key chose the 2nd time');
+      const teal = await k.evaluate(() => { const l = document.querySelector('input[name=w]:checked').closest('.qopt'); const o = document.querySelector('input[name=w]:not(:checked)').closest('.qopt'); const c = getComputedStyle(l), u = getComputedStyle(o); return { chosen: { border: c.borderTopColor, background: c.backgroundColor }, other: { border: u.borderTopColor, background: u.backgroundColor } }; });
+      eq(teal.chosen.border, 'rgb(13, 116, 113)', 'the chosen card takes the teal edge');
+      eq(teal.chosen.background, 'rgb(239, 247, 246)', 'and the teal-tinted ground');
+      eq(teal.other.border, 'rgb(217, 210, 199)', 'the other card keeps the line colour');
+      await qShot(k, '3-two-times.png');
+      for (let i = 0; i < 8; i++) {
+        await k.keyboard.press('Tab'); keys.push('Tab');
+        focus = await k.evaluate(() => document.activeElement && document.activeElement.className);
+        if (focus === 'qgo') break;
+      }
+      eq(focus, 'qgo', 'Tab reaches Accept & confirm');
+      try {
+        await Promise.all([k.waitForNavigation({ waitUntil: 'load', timeout: 15000 }), k.keyboard.press('Enter')]);
+      } catch (err) { ok(false, 'Enter on Accept & confirm completed a navigation', err.message); }
+      keys.push('Enter');
+      const after = await html(k);
+      bodies.push(after);
+      eq(stateOf(after), 'booked', 'keyboard alone booked it');
+      const acc = (await trecord(tTwoEn.id)).accept;
+      eq(acc && acc.window && acc.window.date, '2026-12-05', 'the time the keyboard chose (12/5, 1–3 PM)');
+      await k.close();
+
+      const s = await tab(at(18, 32));
+      await s.goto(qurl(tTwo.code, '', TS), { waitUntil: 'load' });
+      await fontsReady(s);
+      await qShot(s, '5-spanish-open.png');
+      await tap(s, 'input[type=radio][name=w][value="2"]');
+      const sb = await clickAndWait(s, 'button.qgo');
+      eq(stateOf(sb), 'booked', 'Spanish TWO TIMES: the 2nd card, then Aceptar y confirmar → BOOKED');
+      await fontsReady(s);
+      await qShot(s, '6-spanish-booked.png');
+      await s.close();
+      Q3['5'] = { job: tTwoEn.id, cards, keys, chosen, teal, booked: stateOf(after), accept: acc };
+    }
+
+    /* ------------------------------------------------ Q3 · (9) */
+    suite('I · Q3 (9) 390 px on every state: no sideways scroll, targets ≥ 44 px, focus rings visible, reduced motion');
+    {
+      const W1 = [win('2026-12-14', '08:00', '10:00')];
+      const a1 = await quoted('Linnea Paz', 'Hairline crack over the hall door', W1, { base: TB });
+      const a2 = await quoted('Otto Brisk', 'Two dents by the stairs', [win('2026-12-15', '08:00', '10:00'), win('2026-12-16', '13:00', '15:00')], { base: TB });
+      const a3 = await quoted('Vera Holm', 'Nail pops in the den', [win('2026-12-17', '08:00', '10:00'), win('2026-12-18', '08:00', '10:00')], { base: TB });
+      const a4 = await quoted('Remy Stroud', 'Tape seam in the hallway', [win('2026-12-17', '08:00', '10:00')], { base: TB });
+      const a5 = await quoted('Juno Marsh', 'Anchor holes in the office', [win('2026-12-17', '09:00', '11:00')], { base: TB });
+      const a6 = await quoted('Cleo Varga', 'Stain on the bath ceiling', [win('2026-12-19', '08:00', '10:00')], { base: TB });
+      const a7 = await quoted('Ansel Dray', 'Corner bead by the closet', [win('2026-12-21', '08:00', '10:00')], { base: TB });
+      const a8 = await quoted('Bea Lorne', 'Scuffs behind the couch', [win('2026-12-21', '10:00', '12:00')], { base: TB });
+      const a9 = await quoted('Hugo Pell', 'Loose tape over the stairs', [win('2026-12-21', '13:00', '15:00')], { base: TB });
+      const a10 = await quoted('Ida Crane', 'Water ring in the laundry room', [win('2026-12-22', '08:00', '10:00')], { base: TB });
+      eq((await T_ADMIN(a4.id, 'accept', { version: 1, window: 1 }, at(19, 0), TB)).status, 200, 'setup: a4 booked by text (a3 now TAKEN with one free, a5 TAKEN with none)');
+      await postQ(a2.code, { v: 1 }, at(19, 1), {}, '', TS);
+      await create(a6.id, Q(2, [win('2026-12-19', '10:00', '12:00')]), at(19, 2), TB);
+      await create(a7.id, Q(2, [win('2026-12-21', '08:00', '10:00')], { price: 260 }), at(19, 3), TB);
+      await sentQ(a7.id, 2, at(19, 4), TB);
+      await T_ADMIN(a8.id, 'cancel', { version: 1 }, at(19, 5), TB);
+      await postQ(a9.code, { v: 1 }, at(19, 6), {}, '/none', TS);
+      const cut10 = (await rowsOf(a10.id, TB))[0].cutoff;
+      const forbidden = (await postQ(a1.code, { v: 1 }, at(19, 7), { origin: 'https://evil.example' }, '', TS)).text;
+      const states = [
+        ['OPEN · one time', a1.code, '', at(19, 10), 'open'],
+        ['OPEN · two times', a2.code, '', at(19, 11), 'open'],
+        ['OPEN · no time picked', a2.code, '?pick=1', at(19, 12), 'open pick'],
+        ['HOLD ENDED BUT OPEN', a1.code, '', CT(2026, 9, 26, 12, 0), 'hold_ended'],
+        ['TAKEN · one time free', a3.code, '', at(19, 13), 'taken'],
+        ['TAKEN · no time free', a5.code, '', at(19, 14), 'taken'],
+        ['BOOKED', a4.code, '', at(19, 15), 'booked'],
+        ['UPDATING', a6.code, '', at(19, 16), 'updating'],
+        ['REPLACED', a7.code, '', at(19, 17), 'replaced'],
+        ['WITHDRAWN', a8.code, '', at(19, 18), 'withdrawn'],
+        ['RECEIVED', a9.code, '', at(19, 19), 'received'],
+        ['TOO CLOSE', a10.code, '', cut10, 'too_close'],
+        ['NOT VALID', 'AAAAAAAAAAAAAAAAAAAAAA', '', at(19, 20), 'not_valid'],
+        ['FORBIDDEN', null, '', at(19, 21), 'forbidden'],
+      ];
+      const out = [];
+      for (const [label, code, tail, now, want] of states) {
+        const p = await tab(now);
+        if (code) await p.goto(qurl(code, tail, TS), { waitUntil: 'load' });
+        else { await p.goto(qurl('AAAAAAAAAAAAAAAAAAAAAA', '', TS), { waitUntil: 'load' }); await p.setContent(forbidden, { waitUntil: 'load' }); }
+        await fontsReady(p);
+        const m = await p.evaluate(() => {
+          const r = (el) => el.getBoundingClientRect();
+          const targets = [...document.querySelectorAll('button, a[href], summary, label.qopt')].map((el) => ({ what: el.tagName.toLowerCase() + (el.className ? '.' + el.className : ''), w: Math.round(r(el).width), h: Math.round(r(el).height) }));
+          return { state: document.body.dataset.state, scrollWidth: document.documentElement.scrollWidth, bodyScroll: document.body.scrollWidth, targets, steps: Boolean(document.querySelector('.qsteps')) };
+        });
+        await p.bringToFront();
+        await p.focus('body');
+        const rings = [];
+        const seenEl = new Set();
+        for (let i = 0; i < 16; i++) {
+          await p.keyboard.press('Tab');
+          const f = await p.evaluate(() => {
+            const a = document.activeElement;
+            if (!a || a === document.body || a === document.documentElement) return null;
+            let host = a;
+            if (a.matches('input[type=radio]') && getComputedStyle(a).outlineStyle === 'none' && a.closest('.qopt')) host = a.closest('.qopt');
+            const cs = getComputedStyle(host);
+            return { el: a.tagName.toLowerCase() + (a.className ? '.' + a.className : '') + (a.type ? ':' + a.type : '') + (a.value ? '=' + a.value : ''), key: a.outerHTML.slice(0, 120), ring_on: host === a ? 'itself' : 'its card', style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
+          });
+          if (!f || seenEl.has(f.key)) break;
+          seenEl.add(f.key);
+          delete f.key;
+          rings.push(f);
+        }
+        const small = m.targets.filter((t) => t.w < 44 || t.h < 44);
+        const noRing = rings.filter((f) => f.style === 'none' || parseFloat(f.width) < 2);
+        eq(m.state, want, `${label}: the state is ${want}`);
+        ok(m.scrollWidth <= 390 && m.bodyScroll <= 390, `${label}: no sideways scroll (scrollWidth ${m.scrollWidth})`);
+        eq(small.length, 0, `${label}: every target ≥ 44 px (${m.targets.length} targets)`, JSON.stringify(small));
+        eq(noRing.length, 0, `${label}: every focus ring is visible (${rings.length} stops)`, JSON.stringify(noRing));
+        const wantSteps = ['open', 'open pick', 'hold_ended', 'booked'].includes(want) || (want === 'taken' && code === a3.code);
+        eq(m.steps, wantSteps, `${label}: ${wantSteps ? 'the strip shows' : 'no strip'}`);
+        out.push({ label, ...m, rings });
+        await p.close();
+      }
+      const bk = await tab(at(19, 30));
+      await bk.goto(qurl(a4.code, '', TS), { waitUntil: 'load' });
+      const anim0 = await bk.$eval('.qok', (e) => getComputedStyle(e).animationName);
+      await bk.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+      await bk.reload({ waitUntil: 'load' });
+      const anim1 = await bk.$eval('.qok', (e) => getComputedStyle(e).animationName);
+      eq(anim0, 'qpop', '.qok animates (qpop) by default');
+      eq(anim1, 'none', 'with prefers-reduced-motion emulated, .qok\'s computed animation-name is "none"');
+      const calTarget = out.find((o) => o.label === 'BOOKED').targets.find((t) => t.what === 'a.qalt');
+      ok(calTarget && calTarget.h >= 44, `the calendar link is ${calTarget && calTarget.w}×${calTarget && calTarget.h} px`);
+      await bk.close();
+      Q3['9'] = { states: out, reduced_motion: { default: anim0, reduce: anim1 } };
+    }
+
+  } finally {
+    await TQ.stop();
+  }
+
+  /* ------------------------------------------------ Q3 · (6) */
+  suite('I · Q3 (6) the calendar file: BOOKED only, read-only, one VEVENT in UTC, CRLF, ≤ 75 octets, nothing personal');
+  {
+    const r0 = (await rowsOf(P2.id))[0];
+    const k0 = await rawRecord(P2.id);
+    const c = await getCal(P2.code, at(20, 0));
+    const r1 = (await rowsOf(P2.id))[0];
+    const k1 = await rawRecord(P2.id);
+    eq(c.status, 200, 'booked → 200');
+    eq(c.headers['content-type'], 'text/calendar; charset=utf-8; method=PUBLISH', 'Content-Type text/calendar');
+    eq(c.headers['content-disposition'], 'attachment; filename="umbra-domus-visit.ics"', 'Content-Disposition attachment');
+    eq(c.headers['cache-control'], 'no-store', 'no-store');
+    eq(c.headers['x-robots-tag'], 'noindex, nofollow', 'noindex');
+    eq(c.headers['x-content-type-options'], 'nosniff', 'nosniff');
+    eq(c.headers['x-frame-options'], 'DENY', 'the frame header');
+    eq(r1.views, r0.views + 1, `the GET moves the view count by one (${r0.views} → ${r1.views})`);
+    eq(minusViews(r1), minusViews(r0), 'nothing else on the book row changed');
+    eq(k1, k0, 'the KV record is byte-identical');
+    const t = c.text;
+    const lines = t.split('\r\n');
+    const octets = lines.map((l) => Buffer.byteLength(l, 'utf8'));
+    ok(t.endsWith('\r\n') && !/(^|[^\r])\n/.test(t), 'every line ends CRLF (no bare LF)');
+    ok(Math.max(...octets) <= 75, `no line over 75 octets (longest ${Math.max(...octets)})`);
+    eq((t.match(/^BEGIN:VEVENT\r$/gm) || []).length, 1, 'one VEVENT');
+    eq(`${icsProp(t, 'DTSTART')}–${icsProp(t, 'DTEND')}`, '20260929T130000Z–20260929T150000Z', 'Tue 9/29 8–10 AM Central → 13:00–15:00 UTC');
+    eq(icsProp(t, 'VERSION'), '2.0', 'VERSION:2.0');
+    eq(icsProp(t, 'PRODID'), '-//Umbra Domus//Quote page//EN', 'PRODID');
+    eq(icsProp(t, 'METHOD'), 'PUBLISH', 'METHOD:PUBLISH');
+    eq(icsProp(t, 'DTSTAMP'), at(20, 0).replace(/[-:]/g, '').replace(/\.\d{3}/, ''), 'DTSTAMP = now, in UTC (the named moment)');
+    eq(icsUnesc(icsProp(t, 'SUMMARY')), E.ics_title, 'SUMMARY = ics_title');
+    eq(icsUnesc(icsProp(t, 'DESCRIPTION')), 'Arrival between 8 and 10 AM. Questions? Reply to our text.', 'DESCRIPTION = ics_desc filled');
+    const uid = icsProp(t, 'UID');
+    const want = 'umbradomus-' + crypto.createHash('sha256').update(P2.code).digest('hex').slice(0, 32);
+    eq(uid, want, 'UID = "umbradomus-" + the first 32 hex of sha256(code)');
+    ok(!uid.includes('@') && !t.includes(P2.code), 'the UID has no @, and the code itself is nowhere in the file');
+    const personal = t.match(/Teo|Vance|\(956\)|555-01\d\d|@example\.com|Almendro|\$225|\b225\b|tel:|mailto:/g) || [];
+    eq(personal.length, 0, 'no name, phone, address or price in the file (grep)', personal.join(', '));
+    const hd = await getCal(P2.code, at(20, 1), SITE, 'HEAD');
+    eq(`${hd.status} ${hd.headers['content-type']} ${hd.text.length}`, '200 text/calendar; charset=utf-8; method=PUBLISH 0', 'HEAD → 200, the same type, no body');
+
+    /* a window after Nov 1: Central Standard Time, so +6 h */
+    const dst = await quoted('Opal Wick', 'Patch by the back door', [win('2026-12-07', '08:00', '10:00')]);
+    await postQ(dst.code, { v: 1 }, at(20, 2));
+    const cd = await getCal(dst.code, at(20, 3));
+    eq(`${icsProp(cd.text, 'DTSTART')}–${icsProp(cd.text, 'DTEND')}`, '20261207T140000Z–20261207T160000Z', 'Mon 12/7 8–10 AM Central (CST) → 14:00–16:00 UTC: +6 h, where 9/29 (CDT) was +5');
+
+    /* a POST to the calendar path, with the site's own Origin, on an OPEN quote: 405, and nothing booked */
+    const op = await quoted('Pim Ostrander', 'Crack over the bedroom window', [win('2026-12-08', '08:00', '10:00')]);
+    const snap = async () => JSON.stringify({ row: (await rowsOf(op.id))[0], rec: await rawRecord(op.id), bk: await bookingsOn('2026-12-08'), po: pushesFor(op.id) });
+    const s0 = await snap();
+    const pc = await postQ(op.code, { v: 1 }, at(20, 4), {}, '/calendar.ics');
+    const s1 = await snap();
+    eq(pc.status, 405, 'POST /q/<code>/calendar.ics with the site\'s own Origin → 405');
+    eq(pc.headers.allow, 'GET, HEAD', 'Allow: GET, HEAD');
+    eq(s1, s0, 'nothing booked: the book row (views too), the KV record, the day\'s bookings and the pushes are byte-identical');
+    const fpc = await postQ(op.code, { v: 1 }, at(20, 5), { origin: 'https://evil.example' }, '/calendar.ics');
+    eq(fpc.status, 403, 'a foreign POST there → 403 (the origin check runs first)');
+    const nb = await getCal(op.code, at(20, 6));
+    eq(`${nb.status} ${stateOf(nb.text)}`, '404 not_valid', 'a quote not booked → 404 NOT VALID');
+    const unk = await getCal('AAAAAAAAAAAAAAAAAAAAAA', at(20, 7));
+    eq(`${unk.status} ${stateOf(unk.text)}`, '404 not_valid', 'an unknown code → 404 NOT VALID');
+    eq(stateOf((await getQ(op.code, at(20, 8))).text), 'open', 'and the quote is still OPEN');
+
+    /* a Spanish booking: the es title and description */
+    const es = await quoted('Yolanda Treviño', 'Resane junto a la ventana', [win('2026-12-09', '11:00', '13:00')], { extra: ES });
+    await postQ(es.code, { v: 1 }, at(20, 9));
+    const ce = await getCal(es.code, at(20, 10));
+    eq(icsUnesc(icsProp(ce.text, 'SUMMARY')), S.ics_title, `Spanish SUMMARY = "${S.ics_title}"`);
+    eq(icsUnesc(icsProp(ce.text, 'DESCRIPTION')), 'Llegada entre las 11 a.m. y la 1 p.m. ¿Preguntas? Responda a nuestro mensaje de texto.', 'Spanish DESCRIPTION = ics_desc filled');
+    eq(`${icsProp(ce.text, 'DTSTART')}–${icsProp(ce.text, 'DTEND')}`, '20261209T170000Z–20261209T190000Z', 'Wed 12/9 11 AM–1 PM Central → 17:00–19:00 UTC');
+    const eo = ce.text.split('\r\n').map((l) => Buffer.byteLength(l, 'utf8'));
+    ok(Math.max(...eo) <= 75, `the Spanish file: no line over 75 octets (longest ${Math.max(...eo)}), folded outside every UTF-8 character`);
+    ok(!ce.text.includes('�') && Buffer.from(ce.text, 'utf8').toString('utf8') === ce.text, 'and it decodes as UTF-8 with no broken character');
+    for (const k of ['ics_title', 'ics_desc']) seen[k] = (seen[k] || []).concat('the calendar file');
+    Q3['6'] = {
+      booked: { job: P2.id, status: c.status, headers: Object.fromEntries(['content-type', 'content-disposition', 'cache-control', 'x-robots-tag', 'x-content-type-options', 'x-frame-options', 'content-security-policy'].map((h) => [h, c.headers[h]])), views: `${r0.views} → ${r1.views}`, kv_identical: k1 === k0, file: t.replace(/\r\n/g, '⏎\n'), longest_line_octets: Math.max(...octets) },
+      head: hd.status, dst: { job: dst.id, dtstart: icsProp(cd.text, 'DTSTART'), dtend: icsProp(cd.text, 'DTEND') },
+      post: { job: op.id, status: pc.status, allow: pc.headers.allow, nothing_written: s1 === s0, foreign: fpc.status }, not_booked: nb.status, unknown: unk.status,
+      spanish: { job: es.id, file: ce.text.replace(/\r\n/g, '⏎\n'), longest_line_octets: Math.max(...eo) },
+    };
+
+    /* ------------------------------------------------ Q3 · (7) */
+    suite('I · Q3 (7) Spanish: every new es key on a Spanish quote; no "..", no "a. m.", no English left');
+    const esOne = await quoted('Zulema Garza', 'Hoyo de perilla detrás de la puerta', [win('2026-12-10', '08:00', '10:00')], { extra: ES });
+    const pages = {
+      'OPEN · one time': (await getQ(esOne.code, at(20, 20))).text,
+      'OPEN · two times (NOTICE_53255 "true")': Q3.spanish_open_two,
+      BOOKED: (await getQ(es.code, at(20, 21))).text,
+    };
+    delete Q3.spanish_open_two;
+    expectIn('OPEN · one time', pages['OPEN · one time'], ['h1_quote', 'h_price', 'h_when', 'when_line'], { window: 'las 8 y las 10 a.m.' });
+    expectIn('BOOKED', pages.BOOKED, ['h_booked', 'lbl_visit', 'when_line', 'add_calendar', 'booked_confirm', 'h_price'], { window: 'las 11 a.m. y la 1 p.m.' });
+    const enParts = [];
+    for (const [k, v] of Object.entries(E)) for (const s of [].concat(v)) for (const x of String(s).split(/\{\w+\}/)) if (x.trim().length > 3) enParts.push([k, x.trim()]);
+    const out = {};
+    for (const [label, h] of Object.entries(pages)) {
+      const strip = new RegExp(`<ol class="qsteps" aria-label="${S.steps_label}">([\\s\\S]*?)</ol>`).exec(h);
+      const labels = strip ? [...strip[1].matchAll(/<\/span>([^<]+)<\/li>/g)].map((x) => x[1]) : [];
+      eq(JSON.stringify(labels), JSON.stringify(S.steps), `${label}: the strip is labelled "${S.steps_label}" and reads ${S.steps.join(' · ')}`);
+      const h1 = /<h1>([^<]*)<\/h1>/.exec(h);
+      if (label !== 'BOOKED') eq(h1 && decode(h1[1]), S.h1_quote, `${label}: the H1 is "${S.h1_quote}"`);
+      const t = textOf(noLaw(h));
+      const english = enParts.filter(([, x]) => t.includes(x)).map(([k, x]) => `${k}: ${x}`).concat((t.match(/\b(AM|PM)\b/g) || []));
+      eq((t.match(/\.\.(?!\.)/g) || []).length, 0, `${label}: no ".."`);
+      eq((t.match(/[ap]\. m\./g) || []).length, 0, `${label}: no "a. m." or "p. m."`);
+      eq(english.length, 0, `${label}: no English left (every English page string, AM/PM)`, english.join(' | '));
+      out[label] = { strip: labels, h1: h1 && decode(h1[1]), english_found: english, text: t };
+    }
+    for (const k of ['steps', 'steps_label']) seen[k] = (seen[k] || []).concat('the strip, on every Spanish page with one');
+    /* (15)'s "every Spanish string seen", run here once every Spanish page and file has been read. QUOTE-PAGE-03
+       exempts exactly three more by design: `when` and `booked_window` (the day and when_line now sit on two lines)
+       and `title` (it stays the <title> and og:title; h1_quote is the heading). hi and statute_intro as before. */
+    const unexercised = Object.keys(E).filter((k) => !seen[k] && !['hi', 'statute_intro', 'when', 'booked_window', 'title'].includes(k));
+    eq(unexercised.length, 0, 'every Spanish string was seen on a page or in the calendar file (hi and statute_intro are checked in (16) and by hand; when, booked_window and title leave the page by design)', unexercised.join(', '));
+    Q3['7'] = { jobs: [esOne.id, es.id], pages: out, unexercised };
+  }
+
+  /* ------------------------------------------------ Q3 · (10) */
+  suite('I · Q3 (10) the headers and the CSP are unchanged on every /q response; the calendar carries no-store and noindex');
+  {
+    const HDR = ['cache-control', 'x-robots-tag', 'referrer-policy', 'x-frame-options', 'content-security-policy', 'x-content-type-options'];
+    const want = {
+      'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY',
+      'content-security-policy': "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+      'x-content-type-options': 'nosniff',
+    };
+    const o = await getQ(mOne.code, at(20, 30));
+    const b = await getQ(P2.code, at(20, 31));
+    const pick = (r) => Object.fromEntries(HDR.map((k) => [k, r.headers[k]]));
+    eq(stateOf(o.text) + ' · ' + stateOf(b.text), 'open · booked', 'one OPEN and one BOOKED');
+    eq(JSON.stringify(pick(o)), JSON.stringify(want), 'OPEN: the six headers exactly');
+    eq(JSON.stringify(pick(b)), JSON.stringify(want), 'BOOKED: the six headers exactly');
+    const qs = sw.proxyLog.filter((e) => e.url.startsWith('/q'));
+    const off = qs.filter((e) => HDR.some((k) => e.response_headers[k] !== want[k]));
+    eq(off.length, 0, `every /q response the site's proxy carried (${qs.length}) has the six headers, unchanged`, JSON.stringify(off.slice(0, 3).map((e) => ({ m: e.method, s: e.status, u: e.url.replace(/[A-Za-z0-9]{22}/, '<code>') }))));
+    Q3['10'] = { open: pick(o), booked: pick(b), proxied_q_responses: qs.length, off: off.length };
+  }
+  R.Q3 = Q3;
+  R.Q3.pictures = fs.readdirSync(QP).sort();
 
   /* ============================================================ (17) */
   suite('I · (17) every 303 carries a relative Location (/q/<code>)');

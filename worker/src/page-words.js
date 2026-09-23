@@ -46,6 +46,18 @@ export const WORDS = {
     h_forbidden: "This didn't come from our page.",
     forbidden: 'Open the link in our text again, or reply to it.',
     questions: 'Questions? Reply to our text.',
+    /* QUOTE-PAGE-03: the new look. `when`, `booked_window` and `title` leave the visible page by design (the day
+       and when_line sit on two lines; BOOKED uses when_line; h1_quote is the heading and `title` stays the <title>). */
+    h1_quote: 'Your quote',
+    steps: ['Received', 'Quoted', 'Scheduled', 'Done'],
+    steps_label: 'Where your request stands',
+    lbl_visit: 'Your visit',
+    when_line: 'Arrival between {window}',
+    law_title: 'Your rights under Texas law',
+    law_hint: 'Tap to read',
+    add_calendar: 'Add to my calendar',
+    ics_title: 'Umbra Domus visit (arrival window)',
+    ics_desc: 'Arrival between {window}. Questions? Reply to our text.',
   },
   es: {
     title: 'Su cotización de Umbra Domus',
@@ -87,6 +99,18 @@ export const WORDS = {
     h_forbidden: 'Esto no se envió desde nuestra página.',
     forbidden: 'Vuelva a abrir el enlace de nuestro mensaje de texto o respóndanos.',
     questions: '¿Preguntas? Responda a nuestro mensaje de texto.',
+    /* QUOTE-PAGE-03, from Drew's RGV Spanish researcher (Bridge/SUPE/RESEARCH-SPANISH-RGV-2026-09-23/). ics_desc has
+       no period after {window}: its "a.m."/"p.m." ends the sentence. */
+    h1_quote: 'Su cotización',
+    steps: ['Recibido', 'Cotizado', 'Programado', 'Terminado'],
+    steps_label: 'En qué paso va su solicitud',
+    lbl_visit: 'Su visita',
+    when_line: 'Llegada entre {window}',
+    law_title: 'Sus derechos según la ley de Texas',
+    law_hint: 'Toque para leer',
+    add_calendar: 'Agregar a mi calendario',
+    ics_title: 'Visita de Umbra Domus (horario de llegada)',
+    ics_desc: 'Llegada entre {window} ¿Preguntas? Responda a nuestro mensaje de texto.',
   },
 };
 
