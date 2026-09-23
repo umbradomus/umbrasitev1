@@ -844,8 +844,15 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
   /* ACCEPT-PAGE-02: the customer's page at /q/<code>, through the site's own /q proxy. Readings go to
      .tmp/page-readings.json and its pictures to .tmp/page-pictures/. */
   {
-    const readings = await suitePage({ browser, W, stub, sw, siteWorker, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, PORT, TMP, WORKER_DIR, REPO_DIR, wlogRef });
-    fs.writeFileSync(path.join(TMP, 'page-readings.json'), JSON.stringify(readings, null, 2));
+    /* A throw inside suite I is a named FAIL and the tally still prints: the readings after it did not run,
+       and the count says so rather than the run dying without a TOTAL. */
+    try {
+      const readings = await suitePage({ browser, W, stub, sw, siteWorker, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, PORT, TMP, WORKER_DIR, REPO_DIR, wlogRef });
+      fs.writeFileSync(path.join(TMP, 'page-readings.json'), JSON.stringify(readings, null, 2));
+    } catch (err) {
+      suite('I · the suite ran to its end');
+      ok(false, 'suite I stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
+    }
   }
 
   await page.close();

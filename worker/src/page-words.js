@@ -1,10 +1,10 @@
 /* THE CUSTOMER'S PAGE — ITS WORDS (ACCEPT-PAGE-02). Kept apart from page.js so the tests can read the same
    table the page renders from (page.js imports the book; this file imports nothing). */
 
-/* Every fixed string on the page, in both languages. The Spanish is ours and every line is marked REVIEW in the
-   close for his local reviewer, with its English beside it. {x} is filled in; nothing else is. No phone number,
-   address or email of anyone; no upsell, referral, review ask or discount (R37 §5); no materials (R38); never
-   "licensed" or "bonded" (R33). */
+/* Every fixed string on the page, in both languages. The Spanish is ours; every line goes to his local reviewer
+   in the close, with its English beside it. {x} is filled in; nothing else is. No phone number, address or email
+   of anyone; nothing R37 §5 rules out of a scheduling message; no materials (R38); neither of the two words R33
+   keeps off everything this company prints. Suite I greps every page it renders for all of it. */
 export const WORDS = {
   en: {
     title: 'Your quote from Umbra Domus',
@@ -90,7 +90,7 @@ export const WORDS = {
   },
 };
 
-/* READY-4's lighting paragraph, in Spanish (ours — REVIEW). The English is notices.js, word for word. */
+/* READY-4's lighting paragraph, in Spanish (ours — for his reviewer). The English is notices.js, word for word. */
 export const LIGHTING_ES = {
   lead: 'Luz.',
   text: 'La luz fuerte que roza a lo largo de una pared o un techo — una ventana al final del día, o una lámpara montada directamente sobre la superficie — deja ver pequeñas diferencias en cualquier superficie reparada, incluidas las nuestras. Juzgamos una reparación como la juzga el oficio de la pintura: a tres pies de distancia, con la luz normal del cuarto. Si una superficie es de las que siempre van a mostrar un parche con esa luz rasante, se lo decimos antes de empezar, no después.',

@@ -176,11 +176,17 @@ export async function suitePage(ctx) {
       console.log('DIAG button:', JSON.stringify(await p.evaluate((sel) => { const b = document.querySelector(sel); if (!b) return null; const r = b.getBoundingClientRect(); const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return { r: [r.x, r.y, r.width, r.height], inner: innerHeight, at: at && at.outerHTML.slice(0, 80), form: b.form && b.form.getAttribute('action') }; }, selector).catch((e) => 'eval failed ' + e.message)));
       console.log('DIAG proxy tail:', JSON.stringify(sw.proxyLog.slice(-4).map((e) => ({ m: e.method, u: e.url.replace(/[A-Za-z0-9]{22}/, '<c>'), s: e.status, err: e.error, ct: e.headers['content-type'], cl: e.headers['content-length'], o: e.headers.origin }))));
       console.log('DIAG wrangler tail:', wlogRef().slice(-1500));
-      throw err;
+      /* a tap that did not complete is a named FAIL, and the suite goes on to the next check (never a silent stop) */
+      ok(false, `the tap on ${selector} completed a navigation`, err.message);
     }
-    const b = await html(p);
+    const b = await html(p).catch(() => '');
     bodies.push(b);
     return b;
+  }
+  /** A click with no navigation behind it; a missing target is a named FAIL, not a stop. */
+  async function tap(p, selector) {
+    await p.bringToFront();
+    try { await p.click(selector); } catch (err) { ok(false, `${selector} could be clicked`, err.message); }
   }
   const proxied = (code, method) => sw.proxyLog.filter((e) => e.method === method && e.url.startsWith('/q/' + code));
 
@@ -443,7 +449,7 @@ export async function suitePage(ctx) {
     await shot(p, '2-two-times.png');
     /* the browser's own required check: tapping Accept with nothing picked sends nothing */
     const n0 = proxied(P5.code, 'POST').length;
-    await p.click('button.qgo');
+    await tap(p, 'button.qgo');
     await sleep(700);
     eq(proxied(P5.code, 'POST').length, n0, 'in the browser, Accept with nothing picked sends no post (required)');
     /* the server's own check: a post with no w */
@@ -459,7 +465,7 @@ export async function suitePage(ctx) {
     eq(await snap(), s0, 'nothing written (the book row but its view count, the record, both days, the pushes)');
     /* choose the second, in the browser */
     await p.goto(qurl(P5.code), { waitUntil: 'load' });
-    await p.click('input[type=radio][name=w][value="2"]');
+    await tap(p, 'input[type=radio][name=w][value="2"]');
     const booked = await clickAndWait(p, 'button.qgo');
     eq(stateOf(booked), 'booked', 'choosing the 2nd → BOOKED');
     ok(textOf(booked).includes('Fri, Oct 16') && textOf(booked).includes('arrival between 1 and 3 PM'), 'BOOKED names window 2: Fri, Oct 16, 1–3 PM');
