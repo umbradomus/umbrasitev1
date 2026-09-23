@@ -19,6 +19,8 @@
        ceiling_condition    walls_condition
        ceiling_surface      walls_surface
        paint_on_site · name · phone · address · what · attachment
+       avail_* · sms_consent* · time_1..3 · times_flexible · text_consent
+                          the time screen and the text box (FORM-WINDOWS-01, umbra-windows.js)
        _subject · _captcha · _template · _next · _honey
        idioma             Spanish page only (value="español")
 
@@ -74,7 +76,8 @@
     }
     if (ceiling) block('ceiling');
     if (walls) block('walls');
-    keys.push('paint', 'name', 'phone', 'address', 'notes', 'send');
+    /* FORM-WINDOWS-01: 'times' (When could we come?) sits just before Send. */
+    keys.push('paint', 'name', 'phone', 'address', 'notes', 'times', 'send');
     var live = [];
     for (var i = 0; i < keys.length; i++) { var s = stepOf(keys[i]); if (s) live.push(s); }
     return live;
@@ -111,7 +114,8 @@
   /* "Pick at least one" on the two screens that need it, said on the screen. */
   function needMet(step) {
     if (!step || !step.hasAttribute('data-need')) return true;
-    var any = step.querySelector('input[type="checkbox"]:checked, input[type="radio"]:checked');
+    /* a pick on the time screen is a hidden input the picker marks data-picked (umbra-windows.js) */
+    var any = step.querySelector('input[type="checkbox"]:checked, input[type="radio"]:checked, input[data-picked]');
     var note = step.querySelector('.v2need');
     if (note) note.hidden = !!any;
     return !!any;

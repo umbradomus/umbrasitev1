@@ -16,6 +16,7 @@
      GET  /admin?k=                    the aging list as a page
      POST /admin/seen/:id?k=           "I have it" — acknowledges the alerts (admin key; 401 without)
      POST /hooks/pushover/:secret      Pushover's Acknowledge callback (path secret + a receipt we issued)
+     GET  /api/windows                 what the time screen may offer (Sundays, blocked dates) — public
      GET  /health                      liveness
 */
 
@@ -32,6 +33,8 @@ import {
   initialAlerts, sendIntakeAlert, runAlerts, acknowledge, acknowledgeReceipt,
 } from './alerts.js';
 import { renderJobMarkdown } from './export.js';
+import { bizMinutes } from './biztime.js';
+import { readAvailability, readConsent, windowsConfig } from './windows.js';
 
 /* Caps. A submit that breaks one of these is refused out loud, never trimmed quietly. */
 /* The entry module may only export the handler object, so these stay local. */
@@ -290,6 +293,20 @@ async function handleIntake(request, env, ctx) {
       (emailSentField === 'yes' ? 'said yes' : emailSentField === null ? 'was not attempted (no JavaScript or the old form)' : 'reported ' + emailSentField + (emailCopyMs === null ? '' : ' after ' + emailCopyMs + ' ms')) +
       ' and the Worker fallback failed (' + forwardDetail + '). This record is the only copy of the request.';
 
+  /* 3c · FORM-WINDOWS-01: the times they offered and their answer on texts. Both null on a page without
+     the time screen. A bad availability is kept with its reason and never costs the request. */
+  let availability = null, consent = null;
+  try {
+    availability = readAvailability(fields, env, received_at);
+  } catch (err) {
+    availability = { flexible: false, choices: [], notes: '', invalid: 'unreadable: ' + String(err && err.message || err) };
+  }
+  try {
+    consent = await readConsent(fields, request, received_at);
+  } catch (err) {
+    consent = null;
+  }
+
   /* 4 · the record. Written last so it carries the outcome of 2 and 3. */
   if (id) {
     const rec = {
@@ -302,6 +319,8 @@ async function handleIntake(request, env, ctx) {
       user_agent: request.headers.get('user-agent') || '',
       status: 'received',
       fields,
+      availability,
+      ...(consent ? { consent } : {}),
       photos: stored,
       status_link,
       quoted_at: null,
@@ -456,6 +475,9 @@ function adminRow(rec, nowIso) {
     received_at_chicago: rec.received_at_chicago,
     minutes_open: minutesOpen(rec, nowIso),
     minutes_to_quote: rec.minutes_to_quote,
+    /* FORM-WINDOWS-01 (B7 · B8): the register's two-hour column reads THIS, never a second clock.
+       minutes_to_quote above stays raw. */
+    business_minutes_to_quote: rec.quoted_at ? bizMinutes(Date.parse(rec.received_at), Date.parse(rec.quoted_at)) : null,
     quoted_at: rec.quoted_at,
     scheduled_at: rec.scheduled_at,
     scheduled_for: rec.scheduled_for,
@@ -483,6 +505,9 @@ function adminRow(rec, nowIso) {
     /* contact.html names the free text `message`, the other three name it `what`. */
     what: (rec.fields || {}).what || (rec.fields || {}).message || '',
     idioma: (rec.fields || {}).idioma || '',
+    /* FORM-WINDOWS-01 (B5): the times they offered and their answer on texts — FC-1.4b reads them here */
+    availability: rec.availability === undefined ? null : rec.availability,
+    consent: rec.consent || null,
     status_link: rec.status_link || '',
     token: rec.token,
     /* Everything the form posted, exactly as stored — repeated names stay arrays.
@@ -606,6 +631,10 @@ export default {
     const method = request.method.toUpperCase();
 
     if (path === '/health') return json({ ok: true, service: 'umbra-intake', now: new Date().toISOString() });
+
+    if (path === '/api/windows' && method === 'GET') {
+      return withCors(json(windowsConfig(env, nowFor(request, env))));
+    }
 
     if (path === '/intake') {
       if (method === 'POST') return handleIntake(request, env, ctx);

@@ -19,6 +19,7 @@ import puppeteer from 'puppeteer-core';
 import { captureServer, staticServer, close } from './lib/servers.mjs';
 import { parseMultipart, fieldValue, files as filesOf } from './lib/multipart.mjs';
 import { suiteAlerts } from './suite-d-alerts.mjs';
+import { suiteWindows } from './suite-g-windows.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -809,6 +810,13 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB }
       ok(a.some((x) => x.name === 'attachment1') && a.some((x) => x.name === 'attachment2'),
         `${label}: still one field per photo`);
     }
+  }
+
+  /* ====================================================================== G */
+  /* FORM-WINDOWS-01: the time screen and the text box. Its eleven readings go to .tmp/windows-readings.json. */
+  {
+    const readings = await suiteWindows({ browser, W, stub, relay, ADMIN_KEY, suite, ok, eq, json, sleep, PORT, TMP, WORKER_DIR, flipConstant, copyTree });
+    fs.writeFileSync(path.join(TMP, 'windows-readings.json'), JSON.stringify(readings, null, 2));
   }
 
   await page.close();

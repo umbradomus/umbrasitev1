@@ -397,3 +397,51 @@ textarea.field { min-height: 8rem; resize: vertical; }
   .intake2 .v2q { font-size: 1.15rem; }
   .v2nav .v2back { flex: 0 0 6.5rem; }
 }
+
+/* ==========================================================================
+   FORM-WINDOWS-01 (2026-09-23) · "When could we come?" and the text box.
+   Every target is at least 44px; a state is always said in words or a mark,
+   never by colour alone (a picked block says "Picked", a day says "1 picked",
+   an open day is inverted AND carries a notch). Nothing above is changed.
+   ========================================================================== */
+.wbox { display: grid; gap: 0.7rem; }
+.wdays { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 0.45rem; }
+.req .wday { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 60px; min-width: 44px; padding: 0.4rem 0.3rem; border: 1.5px solid var(--muted); border-radius: 12px;
+  background: var(--paper); color: var(--ink); font: inherit; line-height: 1.15; cursor: pointer; }
+.req .wday .wdow { font-size: 0.85rem; font-weight: 600; text-transform: capitalize; }
+.req .wday .wdate { font-size: 1.05rem; font-weight: 700; }
+.req .wday .whas { font-size: 0.72rem; font-weight: 600; margin-top: 0.1rem; }
+.req .wday.has { border-width: 2.5px; border-color: var(--teal); }
+.req .wday[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--white); }
+.req .wday[aria-pressed="true"]::after { content: ""; position: absolute; bottom: -8px; left: 50%; margin-left: -7px;
+  border: 7px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
+.req .wday:focus-visible, .req .wblock:focus-visible, .req .wpick:focus-visible, .req .wprivacy:focus-visible {
+  outline: 3px solid var(--tyrian); outline-offset: 2px; }
+.wblocks { margin: 0; padding: 0.8rem; border: 1.5px solid var(--ink); border-radius: 12px; background: var(--white); }
+.wblocks legend { padding: 0 0.35rem; font-weight: 600; }
+.wblocklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.45rem; }
+.req .wblock { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 52px;
+  padding: 0.55rem 0.85rem; border: 1.5px solid var(--muted); border-radius: 10px; background: var(--paper);
+  color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.req .wblock.on { background: var(--teal); border-color: var(--teal); color: var(--white); }
+.req .wblock .wbon { font-size: 0.85rem; white-space: nowrap; }
+.req .wblock[disabled] { cursor: not-allowed; opacity: 0.55; text-decoration: line-through; }
+.wfull { margin: 0.5rem 0 0; font-size: 0.95rem; font-weight: 600; }
+.wcount { margin: 0; font-size: 0.95rem; color: var(--muted); }
+.wpicks { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.wpicks li { margin: 0; }
+.req .wpick { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 44px; padding: 0.4rem 0.5rem 0.4rem 0.4rem;
+  border: 1.5px solid var(--teal); border-radius: 999px; background: var(--white); color: var(--ink);
+  font: inherit; font-weight: 600; cursor: pointer; }
+.req .wpick .wpn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+  border-radius: 50%; background: var(--teal); color: var(--white); font-size: 0.9rem; }
+.req .wpick .wpx { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+  border-radius: 50%; border: 1.5px solid var(--muted); font-size: 0.85rem; }
+.intake2 .wnq { font-size: 1.05rem; }
+.wconsent { display: grid; gap: 0.25rem; margin-top: 0.6rem; }
+.req .wconsent .v2opt { align-items: flex-start; font-weight: 400; font-size: 0.92rem; line-height: 1.4; }
+.req .wconsent .v2opt .v2mark { margin-top: 0.1rem; }
+.req .wconsent .v2opt strong { font-weight: 700; }
+.req .wprivacy { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 0.25rem;
+  justify-self: start; font-size: 0.95rem; }

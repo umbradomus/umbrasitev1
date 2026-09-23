@@ -10,12 +10,13 @@
 <link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services">
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/services">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=3">
+<link rel="stylesheet" href="/assets/site.css?v=4">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
 <!-- INTAKE v2 · the 14-screen wizard (INTAKE-FORM-V2-SPEC-2026-09-21). The v1 file
      /assets/umbra-intake.js stays in the repo and is no longer referenced. -->
-<script src="/assets/umbra-intake-v2.js?v=4" defer></script>
+<script src="/assets/umbra-intake-v2.js?v=5" defer></script>
+<script src="/assets/umbra-windows.js?v=1" defer></script>
 <script src="/assets/umbra-two-channels.js?v=2" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
@@ -301,12 +302,42 @@
         </section>
         <section class="fstep" data-fstep="phone" hidden>
           <label class="v2field"><span class="v2q">Teléfono</span><input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next"></label>
+          <!-- FORM-WINDOWS-01 · the text box: UNCHECKED, never required, no promotional box beside it.
+               The label's words are worker/src/windows.js SMS_WORDING.es exactly (sms-v1); the Worker
+               stores the hash of them. Change one, change both, and move the version. -->
+          <input type="hidden" name="sms_consent_lang" value="es">
+          <div class="wconsent">
+            <label class="v2opt v2checkbox"><input type="checkbox" name="sms_consent" value="yes"><i class="v2mark" aria-hidden="true"></i><span data-sms-wording><strong>Envíenme mensajes de texto sobre esta solicitud.</strong> Acepto que Umbra Domus me envíe mensajes de texto al número de arriba sobre mi solicitud, cotización, programación y recordatorios de cita, incluidos mensajes automatizados. La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para cancelar, HELP para obtener ayuda. El consentimiento no es requisito para recibir el servicio.</span></label>
+            <a class="wprivacy" href="#privacy">Privacidad</a>
+          </div>
         </section>
         <section class="fstep" data-fstep="address" hidden>
           <label class="v2field"><span class="v2q">Dirección</span><input class="field" type="text" name="address" autocomplete="street-address" enterkeyhint="next"></label>
         </section>
         <section class="fstep" data-fstep="notes" hidden>
           <label class="v2field"><span class="v2q">¿Algo más que debamos saber?</span><span class="v2hint">Opcional</span><textarea class="field" name="what" rows="4"></textarea></label>
+        </section>
+        <!-- FORM-WINDOWS-01 · "When could we come?" — the picker is drawn by /assets/umbra-windows.js.
+             avail_form marks a page that has this screen; the Worker gives every other form availability null. -->
+        <section class="fstep" data-fstep="times" data-need="1" hidden>
+          <p class="v2q">¿Cuándo podemos ir?</p>
+          <p class="v2hint">Elija hasta 3 horarios que le funcionen. Le confirmamos uno con su cotización.</p>
+          <input type="hidden" name="avail_form" value="v1">
+          <div class="wbox" data-windows>
+            <noscript><p class="v2hint">Díganos en el cuadro de abajo algunos días y horas que le funcionen.</p></noscript>
+            <div class="wdays" role="group" aria-label="Días" data-wdays></div>
+            <fieldset class="wblocks" id="wblocks" data-wblocks hidden>
+              <legend data-wlegend></legend>
+              <div class="wblocklist" data-wblocklist></div>
+              <p class="wfull" data-wfull hidden>Ya eligió 3. Quite uno para cambiarlo.</p>
+            </fieldset>
+            <p class="wcount" aria-live="polite" data-wcount>Todavía no ha elegido ningún horario.</p>
+            <ol class="wpicks" aria-label="Sus horarios" data-wpicks></ol>
+            <div data-wout></div>
+          </div>
+          <label class="v2opt v2checkbox wflex"><input type="checkbox" name="avail_flexible" value="yes"><i class="v2mark" aria-hidden="true"></i><span>Tengo flexibilidad &mdash; cualquier hora me funciona</span></label>
+          <label class="v2field"><span class="v2q wnq">¿Algo que debamos saber para entrar?</span><span class="v2hint">Opcional &mdash; código del portón, mascotas, por dónde entrar</span><textarea class="field" name="avail_notes" rows="2"></textarea></label>
+          <p class="v2need" role="alert" hidden>Elija al menos un horario, o marque &ldquo;Tengo flexibilidad&rdquo;</p>
         </section>
         <section class="fstep" data-fstep="send" hidden>
           <p class="v2q">¿Listo para enviar?</p>
@@ -319,7 +350,7 @@
           </div>
         </div>
       </form>
-      <p class="fine">Sus fotos y datos le llegan a Drew por correo electrónico a través de FormSubmit, nuestro servicio de envío. No los vendemos, no los publicamos sin preguntarle, y puede pedirnos que los borremos cuando quiera.</p>
+      <p class="fine" id="privacy">Sus fotos y datos le llegan a Drew por correo electrónico a través de FormSubmit, nuestro servicio de envío. No los vendemos, no los publicamos sin preguntarle, y puede pedirnos que los borremos cuando quiera. Si acepta los mensajes de texto, su número se usa solo para mensajes sobre su solicitud y nunca se comparte ni se vende para la publicidad de nadie.</p>
       <p class="fine">¿Prefiere hablar? <a href="tel:+19565566438">Llame al (956) 556-6438</a> o <a href="sms:+19565566438">mande mensaje</a>.</p>
     </div>
   </section>

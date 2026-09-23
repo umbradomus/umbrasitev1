@@ -10,12 +10,13 @@
 <link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios">
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/services">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=3">
+<link rel="stylesheet" href="/assets/site.css?v=4">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
 <!-- INTAKE v2 · the 14-screen wizard (INTAKE-FORM-V2-SPEC-2026-09-21). The v1 file
      /assets/umbra-intake.js stays in the repo and is no longer referenced. -->
-<script src="/assets/umbra-intake-v2.js?v=4" defer></script>
+<script src="/assets/umbra-intake-v2.js?v=5" defer></script>
+<script src="/assets/umbra-windows.js?v=1" defer></script>
 <script src="/assets/umbra-two-channels.js?v=2" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
@@ -304,12 +305,42 @@
         </section>
         <section class="fstep" data-fstep="phone" hidden>
           <label class="v2field"><span class="v2q">Phone</span><input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next"></label>
+          <!-- FORM-WINDOWS-01 · the text box: UNCHECKED, never required, no promotional box beside it.
+               The label's words are worker/src/windows.js SMS_WORDING.en exactly (sms-v1); the Worker
+               stores the hash of them. Change one, change both, and move the version. -->
+          <input type="hidden" name="sms_consent_lang" value="en">
+          <div class="wconsent">
+            <label class="v2opt v2checkbox"><input type="checkbox" name="sms_consent" value="yes"><i class="v2mark" aria-hidden="true"></i><span data-sms-wording><strong>Text me about this request.</strong> I agree Umbra Domus may text the number above about my request, quote, scheduling and appointment reminders, including automated messages. Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. Consent is not required to get service.</span></label>
+            <a class="wprivacy" href="#privacy">Privacy</a>
+          </div>
         </section>
         <section class="fstep" data-fstep="address" hidden>
           <label class="v2field"><span class="v2q">Address</span><input class="field" type="text" name="address" autocomplete="street-address" enterkeyhint="next"></label>
         </section>
         <section class="fstep" data-fstep="notes" hidden>
           <label class="v2field"><span class="v2q">Anything else we should know?</span><span class="v2hint">Optional</span><textarea class="field" name="what" rows="4"></textarea></label>
+        </section>
+        <!-- FORM-WINDOWS-01 · "When could we come?" — the picker is drawn by /assets/umbra-windows.js.
+             avail_form marks a page that has this screen; the Worker gives every other form availability null. -->
+        <section class="fstep" data-fstep="times" data-need="1" hidden>
+          <p class="v2q">When could we come?</p>
+          <p class="v2hint">Pick up to 3 times that work for you. We&rsquo;ll confirm one with your quote.</p>
+          <input type="hidden" name="avail_form" value="v1">
+          <div class="wbox" data-windows>
+            <noscript><p class="v2hint">Tell us a few days and times that work in the box below.</p></noscript>
+            <div class="wdays" role="group" aria-label="Days" data-wdays></div>
+            <fieldset class="wblocks" id="wblocks" data-wblocks hidden>
+              <legend data-wlegend></legend>
+              <div class="wblocklist" data-wblocklist></div>
+              <p class="wfull" data-wfull hidden>You&rsquo;ve picked 3. Remove one to change it.</p>
+            </fieldset>
+            <p class="wcount" aria-live="polite" data-wcount>No times picked yet.</p>
+            <ol class="wpicks" aria-label="Your picks" data-wpicks></ol>
+            <div data-wout></div>
+          </div>
+          <label class="v2opt v2checkbox wflex"><input type="checkbox" name="avail_flexible" value="yes"><i class="v2mark" aria-hidden="true"></i><span>I&rsquo;m flexible &mdash; any time works</span></label>
+          <label class="v2field"><span class="v2q wnq">Anything about getting in?</span><span class="v2hint">Optional &mdash; gate code, pets, best way in</span><textarea class="field" name="avail_notes" rows="2"></textarea></label>
+          <p class="v2need" role="alert" hidden>Pick at least one time, or tick &ldquo;I&rsquo;m flexible&rdquo;</p>
         </section>
         <section class="fstep" data-fstep="send" hidden>
           <p class="v2q">Ready to send?</p>
@@ -322,7 +353,7 @@
           </div>
         </div>
       </form>
-      <p class="fine">Your photos and details go to Drew by email through FormSubmit, our mail relay. We don't sell them, we don't post them without asking, and you can tell us to delete them any time.</p>
+      <p class="fine" id="privacy">Your photos and details go to Drew by email through FormSubmit, our mail relay. We don't sell them, we don't post them without asking, and you can tell us to delete them any time. If you agree to texts, your number is used only for texts about your request and is never shared or sold for anyone's marketing.</p>
       <p class="fine">Prefer to talk? <a href="tel:+19565566438">Call (956) 556-6438</a> or <a href="sms:+19565566438">text us</a>.</p>
     </div>
   </section>
