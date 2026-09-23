@@ -20,6 +20,7 @@ import { captureServer, staticServer, close } from './lib/servers.mjs';
 import { parseMultipart, fieldValue, files as filesOf } from './lib/multipart.mjs';
 import { suiteAlerts } from './suite-d-alerts.mjs';
 import { suiteWindows } from './suite-g-windows.mjs';
+import { suiteBook } from './suite-h-book.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -274,6 +275,8 @@ async function main() {
     `PUBLIC_BASE_URL=http://127.0.0.1:${PORT.worker}`,
     'IGNORE_NEXT_ORIGIN=true',
     'ALLOW_TEST_HOOKS=true',
+    /* ACCEPT-PAGE-01: the quote link points at the local site copy, never umbradomus.com */
+    `QUOTE_LINK_BASE=http://127.0.0.1:${PORT.siteWorker}`,
     '',
   ].join('\n');
   fs.writeFileSync(path.join(TMP, '.dev.vars'), devVars);
@@ -299,6 +302,15 @@ bucket_name = "umbra-job-photos-test"
 
 [triggers]
 crons = ["*/5 * * * *"]
+
+# ACCEPT-PAGE-01: the book, exactly as wrangler.toml declares it
+[[durable_objects.bindings]]
+name = "BOOK"
+class_name = "QuoteBook"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["QuoteBook"]
 `);
 
   console.log('starting wrangler dev…');
@@ -380,7 +392,7 @@ crons = ["*/5 * * * *"]
 
 /* ------------------------------------------------------------------- suites */
 
-async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB }) {
+async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, wlogRef }) {
   const SITE = `http://127.0.0.1:${PORT.siteWorker}`;
   let lastDialog = null;
   const page = await browser.newPage();
@@ -817,6 +829,13 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB }
   {
     const readings = await suiteWindows({ browser, W, stub, relay, ADMIN_KEY, suite, ok, eq, json, sleep, PORT, TMP, WORKER_DIR, flipConstant, copyTree });
     fs.writeFileSync(path.join(TMP, 'windows-readings.json'), JSON.stringify(readings, null, 2));
+  }
+
+  /* ====================================================================== H */
+  /* ACCEPT-PAGE-01: the book behind the quote link. Its readings go to .tmp/book-readings.json. */
+  {
+    const readings = await suiteBook({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, wlogRef });
+    fs.writeFileSync(path.join(TMP, 'book-readings.json'), JSON.stringify(readings, null, 2));
   }
 
   await page.close();

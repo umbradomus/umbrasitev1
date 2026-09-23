@@ -17,7 +17,13 @@
      POST /admin/seen/:id?k=           "I have it" — acknowledges the alerts (admin key; 401 without)
      POST /hooks/pushover/:secret      Pushover's Acknowledge callback (path secret + a receipt we issued)
      GET  /api/windows                 what the time screen may offer (Sundays, blocked dates) — public
+     POST /admin/quote/:id?k=          a new version of the quote; answers the /q/<code> link ONCE (QUOTE-API.md)
+     POST /admin/quote/:id/sent?k=     "I sent it" — stops the 2-hour clock, restarts the hold from sent_at
+     POST /admin/quote/:id/accept?k=   a texted YES he marks — the same booking step as the page, by "text"
+     POST /admin/quote/:id/cancel?k=   withdraws a version; a booked one frees its time
+     GET  /admin/quote/:id?k=          every version's state for the Flux Capacitor (never the code)
      GET  /health                      liveness
+   The book behind the quote link is a Durable Object (quotebook.js, binding BOOK); quotes.js is the rest.
 */
 
 import ADMIN_HTML from '../admin.html';
@@ -35,9 +41,17 @@ import {
 import { renderJobMarkdown } from './export.js';
 import { bizMinutes } from './biztime.js';
 import { readAvailability, readConsent, windowsConfig } from './windows.js';
+import {
+  readQuoteBody, createQuote, markSent, cancelQuote, quoteState, bookByJob,
+  bookByCode, markNone, viewByCode, reconcile, bookDump,
+} from './quotes.js';
+
+/* ACCEPT-PAGE-01: the book's class rides the main module beside the default export (wrangler.toml
+   binds it as BOOK; its migration is new_sqlite_classes, the only kind the Workers Free plan takes). */
+export { QuoteBook } from './quotebook.js';
 
 /* Caps. A submit that breaks one of these is refused out loud, never trimmed quietly. */
-/* The entry module may only export the handler object, so these stay local. */
+/* The entry module exports the handler object and the book's class only, so these stay local. */
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
@@ -508,6 +522,10 @@ function adminRow(rec, nowIso) {
     /* FORM-WINDOWS-01 (B5): the times they offered and their answer on texts — FC-1.4b reads them here */
     availability: rec.availability === undefined ? null : rec.availability,
     consent: rec.consent || null,
+    /* ACCEPT-PAGE-01: the quote as the book holds it (never the code), and the booking its YES made */
+    accept: rec.accept || null,
+    accepted_at: rec.accepted_at || null,
+    quote: rec.quote || null,
     status_link: rec.status_link || '',
     token: rec.token,
     /* Everything the form posted, exactly as stored — repeated names stay arrays.
@@ -622,6 +640,62 @@ async function handleExport(env, url, id) {
   });
 }
 
+/* ------------------------------------------------------------ the quote link (ACCEPT-PAGE-01) */
+
+async function readJson(request) {
+  try { return { body: await request.json() }; } catch (err) { return { error: true }; }
+}
+
+const REFUSAL = {
+  taken: 'that time overlaps a booking another job already holds',
+  replaced: 'a newer version of this quote has been sent',
+  updating: 'a newer version of this quote exists and is not marked sent yet',
+  withdrawn: 'this quote was withdrawn',
+  too_close: 'the cutoff has passed',
+  choose_window: 'this quote offers two windows: say which (window 1 or 2)',
+  no_such_window: 'this quote has no such window',
+};
+
+/** POST|GET /admin/quote/<id>[/sent|/accept|/cancel] — the Flux Capacitor's calls. QUOTE-API.md. */
+async function handleAdminQuote(request, env, url, id, action, method) {
+  if (!adminOk(env, url)) return json({ error: 'unauthorized' }, 401);
+  const now = nowFor(request, env);
+  if (!action && method === 'GET') {
+    const s = await quoteState(env, id, now);
+    return s ? json(s) : notFound();
+  }
+  if (method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: action ? 'POST' : 'GET, POST' });
+  const { body, error } = await readJson(request);
+  if (error || !body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'bad_body', reason: 'send a JSON object' }, 400);
+
+  if (!action) {
+    const q = readQuoteBody(body, env);
+    if (q.error) return json({ error: 'invalid', reason: q.error }, q.status);
+    const r = await createQuote(env, id, q.quote, now);
+    return json(r.body, r.status);
+  }
+  if (!Number.isInteger(body.version) || body.version < 1) return json({ error: 'invalid', reason: 'version must be a whole number, 1 or more' }, 422);
+  if (action === 'sent') {
+    if (body.sent_at != null && (typeof body.sent_at !== 'string' || isNaN(Date.parse(body.sent_at)))) return json({ error: 'invalid', reason: 'sent_at must be an ISO time' }, 422);
+    const at = body.sent_at ? new Date(body.sent_at).toISOString() : now;
+    const r = await markSent(env, id, body.version, at, now);
+    return json(r.body, r.status);
+  }
+  if (action === 'accept') {
+    const r = await bookByJob(env, id, body.version, body.window, now);
+    if (r.state === 'not_found') return notFound();
+    const ok = r.state === 'booked' || r.state === 'already_booked';
+    return json(ok ? r : { error: r.state, reason: REFUSAL[r.state] || r.state, ...r }, ok ? 200 : 409);
+  }
+  const r = await cancelQuote(env, id, body.version, now);
+  return json(r.body, r.status);
+}
+
+/** The gate every test hook shares: ALLOW_TEST_HOOKS (only ever in a test's .dev.vars) AND the admin key. */
+function testHookOk(env, url) {
+  return String(env.ALLOW_TEST_HOOKS) === 'true' && adminOk(env, url);
+}
+
 /* ------------------------------------------------------------------- router */
 
 export default {
@@ -666,6 +740,9 @@ export default {
     if ((m = /^\/admin\/seen\/(U-\d{4,6})$/.exec(path)) && method === 'POST') {
       return handleSeen(request, env, url, m[1]);
     }
+    if ((m = /^\/admin\/quote\/(U-\d{4,6})(?:\/(sent|accept|cancel))?$/.exec(path))) {
+      return handleAdminQuote(request, env, url, m[1], m[2] || null, method);
+    }
     if ((m = /^\/hooks\/pushover\/([^/]{1,200})$/.exec(path)) && method === 'POST') {
       return handlePushoverHook(request, env, decodeURIComponent(m[1]));
     }
@@ -680,10 +757,31 @@ export default {
       return json(await runAlerts(env, now, { pauseAfterReadMs: pause }));
     }
 
+    /* ACCEPT-PAGE-01's test hooks — the same gate as /__run-alerts. They reach exactly the functions the
+       page (ACCEPT-PAGE-02) will call, so the step is proved without the page. */
+    const hook = /^\/__(book-by-code|none-by-code|view-by-code|reconcile|book-dump|fail-stamp\/(U-\d{4,6}))$/.exec(path);
+    if (hook) {
+      if (method !== 'POST' || !testHookOk(env, url)) return adminDenied();
+      const now = nowFor(request, env);
+      if (hook[1] === 'reconcile') return json(await reconcile(env, now));
+      if (hook[1] === 'book-dump') return json(await bookDump(env));
+      if (hook[2]) {
+        await env.RECORDS.put('test:fail-stamp:' + hook[2], String(parseInt(url.searchParams.get('times') || '1', 10) || 1));
+        return json({ ok: true });
+      }
+      const b = (await readJson(request)).body || {};
+      if (hook[1] === 'book-by-code') return json(await bookByCode(env, b.code, b.version, b.window, b.by || 'page', now));
+      if (hook[1] === 'none-by-code') return json(await markNone(env, b.code, b.version, now));
+      return json(await viewByCode(env, b.code, now));
+    }
+
     return notFound();
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runAlerts(env, new Date(event.scheduledTime || Date.now()).toISOString()));
+    const now = new Date(event.scheduledTime || Date.now()).toISOString();
+    /* ACCEPT-PAGE-01: after the alert ladder (never inside it), the book's mirror and the pushes it owes */
+    ctx.waitUntil(runAlerts(env, now).catch((err) => console.error('runAlerts failed', err))
+      .then(() => reconcile(env, now)).catch((err) => console.error('reconcile failed', err)));
   },
 };

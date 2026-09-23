@@ -24,6 +24,22 @@ PUBLIC_BASE_URL = "https://umbra-intake.umbradomus.workers.dev"
 # The last job id already used on paper. U-0001 and U-0002 exist, so the first
 # record this Worker creates is U-0003.
 SEED_LAST_ID = "2"
+# ACCEPT-PAGE-01: the quote link at the end of the text is QUOTE_LINK_BASE + "/q/" + <22-character code>.
+# The shortest form of our own domain, for a text message; the site rewrites /q/* to this Worker.
+QUOTE_LINK_BASE = "https://umbradomus.com"
+
+# --- THE BOOK (ACCEPT-PAGE-01) ----------------------------------------------
+# The quotes, their holds and one booking per time: a Durable Object with SQLite storage, reached as
+# one named instance so every accept is serialized (src/quotebook.js). `wrangler deploy` creates it from
+# the migration below — no other resource and no command. Always new_sqlite_classes, never the plain kind: the
+# Workers Free plan takes only SQLite-backed Durable Objects.
+[[durable_objects.bindings]]
+name = "BOOK"
+class_name = "QuoteBook"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["QuoteBook"]
 
 # --- THE RECORD STORE -------------------------------------------------------
 # Create with:  npx wrangler kv namespace create RECORDS

@@ -274,8 +274,9 @@ npm test
 | `POST /api/job/U-NNNN/event?k=…` | Drew | the taps: `quoted`, `scheduled`, `done`, `note` |
 | `GET /api/export/U-NNNN.md?k=…` | the vault | the job as markdown, fixed slots, blanks visible |
 | `POST /admin/seen/U-NNNN?k=…` | Drew, the FC | "I have it": stops the alerts for that request (401 without the key) |
+| `POST /admin/quote/U-NNNN?k=…` (and `/sent`, `/accept`, `/cancel`; `GET` for its state) | the FC | the quote behind the `/q/<code>` link, its hold, one booking per time — every field in `QUOTE-API.md` (ACCEPT-PAGE-01) |
 | `POST /hooks/pushover/SECRET` | Pushover | the Acknowledge tap; only a receipt the Worker issued is accepted |
-| *(every 5 minutes)* | Drew's phone | the alert ladder in `src/alerts.js`: +15 urgent, every 30, OVERDUE at due; 9 PM–7 AM held to one 7:00 summary |
+| *(every 5 minutes)* | Drew's phone | the alert ladder in `src/alerts.js`: +15 urgent, every 30, OVERDUE at due; 9 PM–7 AM held to one 7:00 summary; then the book's reconcile (`src/quotes.js`): re-stamps any job the mirror missed, sends any booking push held overnight or owed a 5xx retry |
 
 A wrong link and a link to a job that never existed answer identically, so a stranger
 guessing cannot learn that a job exists.

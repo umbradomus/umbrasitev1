@@ -5,6 +5,7 @@
 
 import { mdCell, minutesBetween } from './util.js';
 import { bizMinutes, replyDue, clock, chicagoDay, REPLY_MIN } from './biztime.js';
+import { windowLabel } from './quotes.js';
 
 /* R32 · THE 2-HOUR WINDOW IS BUSINESS TIME. The promise is "within 2 hours, 7am–9pm", so a request at
    8:30 PM quoted at 8:30 AM met it (30 + 90 business minutes), and one at 10:15 PM is due 9:00 AM. The
@@ -205,6 +206,24 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`scheduled_at\` | ${mdCell(rec.scheduled_at)} |`);
   L.push('| **Photo consent** — two clauses, separately initialled | documentation `____` · marketing `____` |');
   L.push('');
+
+  /* ACCEPT-PAGE-01: the quote they said YES to, as the book booked it — by their tap on the quote link
+     ("page") or by a YES he marked ("text"). A booking later withdrawn stays here, marked so. */
+  {
+    const a = rec.accept;
+    const w = a && a.window;
+    L.push('## E2 · ACCEPTED — the quote they said yes to');
+    L.push('| slot | |');
+    L.push('|---|---|');
+    L.push(`| **Day** | ${w ? mdCell(w.date + ' (' + windowLabel(w).split(' ')[0] + ')') : '`____`'} |`);
+    L.push(`| **Arrival window** | ${w ? mdCell(windowLabel(w).split(' ').slice(2).join(' ') + ' Central') : '`____`'} |`);
+    L.push(`| **Price** | ${a ? mdCell('$' + a.price) : '`____`'} ← one price (R38) |`);
+    L.push(`| **By** | ${a ? mdCell(a.by === 'page' ? 'page — they tapped Accept & confirm' : 'text — a YES he marked') : '`____`'} |`);
+    L.push(`| **Quote version** | ${a ? mdCell('v' + a.version) : '`____`'} |`);
+    L.push(`| \`accepted at\` | ${a ? mdCell(a.at) : '`____`'} |`);
+    if (a && a.cancelled_at) L.push(`| **Withdrawn** | ${mdCell(a.cancelled_at)} — the booking was cancelled and its time freed |`);
+    L.push('');
+  }
 
   L.push('## F · THE WORK ORDER — generated on acceptance');
   L.push('| slot | |');
