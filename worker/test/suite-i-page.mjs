@@ -693,10 +693,10 @@ export async function suitePage(ctx) {
     eq(titleOf(open.text), S.title, 'the title is the Spanish generic line');
     expectIn('OPEN', open.text, ['title', 'hi_name', 'h_work', 'h_price', 'h_when', 'pick_legend', 'hold_two', 'h_notices', 'accept', 'none', 'small'], { name: 'Rocío' });
     const ot = textOf(open.text);
-    ok(ot.includes('vie 30 oct · llegada entre las 8 y las 10 a. m.'), 'the first time in Spanish: "vie 30 oct · llegada entre las 8 y las 10 a. m."');
-    ok(ot.includes('sáb 31 oct · llegada entre las 11 a. m. y la 1 p. m.'), 'across noon: "sáb 31 oct · llegada entre las 11 a. m. y la 1 p. m."');
-    ok(ot.includes('hasta el vie 25 sept, a las 10:00 a. m.'), 'the hold in Spanish: "hasta el vie 25 sept, a las 10:00 a. m."');
-    eq((ot.match(/\.\.(?!\.)/g) || []).length, 0, 'no doubled period anywhere ("a. m." ends its own sentence)');
+    ok(ot.includes('Viernes 30 de octubre · llegada entre las 8 y las 10 a.m.'), 'the first time in Spanish: "Viernes 30 de octubre · llegada entre las 8 y las 10 a.m."');
+    ok(ot.includes('Sábado 31 de octubre · llegada entre las 11 a.m. y la 1 p.m.'), 'across noon: "Sábado 31 de octubre · llegada entre las 11 a.m. y la 1 p.m."');
+    ok(ot.includes('hasta el viernes 25 de septiembre a las 10:00 a.m.'), 'the hold in Spanish: "hasta el viernes 25 de septiembre a las 10:00 a.m."');
+    eq((ot.match(/\.\.(?!\.)/g) || []).length, 0, 'no doubled period anywhere ("a.m." ends its own sentence)');
     seen.when = ['OPEN'];
     ok(ot.includes(LIGHTING_ES.lead + ' ' + LIGHTING_ES.text) && !ot.includes(LIGHTING_EN.text.slice(0, 40)), 'the lighting paragraph in Spanish, not English');
     const p = await tab(CT(...WED, 15, 1));
@@ -711,7 +711,7 @@ export async function suitePage(ctx) {
     expectIn('HOLD ENDED · one time', (await getQ(P16.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_one']);
     expectIn('HOLD ENDED · two times', (await getQ(P15.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_two']);
     await postQ(P15.code, { v: 1, w: 2 }, CT(...WED, 15, 5));
-    expectIn('BOOKED', (await getQ(P15.code, CT(...WED, 15, 6))).text, ['h_booked', 'booked_window', 'booked_confirm', 'questions'], { window: 'las 11 a. m. y la 1 p. m.' });
+    expectIn('BOOKED', (await getQ(P15.code, CT(...WED, 15, 6))).text, ['h_booked', 'booked_window', 'booked_confirm', 'questions'], { window: 'las 11 a.m. y la 1 p.m.' });
     /* P15 booked 10/31, not 10/30 2–4: P16 is still open; book 10/30 2–4 by text for another job to show TAKEN */
     const P17 = await quoted('Nora Echeverría', 'Parche en la pared de la cocina', [win('2026-10-30', '14:00', '16:00')], { extra: ES });
     await acceptText(P17.id, 1, 1, CT(...WED, 15, 8));
@@ -744,6 +744,16 @@ export async function suitePage(ctx) {
     fs.writeFileSync(path.join(TMP, 'page-spanish-review.json'), JSON.stringify(review, null, 1));
     R['15'] = { jobs: [P15.id, P16.id, P17.id, P18.id, P19.id], strings: keys.length + 1, seen, review_file: '.tmp/page-spanish-review.json' };
   }
+
+  /* SPANISH-FIX-01 (5): every English state this suite renders for reading (21), hashed. The code in each
+     /q/… path is random, so it reads as <code>; the two bilingual pages are hashed on their English section only. */
+  const enPages = {};
+  const enHash = (label, h, bilingual = false) => {
+    let s = String(h || '').replace(/\/q\/[A-Za-z0-9]{22}/g, '/q/<code>');
+    if (bilingual) { const m = /<section style="padding:0 0 1\.2rem">[\s\S]*?<\/section>/.exec(s); s = m ? m[0] : ''; }
+    enPages[label] = crypto.createHash('sha256').update(s).digest('hex');
+  };
+  let statuteEs = null;
 
   /* ============================================================ (16) */
   suite('I · (16) the notices: 53255 "false" hides it; lighting matches READY-4 byte for byte; the flags flip each');
@@ -849,6 +859,17 @@ new_sqlite_classes = ["QuoteBook"]
       }
       eq(JSON.stringify(twin.map((t) => t.status)), JSON.stringify([403, 403, 403, 303, 303]), 'production origins: https://umbradomus.com and https://www.umbradomus.com pass; http://, look-alikes and others → 403', JSON.stringify(twin));
       eq(both.logRef().includes(q.code), false, "the code is not in that Worker's log");
+      enHash('OPEN · both notices (NOTICE_53255 "true")', gb.text);
+      /* SPANISH-FIX-01 (5): the statute intro (R83) shows only with NOTICE_53255 "true" — read it here, on a Spanish quote */
+      const qs = await quoted('Eulalia Salinas', 'Resane en el techo de la regadera', [win('2026-10-13', '10:00', '12:00')], { base: both.WN, extra: ES });
+      const gs = await getQ(qs.code, CT(...WED, 16, 13), {}, both.SN);
+      const R83 = 'La declaración que la sección 53.255 del Código de Propiedad de Texas nos pide entregarle antes de que acepte el trabajo (el texto de la ley está en inglés):';
+      const tgs = textOf(gs.text.replace(/<div class="q53" id="notice-53255" lang="en">[\s\S]*?<\/div>/g, ' '));
+      ok(tgs.includes(R83), 'SPANISH-FIX-01 (5) BOTH, a Spanish quote: the statute intro reads R83: "' + R83 + '"');
+      eq(tgs.includes('el Código de Propiedad de Texas, §53.255'), false, 'SPANISH-FIX-01 (5) and the old intro is gone');
+      ok(/id="notice-53255"/.test(gs.text), 'SPANISH-FIX-01 (5) with the statute block itself beside it');
+      const m83 = /[^.:]*sección 53\.255[^:]*:|[^.:]*§53\.255[^:]*:/.exec(tgs);
+      statuteEs = { job: qs.id, intro_shown: m83 ? m83[0].trim() : null };
       bothR = { worker: both.WN, pid: both.pid, vars: ['NOTICE_53255=true', 'NOTICE_LIGHTING (default)'], job: q.id, lighting: true, statute_paragraphs: paras.length, statute_equal: JSON.stringify(paras) === JSON.stringify(NOTICE_53255), production_origin_rule: twin };
     } finally {
       await both.stop();
@@ -866,6 +887,149 @@ new_sqlite_classes = ["QuoteBook"]
       await off.stop();
     }
     R['16'] = { default_worker: { lighting: Boolean(m), lighting_equals_ready4: ready4 === null ? 'na (READY-4 absent)' : shown === ready4, statute: /id="notice-53255"/.test(g.text) }, lighting_sha256: LIGHTING_SHA256, statute_sha256: NOTICE_53255_SHA256, both: bothR, lighting_off: offR };
+  }
+
+  /* ============================================================ (20) SPANISH-FIX-01 */
+  suite('I · (20) SPANISH-FIX-01: the quote page in Spanish — long dates, "a.m."/"p.m.", a capital where the day starts a line');
+  {
+    const SFPIC = path.join(TMP, 'spanish-fix-pictures');
+    fs.mkdirSync(SFPIC, { recursive: true });
+    const sfShot = async (p, file) => { await p.bringToFront(); await sleep(600); await p.screenshot({ path: path.join(SFPIC, file), fullPage: true }); return file; };
+    const read = {};
+    const noDots = (label, t) => eq((t.match(/\.\./g) || []).length, 0, `(5) ${label}: no ".." anywhere`);
+    const noOld = (label, t) => {
+      const old = [/a\. m\./, /p\. m\./, /\bsept\b/, /me funciona/, /reserva esta visita/, /se acaba de reservar/, /está reservada/, /de nosotros/, /luz rasante/].filter((r) => r.test(t)).map(String);
+      eq(old.length, 0, `(5) ${label}: none of the old words ("a. m.", "p. m.", "sept", "me funciona", "reserv…", "de nosotros", "luz rasante")`, old.join(' | '));
+    };
+    const S1 = await quoted('Consuelo Treviño', 'Hoyos de clavo en la pared de la recámara', [win('2026-11-10', '08:00', '10:00')], { extra: ES });
+    const S2 = await quoted('Baltasar Garza', 'Grieta sobre la puerta del baño', [win('2026-11-11', '08:00', '10:00'), win('2026-11-13', '11:00', '13:00')], { extra: ES, sentAt: CT(...WED, 13, 0) });
+    const S3 = await quoted('Leonor Cantú', 'Mancha de agua en el techo del pasillo', [win('2026-11-12', '12:00', '14:00'), win('2026-11-14', '13:00', '15:00')], { extra: ES });
+    /* S4 offers only S2's second window, which S2 books below in the browser: then S4 reads TAKEN */
+    const S4 = await quoted('Tobías Elizondo', 'Resane en la pared de la sala', [win('2026-11-13', '11:00', '13:00')], { extra: ES });
+
+    const t1 = textOf((await getQ(S1.code, CT(...WED, 16, 40))).text);
+    read.one_window = t1;
+    ok(t1.includes('Martes 10 de noviembre · llegada entre las 8 y las 10 a.m.'), '(5) one window: "Martes 10 de noviembre · llegada entre las 8 y las 10 a.m."', t1.slice(0, 400));
+    ok(t1.includes('Le apartamos este horario hasta el viernes 25 de septiembre a las 10:00 a.m.'), '(5) the hold: "Le apartamos este horario hasta el viernes 25 de septiembre a las 10:00 a.m."');
+    ok(t1.includes('Ninguno de estos horarios me acomoda'), '(5) R75 none: "Ninguno de estos horarios me acomoda"');
+    ok(t1.includes('Al aceptar, queda programada esta visita al precio de arriba. ¿Preguntas? Responda a nuestro mensaje de texto.'), '(5) R76 small: "Al aceptar, queda programada esta visita al precio de arriba. …"');
+    ok(t1.includes('—una ventana al final del día o una lámpara montada directamente sobre la superficie—') && t1.includes('un parche con esa luz, se lo decimos'), '(5) R84 the lighting paragraph: attached rayas, "esa luz"');
+    noDots('one window', t1); noOld('one window', t1);
+
+    const t2 = textOf((await getQ(S2.code, CT(...WED, 16, 41))).text);
+    read.two_windows = t2;
+    ok(t2.includes('Miércoles 11 de noviembre · llegada entre las 8 y las 10 a.m.'), '(5) two windows, the first: "Miércoles 11 de noviembre · llegada entre las 8 y las 10 a.m."');
+    ok(t2.includes('Viernes 13 de noviembre · llegada entre las 11 a.m. y la 1 p.m.'), '(5) two windows, across noon: "Viernes 13 de noviembre · llegada entre las 11 a.m. y la 1 p.m."');
+    ok(t2.includes('Le apartamos estos horarios hasta el viernes 25 de septiembre a la 1:00 p.m.'), '(5) a hold at 1 PM: "… hasta el viernes 25 de septiembre a la 1:00 p.m."');
+    noDots('two windows', t2); noOld('two windows', t2);
+
+    const t3 = textOf((await getQ(S3.code, CT(...WED, 16, 42))).text);
+    read.noon_and_one = t3;
+    ok(t3.includes('Jueves 12 de noviembre · llegada entre las 12 y las 2 p.m.'), '(5) starting at 12: "Jueves 12 de noviembre · llegada entre las 12 y las 2 p.m."');
+    ok(t3.includes('Sábado 14 de noviembre · llegada entre la 1 y las 3 p.m.'), '(5) starting at 1: "Sábado 14 de noviembre · llegada entre la 1 y las 3 p.m."');
+    noDots('12 and 1', t3); noOld('12 and 1', t3);
+
+    /* in the browser: the two-window page, then tap the second and book it */
+    const p = await tab(CT(...WED, 16, 43));
+    await p.goto(qurl(S2.code), { waitUntil: 'load' });
+    await sfShot(p, '7-quote-two-times.png');
+    await tap(p, 'input[type=radio][name=w][value="2"]');
+    const booked = await clickAndWait(p, 'button.qgo');
+    eq(stateOf(booked), 'booked', '(5) tapping the second → BOOKED');
+    const dateLine = /<p class="lead" style="font-weight:600;margin:0 0 \.3rem">([^<]*)<\/p>/.exec(booked || '');
+    eq(dateLine && decode(dateLine[1]), 'Viernes 13 de noviembre', '(5) BOOKED: the date line starts with a capital: "Viernes 13 de noviembre"');
+    const tb = textOf(booked);
+    read.booked = tb;
+    ok(tb.includes('Llegada entre las 11 a.m. y la 1 p.m.'), '(5) BOOKED: "Llegada entre las 11 a.m. y la 1 p.m."');
+    ok(tb.includes('Su visita quedó programada.'), '(5) R78 h_booked: "Su visita quedó programada."');
+    noDots('BOOKED', tb); noOld('BOOKED', tb);
+    await sfShot(p, '8-quote-booked.png');
+    await p.close();
+
+    /* the other words the list changes, each on its own state */
+    const t4 = textOf((await getQ(S4.code, CT(...WED, 16, 45))).text);
+    ok(t4.includes('Ese horario ya se ocupó.'), '(5) R77 h_taken: "Ese horario ya se ocupó."');
+    const v2 = await create(S1.id, Q(2, [win('2026-11-10', '10:00', '12:00')], ES), CT(...WED, 16, 46));
+    codes.push(v2.body && v2.body.code);
+    const t5 = textOf((await getQ(S1.code, CT(...WED, 16, 47))).text);
+    ok(t5.includes('En breve le enviaremos un nuevo mensaje de texto.'), '(5) R80 updating: "En breve le enviaremos un nuevo mensaje de texto."');
+    const t6 = textOf((await getQ('AAAAAAAAAAAAAAAAAAAAAA', CT(...WED, 16, 48))).text);
+    ok(t6.includes('Revise el enlace de nuestro mensaje de texto o respóndanos.'), '(5) R81 not_valid: no comma before "o"');
+    const t7 = textOf((await postQ(S3.code, { v: 1 }, CT(...WED, 16, 49), { origin: 'https://evil.example' })).text);
+    ok(t7.includes('Vuelva a abrir el enlace de nuestro mensaje de texto o respóndanos.'), '(5) R82 forbidden: no comma before "o"');
+    for (const [label, t] of [['TAKEN', t4], ['UPDATING', t5], ['NOT VALID', t6], ['FORBIDDEN', t7]]) { noDots(label, t); noOld(label, t); }
+    ok(statuteEs && statuteEs.intro_shown, '(5) R83 statute_intro was read on the notices Worker in reading (16)', JSON.stringify(statuteEs));
+    R['20'] = { jobs: [S1.id, S2.id, S3.id, S4.id], read, taken: t4, updating: t5, statute_intro_on_notices_worker: statuteEs, pictures: ['7-quote-two-times.png', '8-quote-booked.png'] };
+  }
+
+  /* ============================================================ (21) SPANISH-FIX-01 */
+  suite('I · (21) SPANISH-FIX-01: every English state renders byte-identical to the base (codes read as <code>)');
+  {
+    const at = (h, mi) => CT(...WED, h, mi);
+    const E1 = await quoted('Harriet Voss', 'Nail pops along the hallway wall', [win('2026-11-16', '08:00', '10:00')]);
+    const E2 = await quoted('Ambrose Keel', 'Crack above the pantry door', [win('2026-11-17', '08:00', '10:00'), win('2026-11-18', '11:00', '13:00')]);
+    const E3 = await quoted('Petra Lindqvist', 'Stain on the guest room ceiling', [win('2026-11-19', '08:00', '10:00')]);
+    const E4 = await quoted('Cyril Monk', 'Two dents in the stair wall', [win('2026-11-20', '08:00', '10:00'), win('2026-11-21', '08:00', '10:00')]);
+    const E5 = await quoted('Dagny Pruitt', 'Torn paper face by the light switch', [win('2026-11-20', '08:00', '10:00')]);
+    const E6 = await quoted('Ivo Brandt', 'Anchor holes in the office wall', [win('2026-11-20', '09:00', '11:00')]);
+    const E7 = await quoted('Minna Frost', 'A patch that shows in the living room', [win('2026-11-23', '12:00', '14:00'), win('2026-11-24', '13:00', '15:00')], { sentAt: at(13, 0) });
+    enHash('OPEN · one time', (await getQ(E1.code, at(17, 0))).text);
+    enHash('OPEN · two times, one across noon', (await getQ(E2.code, at(17, 1))).text);
+    enHash('OPEN · from 12 and from 1, hold at 1 PM', (await getQ(E7.code, at(17, 2))).text);
+    await postQ(E2.code, { v: 1 }, at(17, 3));
+    enHash('OPEN · no time picked (?pick=1)', (await req('GET', qurl(E2.code, '?pick=1'), { headers: { 'x-umbra-test-now': at(17, 4) } })).text);
+    const sat = CT(2026, 9, 26, 12, 0);
+    enHash('HOLD ENDED · one time', (await getQ(E1.code, sat)).text);
+    enHash('HOLD ENDED · two times', (await getQ(E2.code, sat)).text);
+    enHash('TOO CLOSE', (await getQ(E3.code, (await rowsOf(E3.id))[0].cutoff)).text);
+    await acceptText(E5.id, 1, 1, at(17, 10));
+    enHash('TAKEN · one time free', (await getQ(E4.code, at(17, 11))).text);
+    enHash('TAKEN · no time free', (await getQ(E6.code, at(17, 12))).text);
+    await postQ(E1.code, { v: 1 }, at(17, 13));
+    enHash('BOOKED · one time', (await getQ(E1.code, at(17, 14))).text);
+    await postQ(E2.code, { v: 1, w: 2 }, at(17, 15));
+    enHash('BOOKED · the second of two, across noon', (await getQ(E2.code, at(17, 16))).text);
+    const e3v2 = await create(E3.id, Q(2, [win('2026-11-19', '10:00', '12:00')]), at(17, 17));
+    codes.push(e3v2.body && e3v2.body.code);
+    enHash('UPDATING', (await getQ(E3.code, at(17, 18))).text);
+    await sentQ(E3.id, 2, at(17, 19));
+    enHash('REPLACED', (await getQ(E3.code, at(17, 20))).text);
+    await postQ(E4.code, { v: 1 }, at(17, 21), {}, '/none');
+    enHash('RECEIVED', (await getQ(E4.code, at(17, 22))).text);
+    await cancelQ(E5.id, 1, at(17, 23));
+    enHash('WITHDRAWN', (await getQ(E5.code, at(17, 24))).text);
+    enHash('NOT VALID · the English section', (await getQ('AAAAAAAAAAAAAAAAAAAAAA', at(17, 25))).text, true);
+    enHash('FORBIDDEN · the English section', (await postQ(E6.code, { v: 1 }, at(17, 26), { origin: 'https://evil.example' })).text, true);
+
+    /* Pinned from this same reading run on the base's own src (645c32d), before any edit of this round. */
+    const EN_BASE = {
+      "OPEN · both notices (NOTICE_53255 \"true\")": 'f218e620bb08b6ab5e6c171e76f4cff364cef5b436b0f79b1dab8caf82a51eb3',
+      "OPEN · one time": 'b67ec41cf3f2966ef7595f349458d9bb743dbf1f77b62a0acbbeba6f111e36c6',
+      "OPEN · two times, one across noon": 'a3f8bc40e3ac218983557a9e440f9a28d571cb3059d5088688a415381e6acfd4',
+      "OPEN · from 12 and from 1, hold at 1 PM": 'b1f8633ff38215c29158a785661ebf57823a6bdce90d9c7e9bf153e9d72ce17b',
+      "OPEN · no time picked (?pick=1)": '2d5f2a9963fa265ac932ac521ad7629e7b7816740830057cc62f2a6a6aef8ab9',
+      "HOLD ENDED · one time": '60adb7d670dd859d56540fda2c77f57922ac9243f62c2bd9d4aa4ca936a10d14',
+      "HOLD ENDED · two times": '047c7f07a6e2ae1a90cde15102999ad0fc97af047d97445f960bcb5e88649600',
+      "TOO CLOSE": '4a79f25d8ad4c565e1b860fc1295f7cd62cacadc8d5604ab07a61631062740c4',
+      "TAKEN · one time free": '85eb4bf50de4a8e22ff85ec6ed1bded3487eddbc2ebac8f17b13802d95965a58',
+      "TAKEN · no time free": '68953ae0008ef2a0e20485efac4efb4d0db6f7c315c149f2f94315f09bc8f27d',
+      "BOOKED · one time": '6e131e503905188ddcdd36b0015296d1e5a048e5058efeefe115aadc829b8d05',
+      "BOOKED · the second of two, across noon": 'a985b1a9268f93ba6c9d9ae6bf4a95dbbde6018b047bca4eb22caaa9f6e0ac59',
+      "UPDATING": 'c7b2183011667d1c0e18d014ec5d42f4c7d8fd528d0745cf0d91cc52a9c21ea8',
+      "REPLACED": '983fee5359cd082a38bacb2962ae316fad8e918a999effe5095859cecdb27b35',
+      "RECEIVED": '0ebfa0ae6598372e7b92268a0603c1363eaa70daa952a4444277d62b9e3ac219',
+      "WITHDRAWN": '1752b48efbb6c5cbcdd7691f91a8b65f4c0f115c915d9b5e45ebad4cb7952a9c',
+      "NOT VALID · the English section": 'f802f204b88bda4c28acf51e4a72e7fa170adc0d68c7d10e8fdc05ebd3fdf4c3',
+      "FORBIDDEN · the English section": 'e620d2d4181e9062a6ecd0122ca639046d8e010acadd2b974631672a6b21f8c6',
+    };
+    fs.writeFileSync(path.join(TMP, 'english-pages.json'), JSON.stringify(enPages, null, 1));
+    const labels = Object.keys(enPages);
+    ok(EN_BASE !== null, `the base hashes are pinned (${Object.keys(EN_BASE || {}).length} states)`);
+    if (EN_BASE) {
+      eq(labels.length, Object.keys(EN_BASE).length, `as many English states as at the base (${labels.length})`);
+      for (const k of Object.keys(EN_BASE)) eq(enPages[k], EN_BASE[k], `(5) English ${k}: byte-identical to the base`);
+    }
+    R['21'] = { base: '645c32d29d1c7ba7558ace2e50f1932b9d541a6f', states: labels.length, pages: enPages, base_pages: EN_BASE };
   }
 
   /* ============================================================ (17) */

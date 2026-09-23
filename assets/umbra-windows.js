@@ -14,10 +14,10 @@
        avail_choice      one per pick, in the order picked: "YYYY-MM-DD HH-HH"
        time_1..3         the same picks in plain words, for the email copy
        times_flexible    "Yes — any time works" | "No"
-       text_consent      "Yes — agreed to texts about this request (sms-v1)" | "No"
+       text_consent      "Yes — agreed to texts about this request (sms-v2)" | "No"
    The flexible box (avail_flexible), the note (avail_notes), the consent box
-   (sms_consent) and the markers (avail_form, sms_consent_lang) are in the
-   markup, so they post as they are.
+   (sms_consent) and the markers (avail_form, sms_consent_lang,
+   sms_consent_version) are in the markup, so they post as they are.
 
    WITH JAVASCRIPT OFF the screen shows its flexible box and its note, and the
    form posts to its own action exactly as before.
@@ -37,7 +37,7 @@
     { key: '08-11', en: 'Morning 8–11', es: 'Mañana 8–11' },
     { key: '11-14', en: 'Midday 11–2', es: 'Mediodía 11–2' },
     { key: '14-17', en: 'Afternoon 2–5', es: 'Tarde 2–5' },
-    { key: '17-20', en: 'Evening 5–8', es: 'Noche 5–8' }
+    { key: '17-20', en: 'Evening 5–8', es: 'Tarde-noche 5–8' }
   ];
   var DOW_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -47,7 +47,7 @@
     which: function (d) { return '¿A qué hora el ' + d + '?'; },
     picked: 'Elegido',
     count: function (n) { return n + ' de ' + MAX + ' elegidos'; },
-    full: 'Ya eligió 3. Quite uno para cambiarlo.',
+    full: 'Ya eligió 3. Para cambiar, quite uno.',
     remove: function (s) { return 'Quitar ' + s; },
     dayHas: function (n) { return n === 1 ? '1 elegido' : n + ' elegidos'; },
     none: 'Todavía no ha elegido ningún horario.'
@@ -130,7 +130,7 @@
     }
     for (var j = 0; j < picks.length; j++) out.appendChild(hidden('time_' + (j + 1), wordsOf(picks[j], j + 1)));
     out.appendChild(hidden('times_flexible', flex && flex.checked ? 'Yes — any time works' : 'No'));
-    out.appendChild(hidden('text_consent', consent && consent.checked ? 'Yes — agreed to texts about this request (sms-v1)' : 'No'));
+    out.appendChild(hidden('text_consent', consent && consent.checked ? 'Yes — agreed to texts about this request (sms-v2)' : 'No'));
   }
 
   function el(tag, cls, text) {
@@ -193,7 +193,10 @@
       b.setAttribute('data-remove', String(i));
       b.setAttribute('aria-label', T.remove(shownOf(picks[i])));
       b.appendChild(el('span', 'wpn', String(i + 1)));
-      b.appendChild(el('span', 'wpt', shownOf(picks[i])));
+      /* the pick's text starts its line, so in Spanish it takes a capital ("Sáb 26 sep · …"); its
+         remove label keeps the lowercase form ("Quitar sáb 26 sep · …") */
+      var shown = shownOf(picks[i]);
+      b.appendChild(el('span', 'wpt', ES ? shown.charAt(0).toUpperCase() + shown.slice(1) : shown));
       b.appendChild(el('span', 'wpx', '✕'));
       b.lastChild.setAttribute('aria-hidden', 'true');
       li.appendChild(b);

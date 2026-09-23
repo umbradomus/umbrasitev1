@@ -39,17 +39,17 @@
     </nav>
   </div>
 </header>
-<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> Respondemos en 2 horas, de 7am a 9pm, los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
+<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
 
 <main>
   <section>
     <div class="wrap narrow">
       <p class="kicker">Recibido</p>
       <h1>Ya lo tenemos.</h1>
-      <p class="lead">Ya lo tenemos — esta página se abrió a las <strong><time id="when">ahora</time></strong> en su teléfono. El correo que le llegó a Drew lleva la hora real.</p>
+      <p class="lead">Ya lo tenemos — esta página se abrió <strong><time id="when">hace un momento</time></strong> en su teléfono. El correo que le llegó a Drew lleva la hora real.</p>
       <div class="note">
-        <p><strong>Qué sigue:</strong> Respondemos en 2 horas, de 7am a 9pm, los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
-        <p id="by" hidden style="margin:0"><strong>Le contestamos antes de las <time id="bywhen"></time></strong></p>
+        <p><strong>Qué sigue:</strong> Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
+        <p id="by" hidden style="margin:0"><strong>Le contestamos <time id="bywhen"></time></strong></p>
       </div>
 
       <!-- Solo aparece cuando el Worker mandó al navegador aqui con ?id= y ?t=. Sin eso, la pagina queda igual que antes. -->
@@ -60,8 +60,8 @@
       <ol class="track" style="margin-top:2rem" aria-label="Estado">
         <li class="done"><div><strong>Recibido</strong></div></li>
         <li><div><strong>Cotizado</strong><small>Precio y plan, por escrito.</small></div></li>
-        <li><div><strong>Programado</strong><small>Un día y una hora, acordados con usted.</small></div></li>
-        <li><div><strong>Terminado</strong></div></li>
+        <li><div><strong>Programado</strong><small>Día y horario de llegada de 2 horas, acordados con usted.</small></div></li>
+        <li><div><strong>Terminado</strong><small>Trabajo hecho, con fotos.</small></div></li>
       </ol>
       <p style="margin-top:2rem">Si es urgente, no nos espere: <a href="tel:+19565566438">llame al (956) 556-6438</a>.</p>
       <p><a href="/es">Volver al inicio</a></p>
@@ -89,28 +89,34 @@
       <a href="/request-received" lang="en" hreflang="en">English</a>
     </nav>
   </div>
-  <div class="wrap"><p class="fine">Umbra Domus no es una compañía de electricidad, plomería, aire acondicionado ni seguridad. No hacemos ese trabajo y no lo cotizamos.</p></div>
+  <div class="wrap"><p class="fine">Umbra Domus no es contratista de electricidad, plomería, aire acondicionado ni seguridad. No hacemos ese trabajo y no lo cotizamos.</p></div>
 </footer>
 <script>
-// WINDOW_MINUTES = the 2-hour promise. The promise runs 7am–9pm (OPEN_HOUR–CLOSE_HOUR): if the window would
-// end after 9:00 PM, or the request arrived before 7:00 AM, the answer-by time is clamped to 7:00 AM + the window
-// (9:00 a.m.), "de mañana" when the date rolls. Same clamp as request-received.html.
+// WINDOW_MINUTES = the 2-hour promise. The promise runs 7:00 AM–9:00 PM (OPEN_HOUR–CLOSE_HOUR): if the window
+// would end after 9:00 PM, or the request arrived before 7:00 AM, the answer-by time is clamped to 7:00 AM + the
+// window (9:00 a.m.), with "mañana" in front when the date rolls ("mañana antes de las 9:00 a.m."). Same clamp as
+// request-received.html.
+// The time is built here, never with toLocaleTimeString: phones with older locale data put a space inside the
+// abbreviation, and the page prints one style on every phone — "la 1:05 p.m.", "las 12:40 p.m.", "las 11:05 a.m.".
 (function () {
   var WINDOW_MINUTES = 120;
   var OPEN_HOUR = 7, CLOSE_HOUR = 21;
   var now = new Date();
-  var fmt = function (d) { return d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' }); };
-  document.getElementById('when').textContent = fmt(now);
+  var at = function (d) {
+    var h = d.getHours(), h12 = ((h + 11) % 12) + 1, m = d.getMinutes();
+    return (h12 === 1 ? 'la ' : 'las ') + h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'a.m.' : 'p.m.');
+  };
+  document.getElementById('when').textContent = 'a ' + at(now);
   if (WINDOW_MINUTES) {
     var by = new Date(now.getTime() + WINDOW_MINUTES * 60000);
     var close = new Date(now.getFullYear(), now.getMonth(), now.getDate(), CLOSE_HOUR, 0, 0, 0);
     var early = now.getHours() < OPEN_HOUR;
-    var suffix = '';
+    var tomorrow = false;
     if (early || by > close) {
       by = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (early ? 0 : 1), OPEN_HOUR, WINDOW_MINUTES, 0, 0);
-      if (by.getDate() !== now.getDate()) suffix = ' de mañana.';
+      tomorrow = by.getDate() !== now.getDate();
     }
-    document.getElementById('bywhen').textContent = fmt(by) + suffix;
+    document.getElementById('bywhen').textContent = (tomorrow ? 'mañana ' : '') + 'antes de ' + at(by);
     document.getElementById('by').hidden = false;
   }
   // El Worker manda el id del registro y su token privado. Sin ellos no pasa nada.

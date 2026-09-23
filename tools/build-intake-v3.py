@@ -7,6 +7,7 @@ Replaces everything between  <div class="intake2" data-intake2>  and the
 closing  </form>  on each page. Field NAMES are unchanged (spec §6).
 """
 import re, sys, pathlib
+sys.exit("build-intake-v3.py is retired (SPANISH-FIX-01, 2026-09-23): services.html and es/servicios.html now carry the time screen and the text-consent box (FORM-WINDOWS-01) and newer asset versions, which this script would overwrite. Edit the two pages by hand.")
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -26,19 +27,19 @@ L = {
     'Door or window': ('Door or window', 'Puerta o ventana'),
     '1–5': ('1–5', '1–5'), '6–15': ('6–15', '6–15'), '16–30': ('16–30', '16–30'), '30+': ('30+', 'Más de 30'),
     'Not sure': ('Not sure', 'No sé'),
-    'Pinhole': ('Pinhole', 'De clavo'), 'Coin': ('Coin', 'Como un quarter'), 'Golf ball': ('Golf ball', 'Pelota de golf'),
-    'Fist': ('Fist', 'Un puño'), 'Basketball': ('Basketball', 'Balón de básquetbol'),
+    'Pinhole': ('Pinhole', 'Como un hoyito de clavo'), 'Coin': ('Coin', 'Como una moneda'), 'Golf ball': ('Golf ball', 'Como una pelota de golf'),
+    'Fist': ('Fist', 'Como un puño'), 'Basketball': ('Basketball', 'Como un balón'),
     'Nothing': ('Nothing', 'Nada'), 'Screws or nails': ('Screws or nails', 'Tornillos o clavos'), 'Plastic anchors': ('Plastic anchors', 'Taquetes'),
     'Smooth': ('Smooth', 'Lisa'), 'Orange peel': ('Orange peel', 'Cáscara de naranja'), 'Knockdown': ('Knockdown', 'Knockdown'),
     'Popcorn': ('Popcorn', 'Tirol'),
     'Yes': ('Yes', 'Sí'), 'No': ('No', 'No'),
 }
 T = {
-    'photo.q': ('Show us the problem areas', 'Muéstrenos las áreas con problema'),
+    'photo.q': ('Show us the problem areas', 'Agregue fotos del problema'),
     'photo.hint': ('Photos help us quote accurately &mdash; the more, the better', 'Las fotos nos ayudan a cotizar bien &mdash; entre más, mejor'),
     'photo.add': ('Add photos', 'Agregar fotos'), 'photo.take': ('Take a photo', 'Tomar una foto'),
-    'multi': ('Select all that apply', 'Seleccione todas las que apliquen'),
-    'need1': ('Please select at least one', 'Seleccione por lo menos una'),
+    'multi': ('Select all that apply', 'Puede elegir más de una'),
+    'need1': ('Please select at least one', 'Elija por lo menos una'),
     'what.q': ('What is the issue?', '¿Cuál es el problema?'), 'where.q': ('Where is the issue?', '¿Dónde está el problema?'),
     'ceiling': ('Ceiling', 'Techo'), 'walls': ('Walls', 'Paredes'),
     'count.q': ('How many areas need repair?', '¿Cuántas áreas necesitan reparación?'), 'size.q': ('How large is the biggest one?', '¿De qué tamaño es la más grande?'),
@@ -46,8 +47,8 @@ T = {
     'paint.q': ('Do you have leftover paint on hand?', '¿Tiene pintura sobrante a la mano?'),
     'name.q': ('Your name', 'Su nombre'), 'phone.q': ('Phone', 'Teléfono'), 'addr.q': ('Address', 'Dirección'),
     'notes.q': ('Anything else we should know?', '¿Algo más que debamos saber?'), 'opt': ('Optional', 'Opcional'),
-    'send.q': ('Ready to send?', '¿Listo para enviar?'),
-    'send.hint': ('We reply within 2 hours, 7am&ndash;9pm, seven days a week.', 'Respondemos en menos de 2 horas, de 7am a 9pm, los siete días.'),
+    'send.q': ('Ready to send?', '¿Todo listo?'),
+    'send.hint': ('We reply within 2 hours, 7am&ndash;9pm, seven days a week.', 'Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días.'),
     'back': ('Back', 'Atrás'), 'next': ('Next', 'Siguiente'), 'send': ('Send', 'Enviar'),
 }
 TEX_IMG = {'Smooth': 'tex-smooth', 'Orange peel': 'tex-orange-peel', 'Knockdown': 'tex-knockdown', 'Popcorn': 'tex-popcorn', 'Not sure': 'tex-unsure'}

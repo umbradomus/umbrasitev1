@@ -45,32 +45,41 @@ const CODE_SHAPE = /^[A-Za-z0-9]{1,64}$/;
 
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-/* A value that ends the sentence with its own period ("a. m.") takes the sentence's period with it: never "a. m..". */
+/* A value that ends the sentence with its own period ("a.m.") takes the sentence's period with it: never "a.m..". */
 const fill = (tpl, vals) => tpl.replace(/\{(\w+)\}/g, (_, k) => (k in vals ? vals[k] : '')).replace(/\.\.$/, '.');
 
-const DOW = { en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], es: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'] };
+const DOW = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  es: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+};
 const MON = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-  es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'],
+  es: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
 };
 
-/** "Tue, Sep 29" · "mar 29 sept" — a window's date is a calendar day, so no time zone enters. */
+/** "Tue, Sep 29" · "martes 29 de septiembre" — a window's date is a calendar day, so no time zone enters.
+    Spanish is written in full and lowercase, as inside a sentence; lineDay() capitalises it where it starts a line. */
 function dayLabel(date, lang) {
   const [y, mo, d] = String(date).split('-').map(Number);
   const dow = new Date(Date.UTC(y, mo - 1, d)).getUTCDay();
-  return lang === 'es' ? `${DOW.es[dow]} ${d} ${MON.es[mo - 1]}` : `${DOW.en[dow]}, ${MON.en[mo - 1]} ${d}`;
+  return lang === 'es' ? `${DOW.es[dow]} ${d} de ${MON.es[mo - 1]}` : `${DOW.en[dow]}, ${MON.en[mo - 1]} ${d}`;
+}
+/** A date that starts its line: "Martes 29 de septiembre · llegada entre …". English already starts with a capital. */
+function lineDay(date, lang) {
+  const s = dayLabel(date, lang);
+  return lang === 'es' ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 function clock(min, lang, withMinutes) {
   const h = Math.floor(min / 60), m = min % 60;
   const h12 = ((h + 11) % 12) + 1;
   const t = withMinutes || m ? `${h12}:${String(m).padStart(2, '0')}` : String(h12);
-  const ap = lang === 'es' ? (h < 12 ? 'a. m.' : 'p. m.') : (h < 12 ? 'AM' : 'PM');
+  const ap = lang === 'es' ? (h < 12 ? 'a.m.' : 'p.m.') : (h < 12 ? 'AM' : 'PM');
   return { t, ap, h12 };
 }
 const toMin = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + m; };
 
-/** "8 and 10 AM" · "11 AM and 1 PM" · "las 8 y las 10 a. m." · "las 11 a. m. y la 1 p. m." */
+/** "8 and 10 AM" · "11 AM and 1 PM" · "las 8 y las 10 a.m." · "las 11 a.m. y la 1 p.m." */
 function windowSpan(w, lang) {
   const a = clock(toMin(w.start), lang), b = clock(toMin(w.end), lang);
   if (lang === 'es') {
@@ -84,12 +93,12 @@ const CHI = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/Chicago', year: 'numeric', month: 'numeric', day: 'numeric',
   hour: 'numeric', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
 });
-/** An instant on Chicago's own clock: "Fri, Sep 25 at 10:00 AM" · "vie 25 sept, a las 10:00 a. m." */
+/** An instant on Chicago's own clock: "Fri, Sep 25 at 10:00 AM" · "viernes 25 de septiembre a las 10:00 a.m." */
 function momentLabel(iso, lang) {
   const p = Object.fromEntries(CHI.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
   const date = `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
   const c = clock(Number(p.hour) % 24 * 60 + Number(p.minute), lang, true);
-  if (lang === 'es') return `${dayLabel(date, 'es')}, a ${c.h12 === 1 ? 'la' : 'las'} ${c.t} ${c.ap}`;
+  if (lang === 'es') return `${dayLabel(date, 'es')} a ${c.h12 === 1 ? 'la' : 'las'} ${c.t} ${c.ap}`;
   return `${dayLabel(date, 'en')} at ${c.t} ${c.ap}`;
 }
 
@@ -229,12 +238,12 @@ function openPage(env, v, code, nowIso, pickError) {
     if (pickError) form.push(`<p class="qerr" id="pick-error">${esc(w.pick_error)}</p>`);
     form.push(`<fieldset class="qpick"${pickError ? ' aria-describedby="pick-error"' : ''}><legend>${esc(w.pick_legend)}</legend>`);
     for (const x of offer) {
-      form.push(`<label><input type="radio" name="w" value="${esc(x.n)}" required> <span>${esc(fill(w.when, { day: dayLabel(x.date, lang), window: windowSpan(x, lang) }))}</span></label>`);
+      form.push(`<label><input type="radio" name="w" value="${esc(x.n)}" required> <span>${esc(fill(w.when, { day: lineDay(x.date, lang), window: windowSpan(x, lang) }))}</span></label>`);
     }
     form.push('</fieldset>');
   } else {
     const x = offer[0];
-    form.push(`<p class="qbox" style="font-weight:600">${esc(fill(w.when, { day: dayLabel(x.date, lang), window: windowSpan(x, lang) }))}</p>`);
+    form.push(`<p class="qbox" style="font-weight:600">${esc(fill(w.when, { day: lineDay(x.date, lang), window: windowSpan(x, lang) }))}</p>`);
     /* One window of two left free: name it, so the book never has to guess. One window of one: nothing to say. */
     if (all.length > 1) form.push(`<input type="hidden" name="w" value="${esc(x.n)}">`);
   }
@@ -261,7 +270,7 @@ function bookedPage(v) {
   const inner = [
     `<h1>${esc(w.h_booked)}</h1>`,
     '<div class="qbox">',
-    x ? `<p class="lead" style="font-weight:600;margin:0 0 .3rem">${esc(dayLabel(x.date, lang))}</p>` : '',
+    x ? `<p class="lead" style="font-weight:600;margin:0 0 .3rem">${esc(lineDay(x.date, lang))}</p>` : '',
     x ? `<p style="margin:0 0 .3rem">${esc(fill(w.booked_window, { window: windowSpan(x, lang) }))}</p>` : '',
     `<p class="qprice" style="margin:0">${esc(money(v.body && v.body.price))}</p>`,
     '</div>',

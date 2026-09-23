@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Services — UMBRA DOMUS</title>
-<meta name="description" content="Drywall and paint, doors and carpentry, yard and property care, comfort and efficiency, and home automation across the Rio Grande Valley. Request a repair in three fields, no account.">
+<meta name="description" content="Drywall and paint, doors and carpentry, yard and property care, comfort and efficiency, and home automation across the Rio Grande Valley. Request a repair with a few photos and quick questions, no account.">
 <link rel="canonical" href="https://www.umbradomus.com/services">
 <link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services">
 <link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios">
@@ -16,7 +16,7 @@
 <!-- INTAKE v2 · the 14-screen wizard (INTAKE-FORM-V2-SPEC-2026-09-21). The v1 file
      /assets/umbra-intake.js stays in the repo and is no longer referenced. -->
 <script src="/assets/umbra-intake-v2.js?v=5" defer></script>
-<script src="/assets/umbra-windows.js?v=1" defer></script>
+<script src="/assets/umbra-windows.js?v=2" defer></script>
 <script src="/assets/umbra-two-channels.js?v=2" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=6">
@@ -26,7 +26,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="UMBRA DOMUS">
 <meta property="og:title" content="Services — UMBRA DOMUS">
-<meta property="og:description" content="Drywall and paint, carpentry, yard and property care, efficiency and home automation across the Rio Grande Valley. Request a repair in three fields.">
+<meta property="og:description" content="Drywall and paint, carpentry, yard and property care, efficiency and home automation across the Rio Grande Valley. Request a repair with a few photos and quick questions.">
 <meta property="og:url" content="https://www.umbradomus.com/services">
 <meta property="og:image" content="https://www.umbradomus.com/assets/og-image.jpg?v=2">
 <meta property="og:image:width" content="1200">
@@ -65,7 +65,7 @@
     <div class="wrap">
       <p class="kicker">Service, repair and upgrades</p>
       <h1>Providing For Your Home So It Can Provide For You.</h1>
-      <p class="lead narrow">Pick the closest thing to what you need, or skip straight to the form. Three fields and you're done.</p>
+      <p class="lead narrow">Pick the closest thing to what you need, or skip straight to the form. A few photos, a few questions, and you're done.</p>
       <div class="cta-row">
         <a class="btn" href="#request">Request a repair</a>
         <a class="btn ghost" href="tel:+19565566438">Call (956) 556-6438</a>
@@ -139,7 +139,7 @@
     <div class="wrap narrow">
       <p class="kicker">Request</p>
       <h2>Tell us what's wrong.</h2>
-      <p class="lead">Three fields. No account, no email needed. You'll get a confirmation that says when you'll hear from us.</p>
+      <p class="lead">A few photos and quick questions. No account, no email needed. You'll get a confirmation that says when you'll hear from us.</p>
       <p>If the work isn't right, we come back and fix it. You don't pay twice for the same job.</p>
 
       <form class="req" action="https://formsubmit.co/07242513cc0b8b4dac5ae320baa7c431" method="POST" enctype="multipart/form-data">
@@ -306,9 +306,10 @@
         <section class="fstep" data-fstep="phone" hidden>
           <label class="v2field"><span class="v2q">Phone</span><input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next"></label>
           <!-- FORM-WINDOWS-01 · the text box: UNCHECKED, never required, no promotional box beside it.
-               The label's words are worker/src/windows.js SMS_WORDING.en exactly (sms-v1); the Worker
+               The label's words are worker/src/windows.js SMS_WORDING.en exactly (sms-v2); the Worker
                stores the hash of them. Change one, change both, and move the version. -->
           <input type="hidden" name="sms_consent_lang" value="en">
+          <input type="hidden" name="sms_consent_version" value="sms-v2">
           <div class="wconsent">
             <label class="v2opt v2checkbox"><input type="checkbox" name="sms_consent" value="yes"><i class="v2mark" aria-hidden="true"></i><span data-sms-wording><strong>Text me about this request.</strong> I agree Umbra Domus may text the number above about my request, quote, scheduling and appointment reminders, including automated messages. Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. Consent is not required to get service.</span></label>
             <a class="wprivacy" href="#privacy">Privacy</a>

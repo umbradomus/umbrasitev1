@@ -19,6 +19,8 @@ import crypto from 'node:crypto';
 import { parseMultipart, fieldValue } from './lib/multipart.mjs';
 import { staticServer, close } from './lib/servers.mjs';
 import { SMS_WORDING } from '../src/windows.js';
+/* SPANISH-FIX-01: read as a namespace, so a Worker without SMS_WORDINGS (the base) still loads and reads red */
+import * as WIN from '../src/windows.js';
 
 const PORT_SUNDAY_WORKER = 4776;
 const PORT_SUNDAY_SITE = 4777;
@@ -167,7 +169,23 @@ export async function suiteWindows(ctx) {
     address: `${100 + n.length} Invented Lane, Brownsville`, what: `${n}: a scuffed wall in the invented hallway, just paint.`,
   });
 
-  const EXPECT_DAYS = ['2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', '2026-09-29', '2026-09-30',
+  /* SPANISH-FIX-01's pictures, all at 390 px; the round copies them out */
+  const SFPIC = path.join(TMP, 'spanish-fix-pictures');
+  fs.rmSync(SFPIC, { recursive: true, force: true });
+  fs.mkdirSync(SFPIC, { recursive: true });
+  async function sfShot(page, file, selector = null) {
+    await page.evaluate(() => { const h = document.querySelector('header.top'); if (h) h.style.position = 'static'; });
+    await sleep(250);
+    const target = path.join(SFPIC, file);
+    const el = selector ? await page.$(selector) : null;
+    if (selector && !el) ok(false, `picture ${file}: ${selector} is on the page`);
+    else if (el) await el.screenshot({ path: target });
+    else await page.screenshot({ path: target, fullPage: true });
+    await page.evaluate(() => { const h = document.querySelector('header.top'); if (h) h.style.position = ''; });
+    return file;
+  }
+
+  const EXPECT_DAYS = ['2026-09-24','2026-09-25', '2026-09-26', '2026-09-28', '2026-09-29', '2026-09-30',
     '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-05', '2026-10-06', '2026-10-07'];
 
   /* ============================================================== (2) */
@@ -176,7 +194,7 @@ export async function suiteWindows(ctx) {
     R['2'] = {};
     for (const [lang, url, title, blocks] of [
       ['en', SITE + '/services#request', 'When could we come?', ['Morning 8–11', 'Midday 11–2', 'Afternoon 2–5', 'Evening 5–8']],
-      ['es', SITE + '/es/servicios#request', '¿Cuándo podemos ir?', ['Mañana 8–11', 'Mediodía 11–2', 'Tarde 2–5', 'Noche 5–8']],
+      ['es', SITE + '/es/servicios#request', '¿Cuándo podemos ir?', ['Mañana 8–11', 'Mediodía 11–2', 'Tarde 2–5', 'Tarde-noche 5–8']],
     ]) {
       const page = await newPage();
       const reached = await openAt(page, url, 'times', who('Screen ' + lang));
@@ -208,7 +226,7 @@ export async function suiteWindows(ctx) {
       eq(consent.checked, false, `${lang}: the text box is UNCHECKED`);
       eq(consent.required, false, `${lang}: and not required`);
       eq(consent.screen, 'phone', `${lang}: on the phone screen, under the number it names`);
-      eq(consent.words, SMS_WORDING[lang], `${lang}: its words are the Worker's sms-v1 wording exactly`);
+      eq(consent.words, SMS_WORDING[lang], `${lang}: its words are the Worker's sms-v2 wording exactly`);
       ok(consent.privacy === '#privacy' && await page.$('#privacy'), `${lang}: with the privacy link beside it`, consent.privacy);
       const promo = await page.$$eval('input[type="checkbox"]', (b) => b.map((x) => x.name).filter((n) => /promo|market|offer|news/i.test(n)));
       eq(promo.length, 0, `${lang}: no promotional box anywhere on the form`);
@@ -277,7 +295,7 @@ export async function suiteWindows(ctx) {
     eq(t1, '1 · Tue 9/29 · Morning 8–11', 'the email copy: "1 · Tue 9/29 · Morning 8–11"');
     eq(t2, '2 · Fri 9/25 · Evening 5–8', 'the email copy: "2 · Fri 9/25 · Evening 5–8"');
     eq(t3, '3 · Fri 10/2 · Midday 11–2', 'the email copy: "3 · Fri 10/2 · Midday 11–2"');
-    eq(copy && fieldValue(copy, 'text_consent'), 'Yes — agreed to texts about this request (sms-v1)', 'the email copy carries the consent answer');
+    eq(copy && fieldValue(copy, 'text_consent'), 'Yes — agreed to texts about this request (sms-v2)', 'the email copy carries the consent answer');
     eq(copy && fieldValue(copy, 'times_flexible'), 'No', 'and the flexible answer');
     eq(copy && fieldValue(copy, 'avail_notes'), 'Side gate, invented code 0000. One friendly dog.', 'and the note');
     const avc = copy ? copy.filter((p) => p.name === 'avail_choice').map((p) => p.value) : [];
@@ -285,7 +303,7 @@ export async function suiteWindows(ctx) {
 
     /* (8) checked */
     const c = row.consent;
-    eq(c.textVersion, 'sms-v1', '(8) version sms-v1');
+    eq(c.textVersion, 'sms-v2', '(8) version sms-v2');
     eq(c.at, T, '(8) the time is the server\'s moment');
     ok('ip' in c, '(8) the IP field is stored as received', String(c.ip));
     ok(typeof c.ua === 'string' && c.ua.length > 0 && c.ua.length <= 200 && /Chrome/.test(c.ua), '(8) the browser, first 200 chars', c.ua);
@@ -554,6 +572,308 @@ export async function suiteWindows(ctx) {
     const row = await rowOf(W, one.id);
     eq(row.consent.at, T, 'the consent time is the first post\'s (the server stamps it; it is not part of the match)');
     R['11'] = { first: one.id, second_at_plus2: two.id, records_added: n1 - n0, pushover: aboutPO(one.id).length, telegram: aboutTG(one.id).length, consent_at: row.consent.at, choices: row.availability.choices };
+  }
+
+  /* ============================================================== SPANISH-FIX-01 (12)–(15)
+     The round's own readings: the consent under sms-v2, the Spanish picker, es/recibido's times, the size scale.
+     Each is written so that, run on the base (645c32d), it reads red where the round changes something. */
+  const collapse = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+  const PIN_V1 = {   /* SMS_WORDING at the base, measured by 1SUPE5 at 645c32d — never this round's own constant */
+    en: 'c6445736ec428857ddf6f1575d0485b2075eb26134d954a7c7eeddb9ff9ac1a6',
+    es: '1020274500ea99128270b0bf6bbfe4501ebe16dec8d6e3567ee44661b722dc01',
+  };
+  const R52_SHIP = 'Responda STOP o ALTO para cancelar, HELP o AYUDA para obtener ayuda.';
+
+  suite('G · (12) SPANISH-FIX-01: sms-v2 — the record names the wording the customer saw');
+  {
+    const V = WIN.SMS_WORDINGS || {};
+    const v1 = V['sms-v1'] || {}, v2 = V['sms-v2'] || {};
+    R['12'] = { wordings: {
+      'sms-v1': { en_sha256: v1.en ? sha(v1.en) : null, es_sha256: v1.es ? sha(v1.es) : null },
+      'sms-v2': { en_sha256: v2.en ? sha(v2.en) : null, es_sha256: v2.es ? sha(v2.es) : null, es: v2.es || null },
+      SMS_VERSION: WIN.SMS_VERSION,
+    } };
+    eq(v1.en ? sha(v1.en) : null, PIN_V1.en, '(2) SMS_WORDINGS["sms-v1"].en is the base wording byte for byte (sha256 pinned at 645c32d)');
+    eq(v1.es ? sha(v1.es) : null, PIN_V1.es, '(2) SMS_WORDINGS["sms-v1"].es is the base wording byte for byte (sha256 pinned at 645c32d)');
+    eq(v2.en === undefined ? null : v2.en, v1.en === undefined ? 'missing' : v1.en, '(6b) the sms-v2 English equals the sms-v1 English, byte for byte');
+    ok(typeof v2.es === 'string' && v2.es.includes(R52_SHIP), '(2) the sms-v2 Spanish carries R52: "' + R52_SHIP + '"');
+    ok(typeof v2.es === 'string' && v2.es === (v1.es || '').replace('Responda STOP para cancelar, HELP para obtener ayuda.', R52_SHIP), '(2) and differs from sms-v1 by R52 alone');
+    eq(WIN.SMS_VERSION, 'sms-v2', 'SMS_VERSION is sms-v2');
+    ok(WIN.SMS_WORDING === v2, 'SMS_WORDING (the old export) is SMS_WORDINGS["sms-v2"]');
+
+    /* (6a) and (6b): through the real pages, box ticked */
+    R['12'].pages = {};
+    for (const [lang, url] of [['es', SITE + '/es/servicios#request'], ['en', SITE + '/services#request']]) {
+      const page = await newPage();
+      await openAt(page, url, 'phone', who('Consent v2 ' + lang));
+      const marker = await page.evaluate(() => {
+        const e = document.querySelector('input[name="sms_consent_version"]');
+        return e ? { type: e.type, value: e.value, in_form: e.form === document.querySelector('form.req'), next_to_lang: !!(e.previousElementSibling && e.previousElementSibling.name === 'sms_consent_lang') } : null;
+      });
+      eq(marker && marker.type + ' ' + marker.value, 'hidden sms-v2', `(6) ${lang}: the page carries <input type="hidden" name="sms_consent_version" value="sms-v2">`);
+      ok(marker && marker.in_form && marker.next_to_lang, `(6) ${lang}: inside form.req, next to sms_consent_lang`, JSON.stringify(marker));
+      await page.click('.wconsent label.v2opt');
+      const words = await page.$eval('[data-sms-wording]', (e) => e.textContent.replace(/\s+/g, ' ').trim());
+      if (lang === 'es') await sfShot(page, '3-consent.png', '[data-fstep="phone"]');
+      for (let i = 0; i < 5 && (await screenOf(page)) !== 'times'; i++) { await page.click('[data-v2next]'); await sleep(40); }
+      await page.waitForSelector('.wday');
+      await page.click('label.wflex');
+      const got = await send(page);
+      const row = got.id ? await rowOf(W, got.id) : null;
+      const c = row && row.consent;
+      eq(c && c.textVersion, 'sms-v2', `(6${lang === 'es' ? 'a' : 'b'}) ${lang}: textVersion "sms-v2"`);
+      eq(c && c.smsService, true, `(6${lang === 'es' ? 'a' : 'b'}) ${lang}: smsService true`);
+      eq(c && c.wordingSha256, v2[lang] ? sha(v2[lang]) : 'no v2 wording', `(6${lang === 'es' ? 'a' : 'b'}) ${lang}: wordingSha256 is the sha256 of the v2 ${lang} wording`);
+      eq(words, v2[lang] === undefined ? 'no v2 wording' : v2[lang], `(6${lang === 'es' ? 'a' : 'b'}) ${lang}: the page's label, whitespace collapsed, is the v2 ${lang} wording`);
+      if (lang === 'en') eq(c && c.wordingSha256, PIN_V1.en, '(6b) en: and that hash is the v1 English hash, since the English did not change');
+      const copyVersion = got.copy && fieldValue(got.copy, 'sms_consent_version');
+      const copyText = got.copy && fieldValue(got.copy, 'text_consent');
+      eq(copyVersion, 'sms-v2', `(6) ${lang}: the browser posted sms_consent_version=sms-v2`);
+      eq(copyText, 'Yes — agreed to texts about this request (sms-v2)', `(6f) ${lang}: the email copy's text_consent reads "(sms-v2)"`);
+      R['12'].pages[lang] = { id: got.id, marker, consent: c, shown_words_sha256: sha(words), posted_sms_consent_version: copyVersion, email_text_consent: copyText };
+      await page.close();
+    }
+
+    /* (6c) an old page: no sms_consent_version at all */
+    R['12'].old_page = {};
+    for (const lang of ['es', 'en']) {
+      const r = await directPost(W, T, { avail_form: 'v1', avail_flexible: 'yes', sms_consent: 'yes', sms_consent_lang: lang, name: `Fixture Old Page ${lang.toUpperCase()}`, phone: lang === 'es' ? '(956) 555-0611' : '(956) 555-0612', what: `Fixture Old Page ${lang}: an invented crack.` });
+      const c = (await rowOf(W, r.id)).consent;
+      eq(c.textVersion, 'sms-v1', `(6c) ${lang}: no sms_consent_version (an old page) → "sms-v1"`);
+      eq(c.wordingSha256, PIN_V1[lang], `(6c) ${lang}: and the v1 hash pinned at the base`);
+      eq(c.smsService, true, `(6c) ${lang}: the consent counts`);
+      R['12'].old_page[lang] = { id: r.id, consent: c };
+    }
+
+    /* (6d) a version we cannot show them: never counts. Plus the edges of the good ones. */
+    R['12'].posted = [];
+    const cases = [
+      ['"sms-v9"', 'sms-v9', 'unknown'],
+      ['"constructor"', 'constructor', 'unknown'],
+      ['"__proto__"', '__proto__', 'unknown'],
+      ['"toString"', 'toString', 'unknown'],
+      ['"hasOwnProperty"', 'hasOwnProperty', 'unknown'],
+      ['posted twice (sms-v2, sms-v2)', ['sms-v2', 'sms-v2'], 'unknown'],
+      ['"SMS-V2" (not exactly)', 'SMS-V2', 'unknown'],
+      ['" sms-v2 " (trimmed)', ' sms-v2 ', 'sms-v2'],
+      ['"sms-v1" named', 'sms-v1', 'sms-v1'],
+      ['"   " (empty after trimming)', '   ', 'sms-v1'],
+    ];
+    let k = 0;
+    for (const [label, value, want] of cases) {
+      k++;
+      const r = await directPost(W, T, { avail_form: 'v1', avail_flexible: 'yes', sms_consent: 'yes', sms_consent_lang: 'es', sms_consent_version: value, name: `Fixture Version Case ${String.fromCharCode(64 + k)}`, phone: '(956) 555-06' + String(20 + k), what: `Fixture version case ${k}: an invented dent.` });
+      const row = r.id ? await rowOf(W, r.id) : null;
+      const c = row && row.consent;
+      ok(r.status === 303 && row, `(6d) ${label}: the request is still stored (${r.id})`);
+      eq(c && c.textVersion, want, `(6d) ${label} → textVersion "${want}"`);
+      if (want === 'unknown') {
+        eq(c && c.wordingSha256, null, `(6d) ${label} → wordingSha256 null`);
+        eq(c && c.smsService, false, `(6d) ${label} → smsService false, though the box was ticked`);
+      } else {
+        eq(c && c.wordingSha256, want === 'sms-v1' ? PIN_V1.es : (v2.es ? sha(v2.es) : 'no v2'), `(6d) ${label} → the ${want} Spanish hash`);
+        eq(c && c.smsService, true, `(6d) ${label} → smsService true`);
+      }
+      R['12'].posted.push({ case: label, posted: value, id: r.id, textVersion: c && c.textVersion, wordingSha256: c && c.wordingSha256, smsService: c && c.smsService });
+    }
+
+    /* (6e) JavaScript off: the page's own action is FormSubmit, so the post is caught in the browser and never leaves;
+       its body is read, then replayed to the local Worker only. */
+    {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 390, height: 844 });
+      await page.setJavaScriptEnabled(false);
+      await page.setRequestInterception(true);
+      let caught = null;
+      const aborted = [];
+      page.on('request', (r) => {
+        const u = r.url();
+        if (/^http:\/\/127\.0\.0\.1:/.test(u)) { r.continue(); return; }
+        if (r.method() === 'POST' && !caught) caught = { url: u, headers: r.headers(), body: r.postData() || '' };
+        aborted.push(u.replace(/\/[0-9a-f]{32}$/, '/<form id>'));
+        r.abort();
+      });
+      await page.goto(SITE + '/es/servicios', { waitUntil: 'domcontentloaded' });
+      const filled = await page.evaluate(() => {
+        const f = document.querySelector('form.req');
+        const set = (sel, v) => { const el = f.querySelector(sel); if (el) el.value = v; return !!el; };
+        const tick = (sel) => { const el = f.querySelector(sel); if (el) el.checked = true; return !!el; };
+        const r = [set('[name="name"]', 'Fixture No Script Nidia'), set('[name="phone"]', '(956) 555-0640'), set('textarea[name="what"]', 'Fixture No Script Nidia: an invented dent, JavaScript off.'), tick('input[name="sms_consent"]'), tick('input[name="avail_flexible"]')];
+        f.submit();
+        return r;
+      }).catch((e) => 'evaluate failed: ' + e.message);
+      for (let i = 0; i < 50 && !caught; i++) await sleep(100);
+      const body = caught ? caught.body : '';
+      const posted = /name="sms_consent_version"\r?\n\r?\nsms-v2\r?\n/.test(body);
+      ok(caught && /^https:\/\/formsubmit\.co\//.test(caught.url), '(6e) JavaScript off: the form posted to its own action (caught in the browser, aborted — it never left)', caught ? caught.url.replace(/[0-9a-f]{32}$/, '<form id>') : JSON.stringify(filled));
+      ok(posted, '(6e) JavaScript off: the post carries sms_consent_version=sms-v2', body.length + ' bytes');
+      let replay = null;
+      if (caught && body) {
+        const rr = await fetch(`${W}/intake`, { method: 'POST', body: Buffer.from(body, 'utf8'), redirect: 'manual', headers: { 'content-type': caught.headers['content-type'], 'x-umbra-test-now': T } });
+        const loc = rr.headers.get('location');
+        const id = loc ? new URL(loc).searchParams.get('id') : null;
+        const c = id ? (await rowOf(W, id)).consent : null;
+        eq(c && c.textVersion, 'sms-v2', '(6e) replayed to the local Worker: the record says sms-v2');
+        replay = { status: rr.status, id, consent: c };
+      }
+      R['12'].javascript_off = { filled, posted_to: caught && caught.url.replace(/[0-9a-f]{32}$/, '<form id>'), aborted_in_browser: aborted, version_field_posted: posted, replay };
+      await page.close();
+    }
+  }
+
+  suite('G · (13) SPANISH-FIX-01: the Spanish picker — a capital where a pick starts; buttons, labels and posted words unchanged');
+  {
+    R['13'] = {};
+    const BASE = {   /* the base's own readings (645c32d, windows-readings.json (2) and (3)) */
+      es_days: ['jue24 sep', 'vie25 sep', 'sáb26 sep', 'lun28 sep', 'mar29 sep', 'mié30 sep', 'jue1 oct', 'vie2 oct', 'sáb3 oct', 'lun5 oct', 'mar6 oct', 'mié7 oct'],
+      en_days: ['Thu9/24', 'Fri9/25', 'Sat9/26', 'Mon9/28', 'Tue9/29', 'Wed9/30', 'Thu10/1', 'Fri10/2', 'Sat10/3', 'Mon10/5', 'Tue10/6', 'Wed10/7'],
+    };
+    for (const [lang, url] of [['es', SITE + '/es/servicios#request'], ['en', SITE + '/services#request']]) {
+      const page = await newPage();
+      await openAt(page, url, 'times', who('Picker ' + lang));
+      await page.waitForSelector('.wday');
+      const days = await chipTexts(page);
+      const dayAria = await page.$$eval('.wday', (b) => b.map((x) => x.getAttribute('aria-label')));
+      const blocks = await blockLabels(page, '2026-10-01');
+      await pick(page, '2026-09-26', '08-11');
+      await pick(page, '2026-10-01', '17-20');
+      await pick(page, '2026-09-29', '14-17');
+      const picks = await page.$$eval('.wpick', (b) => b.map((x) => ({ text: x.querySelector('.wpt').textContent, aria: x.getAttribute('aria-label') })));
+      const dayAriaAfter = await page.$$eval('.wday.has', (b) => b.map((x) => x.getAttribute('aria-label')));
+      const dow = await page.$$eval('.wday .wdow', (b) => b.map((x) => x.textContent));
+      if (lang === 'es') {
+        await sfShot(page, '2-times.png', '[data-fstep="times"]');
+        eq(picks.map((p) => p.text).join(' | '), 'Sáb 26 sep · Mañana 8–11 | Jue 1 oct · Tarde-noche 5–8 | Mar 29 sep · Tarde 2–5', '(7) es: each pick\'s text (.wpick .wpt) starts with a capital');
+        eq(picks.map((p) => p.aria).join(' | '), 'Quitar sáb 26 sep · Mañana 8–11 | Quitar jue 1 oct · Tarde-noche 5–8 | Quitar mar 29 sep · Tarde 2–5', '(7) es: its remove label is unchanged ("Quitar sáb 26 sep · …", lowercase)');
+        eq(days.join(','), BASE.es_days.join(','), '(7) es: the day buttons read as at the base');
+        eq(dayAria[0] + ' | ' + dow[0], 'jue 24 sep | jue', '(7) es: a day button\'s label and its weekday stay lowercase (CSS capitalises the button)');
+        eq(dayAriaAfter.join(' | '), 'sáb 26 sep, 1 elegido | mar 29 sep, 1 elegido | jue 1 oct, 1 elegido', '(7) es: a day with a pick says so, as at the base');
+        eq(blocks.join(' | '), 'Mañana 8–11 | Mediodía 11–2 | Tarde 2–5 | Tarde-noche 5–8', '(7) es: the fourth block reads "Tarde-noche 5–8"');
+      } else {
+        eq(picks.map((p) => p.text).join(' | '), 'Sat 9/26 · Morning 8–11 | Thu 10/1 · Evening 5–8 | Tue 9/29 · Afternoon 2–5', '(7) en: the English picks read as at the base');
+        eq(picks.map((p) => p.aria).join(' | '), 'Remove Sat 9/26 · Morning 8–11 | Remove Thu 10/1 · Evening 5–8 | Remove Tue 9/29 · Afternoon 2–5', '(7) en: and their remove labels');
+        eq(days.join(','), BASE.en_days.join(','), '(7) en: the English day buttons read as at the base');
+        eq(blocks.join(' | '), 'Morning 8–11 | Midday 11–2 | Afternoon 2–5 | Evening 5–8', '(7) en: the English blocks read as at the base');
+      }
+      const got = await send(page);
+      const tn = got.copy ? [1, 2, 3].map((n) => fieldValue(got.copy, 'time_' + n)) : [];
+      const avc = got.copy ? got.copy.filter((p) => p.name === 'avail_choice').map((p) => p.value) : [];
+      eq(tn.join(' | '), '1 · Sat 9/26 · Morning 8–11 | 2 · Thu 10/1 · Evening 5–8 | 3 · Tue 9/29 · Afternoon 2–5', `(7) ${lang}: the posted time_1..3 are the base's plain English`);
+      eq(avc.join(' | '), '2026-09-26 08-11 | 2026-10-01 17-20 | 2026-09-29 14-17', `(7) ${lang}: and the posted avail_choice values`);
+      R['13'][lang] = { day_buttons: days, day_aria_first: dayAria[0], day_aria_with_picks: dayAriaAfter, blocks, picks, posted_time: tn, posted_avail_choice: avc, id: got.id };
+      await page.close();
+    }
+  }
+
+  suite('G · (14) SPANISH-FIX-01: es/recibido — one time style, la/las, "mañana antes de …", never "p. m."');
+  {
+    R['14'] = [];
+    const read = (page) => page.evaluate(() => {
+      const t = (sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; };
+      const by = document.getElementById('by');
+      return { when: t('#when'), bywhen: t('#bywhen'), lead: t('main .lead'), by_line: t('#by'), by_hidden: by ? by.hidden : null, text: document.body.innerText, html: document.documentElement.outerHTML };
+    });
+    const cases = [
+      ['1:05 PM', '2026-09-23T18:05:00.000Z', 'a la 1:05 p.m.', 'Le contestamos antes de las 3:05 p.m.', '5-recibido-afternoon.png'],
+      ['12:40 PM', '2026-09-23T17:40:00.000Z', 'a las 12:40 p.m.', 'Le contestamos antes de las 2:40 p.m.'],
+      ['11:05 AM', '2026-09-23T16:05:00.000Z', 'a las 11:05 a.m.', 'Le contestamos antes de la 1:05 p.m.'],
+      ['7:30 PM', '2026-09-24T00:30:00.000Z', 'a las 7:30 p.m.', 'Le contestamos mañana antes de las 9:00 a.m.', '6-recibido-night.png'],
+      ['5:30 AM', '2026-09-23T10:30:00.000Z', 'a las 5:30 a.m.', 'Le contestamos antes de las 9:00 a.m.'],
+    ];
+    for (const [label, now, when, byLine, picture] of cases) {
+      const page = await newPage({ now, tz: 'America/Chicago' });
+      await page.goto(SITE + '/es/recibido', { waitUntil: 'load' });
+      const r = await read(page);
+      eq(r.when, when, `(4) ${label}: #when reads "${when}"`);
+      ok(r.lead && r.lead.includes(`se abrió ${when} en su teléfono`), `(4) ${label}: "…se abrió ${when} en su teléfono."`, r.lead);
+      eq(r.by_line, byLine, `(4) ${label}: "${byLine}"`);
+      eq(r.by_hidden, false, `(4) ${label}: the answer-by line shows`);
+      if (label === '5:30 AM') eq(/mañana/.test(r.by_line || ''), false, '(4) 5:30 AM: same day, so no "mañana"');
+      eq((r.text.match(/[ap]\. m\./g) || []).length + (r.html.match(/[ap]\. m\./g) || []).length, 0, `(4) ${label}: no "a. m."/"p. m." in the page or its source`);
+      eq((r.text.match(/\.\./g) || []).length, 0, `(4) ${label}: no ".." anywhere on the page`);
+      if (picture) await sfShot(page, picture);
+      R['14'].push({ case: label, now, when: r.when, bywhen: r.bywhen, lead: r.lead, by_line: r.by_line });
+      await page.close();
+    }
+    const off = await browser.newPage();
+    await off.setViewport({ width: 390, height: 844 });
+    await off.setJavaScriptEnabled(false);
+    await off.goto(SITE + '/es/recibido', { waitUntil: 'load' });
+    const r = await read(off);
+    ok(r.lead && r.lead.includes('se abrió hace un momento en su teléfono'), '(4) JavaScript off: "se abrió hace un momento en su teléfono"', r.lead);
+    eq(r.by_hidden, true, '(4) JavaScript off: no answer-by line (#by stays hidden)');
+    eq(/Le contestamos/.test(r.text), false, '(4) JavaScript off: "Le contestamos" is nowhere in the visible text');
+    eq((r.text.match(/\.\./g) || []).length, 0, '(4) JavaScript off: no ".."');
+    R['14'].push({ case: 'JavaScript off', lead: r.lead, by_hidden: r.by_hidden });
+    await off.close();
+  }
+
+  suite('G · (15) SPANISH-FIX-01: the size scale — the wizard and the home intake');
+  {
+    const SIZES = 'Como un hoyito de clavo · Como una moneda · Como una pelota de golf · Como un puño · Como un balón';
+    const page = await newPage();
+    await page.goto(SITE + '/es/servicios#request', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-intake2][data-screen]');
+    const groups = await page.$$eval('[data-fstep$="-size"]', (s) => s.map((x) => ({ step: x.getAttribute('data-fstep'), sizes: [...x.querySelectorAll('.v2opt span')].map((e) => e.textContent.trim()) })));
+    for (const g of groups) eq(g.sizes.join(' · '), SIZES, `(8) es/servicios ${g.step}: "${SIZES}"`);
+    eq(groups.length, 2, '(8) both size steps (ceiling and walls) were read');
+    await page.evaluate(() => {
+      const f = document.querySelector('form.req');
+      const tick = (n, v) => { const el = f.querySelector(`input[name="${n}"][value="${v}"]`); el.checked = true; el.dispatchEvent(new Event('change', { bubbles: true })); };
+      tick('problem', 'Holes');
+      tick('problem_area', 'Walls');
+    });
+    let screen = null;
+    for (let i = 0; i < 12; i++) {
+      screen = await screenOf(page);
+      if (screen === 'walls-size') break;
+      await page.click('[data-v2next]');
+      await sleep(60);
+    }
+    eq(screen, 'walls-size', '(8) the wizard walks to the walls size step');
+    if (screen === 'walls-size') await sfShot(page, '1-size.png', '[data-fstep="walls-size"]');
+    await page.close();
+
+    /* es/index.html's intake: tap Tablaroca y pintura → Hoyos por resanar → Techo, then measure the size chips at 390 */
+    const home = await newPage({ width: 390 });
+    await home.goto(SITE + '/es/', { waitUntil: 'load' });
+    const steps = [];
+    const tapChip = async (sel, shown) => {
+      try {
+        await home.click(sel);
+        await home.waitForSelector(shown, { visible: true, timeout: 5000 });
+        steps.push(sel + ' → ' + shown + ' shown');
+      } catch (err) { ok(false, `(8) home: ${sel} reveals ${shown}`, err.message); }
+    };
+    await tapChip('input[name="service"][value="Drywall & Paint"] + span', '[data-intake-problem]');
+    await tapChip('input[name="problem"][value="Holes to patch"] + span', '[data-intake-holes]');
+    await tapChip('input[name="problem_area"][value="Ceiling"] + span', '.area[data-card="ceiling"]');
+    const m = await home.evaluate(() => {
+      const chips = [...document.querySelectorAll('.area[data-card="ceiling"] input[name="ceiling_biggest"]')].map((i) => i.closest('.chip'));
+      /* the lines the words sit on: the text nodes' own boxes only (the size dot beside them is not a line) */
+      const lineCount = (el) => {
+        const tops = new Set();
+        for (const n of el.childNodes) {
+          if (n.nodeType !== 3 || !n.textContent.trim()) continue;
+          const r = document.createRange(); r.selectNodeContents(n);
+          for (const x of r.getClientRects()) if (x.width > 1) tops.add(Math.round(x.top));
+        }
+        return tops.size;
+      };
+      return {
+        chips: chips.map((c) => { const s = c.querySelector('span'); const b = c.getBoundingClientRect(); return { text: s.textContent.trim(), w: Math.round(b.width), h: Math.round(b.height), lines: lineCount(s) }; }),
+        scrollWidth: document.documentElement.scrollWidth, innerWidth,
+      };
+    });
+    const nail = m.chips.find((c) => c.text === 'Como un hoyito de clavo');
+    const coin = m.chips.find((c) => c.text === 'Como una moneda');
+    ok(nail, '(8) home: the smallest chip reads "Como un hoyito de clavo"', JSON.stringify(m.chips.map((c) => c.text)));
+    eq(nail && nail.lines, 1, '(8) home at 390: "Como un hoyito de clavo" sits on one line');
+    eq(nail && coin && nail.h === coin.h, true, '(8) home at 390: and is as tall as the one-line "Como una moneda" chip', JSON.stringify({ nail, coin }));
+    ok(m.scrollWidth <= 390, '(8) home at 390: no sideways scroll', String(m.scrollWidth));
+    await sfShot(home, '4-home-intake-size.png', '.area[data-card="ceiling"]');
+    R['15'] = { wizard_groups: groups, wizard_screen: screen, home_steps: steps, home_chips: m.chips, home_scroll_width: m.scrollWidth };
+    await home.close();
   }
 
   /* ============================================================== (5) */

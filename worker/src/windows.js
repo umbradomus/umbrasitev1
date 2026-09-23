@@ -11,6 +11,7 @@
        avail_notes          free text (gate code, pets, best way in)
        sms_consent          "yes" when ticked
        sms_consent_lang     "en" | "es" — which wording the page showed
+       sms_consent_version  "sms-v2" — which version of that wording the page showed (absent on an sms-v1 page)
        time_1..3 · times_flexible · text_consent   the same answers in plain words, for the email copy only
 
    THE RULE THAT BEATS EVERY OTHER: a bad availability NEVER loses the request. It is stored with
@@ -34,14 +35,38 @@ export const SAME_DAY_LEAD_H = 3;
 const NOTES_MAX = 1000;
 
 /* THE WORDING, EXACTLY AS THE PAGES SHOW IT (the label's text with its whitespace collapsed). The hash on
-   the record is the hash of the one the customer saw. A change to either string is a new version: move
-   SMS_VERSION and the pages together, never one without the other. The suite reads each page's label and
-   proves its hash equals the one stored. */
-export const SMS_VERSION = 'sms-v1';
-export const SMS_WORDING = {
-  en: 'Text me about this request. I agree Umbra Domus may text the number above about my request, quote, scheduling and appointment reminders, including automated messages. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help. Consent is not required to get service.',
-  es: 'Envíenme mensajes de texto sobre esta solicitud. Acepto que Umbra Domus me envíe mensajes de texto al número de arriba sobre mi solicitud, cotización, programación y recordatorios de cita, incluidos mensajes automatizados. La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para cancelar, HELP para obtener ayuda. El consentimiento no es requisito para recibir el servicio.',
+   the record is the hash of the one the customer saw. Every wording a page has ever shown is kept here, and
+   the page declares which one it showed (sms_consent_version), so a form left open across a deploy is
+   recorded under its own words. A change to either string is a new version: add it here, move SMS_VERSION,
+   and move the pages' sms_consent_version with it. The suite reads each page's label and proves its hash
+   equals the one stored. sms-v1 is the wording as FORM-WINDOWS-01 shipped it, byte for byte; sms-v2 adds
+   ALTO and AYUDA to the Spanish (SPANISH-FIX-01), and its English is sms-v1's. */
+export const SMS_WORDINGS = {
+  'sms-v1': {
+    en: 'Text me about this request. I agree Umbra Domus may text the number above about my request, quote, scheduling and appointment reminders, including automated messages. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help. Consent is not required to get service.',
+    es: 'Envíenme mensajes de texto sobre esta solicitud. Acepto que Umbra Domus me envíe mensajes de texto al número de arriba sobre mi solicitud, cotización, programación y recordatorios de cita, incluidos mensajes automatizados. La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para cancelar, HELP para obtener ayuda. El consentimiento no es requisito para recibir el servicio.',
+  },
+  'sms-v2': {
+    en: 'Text me about this request. I agree Umbra Domus may text the number above about my request, quote, scheduling and appointment reminders, including automated messages. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help. Consent is not required to get service.',
+    es: 'Envíenme mensajes de texto sobre esta solicitud. Acepto que Umbra Domus me envíe mensajes de texto al número de arriba sobre mi solicitud, cotización, programación y recordatorios de cita, incluidos mensajes automatizados. La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP o ALTO para cancelar, HELP o AYUDA para obtener ayuda. El consentimiento no es requisito para recibir el servicio.',
+  },
 };
+/* The versions a post may name, as a plain list: never a lookup on the object itself, where "constructor",
+   "__proto__" or "toString" would find the prototype's. */
+const SMS_VERSIONS = ['sms-v1', 'sms-v2'];
+export const SMS_VERSION = 'sms-v2';
+export const SMS_WORDING = SMS_WORDINGS[SMS_VERSION];
+
+/** Which wording the page showed: absent or blank → 'sms-v1' (the only pages without the field are v1
+    pages); exactly one known version, trimmed → that one; anything else (unknown, posted twice) → null. */
+function consentVersion(fields) {
+  const v = fields.sms_consent_version;
+  if (v === undefined || v === null) return 'sms-v1';
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  if (t === '') return 'sms-v1';
+  return SMS_VERSIONS.includes(t) ? t : null;
+}
 
 const CHOICE = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}-\d{2})$/;
 
@@ -136,15 +161,16 @@ export function readAvailability(fields, env, nowIso) {
 export async function readConsent(fields, request, nowIso) {
   if (!fields || typeof fields.avail_form !== 'string' || fields.avail_form.trim() === '') return null;
   const lang = String(fields.sms_consent_lang || '').trim().toLowerCase() === 'es' ? 'es' : 'en';
-  const wording = SMS_WORDING[lang];
+  const version = consentVersion(fields);
   return {
-    smsService: String(fields.sms_consent || '').trim().toLowerCase() === 'yes',
-    textVersion: SMS_VERSION,
+    /* a version we cannot name is words we cannot show them: the yes does not count */
+    smsService: version !== null && String(fields.sms_consent || '').trim().toLowerCase() === 'yes',
+    textVersion: version === null ? 'unknown' : version,
     lang,
     at: nowIso,
     /* what the Worker received; on the live edge this is the customer's address. Never invented. */
     ip: request.headers.get('cf-connecting-ip') || null,
     ua: (request.headers.get('user-agent') || '').slice(0, 200),
-    wordingSha256: await sha256hex(new TextEncoder().encode(wording)),
+    wordingSha256: version === null ? null : await sha256hex(new TextEncoder().encode(SMS_WORDINGS[version][lang])),
   };
 }
