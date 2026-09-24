@@ -48,6 +48,10 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
   const mine = (id) => PO().filter((c) => textOf(c).includes(id) && !SUMMARYISH.test(titleOf(c)));
   const theirs = (id) => TG().filter((c) => textOf(c).includes(id));
 
+  /* A reading that expects a push and does not get one should FAIL, by name, and let the rest of the
+     suite run. Without this, the very next line reads .p of undefined and the whole suite falls over —
+     which in a mutant pass looks like a catch and is not one. */
+  const one = (list) => list[0] || { p: new URLSearchParams(), receipt: null, runNow: null };
   const mark = () => ({ po: PO().length, tg: TG().length, cancels: CANCELS().length, gate: gate.requests.length });
   const since = (m) => ({ po: PO().slice(m.po), cancels: CANCELS().slice(m.cancels), gate: gate.requests.slice(m.gate) });
   const gatePosts = (from = 0) => gate.requests.slice(from).filter((r) => r.method === 'POST' && r.path === '/3rdparty/v1/messages');
@@ -233,8 +237,8 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     await walk(CT(...DAY_A, 9, 5), CT(...DAY_A, 10, 10));
     const at1010 = mine(a.id).filter((c) => c.runNow === CT(...DAY_A, 10, 10));
     eq(at1010.length, 1, '(3) the 10:10 push went');
-    eq(Number(at1010[0].p.get('priority')), 2, '(3) at priority 2');
-    const receipt = at1010[0].receipt;
+    eq(Number(one(at1010).p.get('priority')), 2, '(3) at priority 2');
+    const receipt = one(at1010).receipt;
     ok(Boolean(receipt), '(3) and Pushover issued a receipt for it', String(receipt));
     const before = CANCELS().length;
     const cb = await fetch(`${W}/hooks/pushover/${encodeURIComponent(FAKE.HOOK_SECRET)}`, {
@@ -252,9 +256,9 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     const at1020 = mine(a.id).filter((c) => c.runNow === CT(...DAY_A, 10, 20));
     eq(at1020.length, 1, '(3) the 10:20 push still fires');
     R['3'] = {
-      id: a.id, push_1010: titleOf(at1010[0]), receipt_issued: true, cancel_by_tag_calls: cancels.length,
+      id: a.id, push_1010: titleOf(one(at1010)), receipt_issued: true, cancel_by_tag_calls: cancels.length,
       ack_at: rec.alerts.ack_at, ack_by: rec.alerts.ack_by, ladder_ended_at: rec.alerts.table.ended_at,
-      push_1020: titleOf(at1020[0]),
+      push_1020: titleOf(one(at1020)),
     };
     await noText(a.id);
   } }
@@ -267,37 +271,38 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     await walk(CT(...DAY_C, 9, 5), CT(...DAY_C, 11, 0));
     const posts = gatePosts(m.gate);
     eq(posts.length, 1, `${label} exactly ONE POST to the gateway`);
-    const p = posts[0], b = bodyOf(p);
+    const p = one(posts), b = bodyOf(p);
     eq(p.path, '/3rdparty/v1/messages', `${label} POST /3rdparty/v1/messages`);
     eq(p.authScheme, 'Basic', `${label} with basic auth`);
     eq(p.authUser, FAKE_SMSGATE_AUTH.split(':')[0], `${label} the fake pair's username (the password is never logged)`);
-    ok(!p.body.includes(FAKE_SMSGATE_AUTH.split(':')[1]), `${label} and the password is nowhere in the body`);
+    ok(!String(p.body || '').includes(FAKE_SMSGATE_AUTH.split(':')[1]), `${label} and the password is nowhere in the body`);
     eq(b && b.id, `${a.id}-hold`, `${label} id <U-id>-hold`);
     ok(b && Array.isArray(b.phoneNumbers) && b.phoneNumbers.length === 1 && /^\+1[2-9]\d{2}[2-9]\d{6}$/.test(b.phoneNumbers[0]),
       `${label} phoneNumbers is one E.164 US number`, JSON.stringify(b && b.phoneNumbers));
     eq(b && b.withDeliveryReport, true, `${label} withDeliveryReport true`);
     eq(b && b.ttl, 3600, `${label} ttl = min(3600, seconds to 9 PM) = 3600 at 11:00 AM`);
-    const words = b && b.textMessage && b.textMessage.text;
+    const words = (b && b.textMessage && b.textMessage.text) || '';
     ok(typeof words === 'string' && !/[{}]/.test(words), `${label} no brace is left anywhere in the words`, String(words));
     ok(!/[‘’“”–—áíóúÁÍÓÚ]/.test(words),
       `${label} GSM-7: no curly quote, no long dash, no a/i/o/u-acute`);
     eq(words, expected, `${label} the words, byte for byte`);
     const rec = await record(a.id);
-    eq(rec.alerts.holding.state, 'accepted', `${label} the record's holding block says accepted`);
-    eq(rec.alerts.holding.gateway_id, `${a.id}-hold`, `${label} with the gateway's own id`);
-    eq(rec.alerts.holding.lang, lang, `${label} in the request's language`);
+    const h = rec.alerts.holding || {};
+    eq(h.state, 'accepted', `${label} the record's holding block says accepted`);
+    eq(h.gateway_id, `${a.id}-hold`, `${label} with the gateway's own id`);
+    eq(h.lang, lang, `${label} in the request's language`);
     ok(Boolean(rec.alerts.second_clock_started_at), `${label} and the second clock has started`, String(rec.alerts.second_clock_started_at));
     const push = mine(a.id).filter((c) => /HOLDING TEXT QUEUED/.test(titleOf(c)));
     eq(push.length, 1, `${label} one "HOLDING TEXT QUEUED" push`);
-    eq(titleOf(push[0]), `HOLDING TEXT QUEUED · ${a.id}`, `${label} naming the job id and nothing else`);
+    eq(titleOf(one(push)), `HOLDING TEXT QUEUED · ${a.id}`, `${label} naming the job id and nothing else`);
     eq(JSON.stringify([...new Set(mine(a.id).map(leaks).flat())]), '[]', `${label} no push carries the number, the key or the text's words`);
     return {
       id: a.id, sent_at: at(rec.alerts.holding.at),
-      post: { id: b.id, phoneNumbers: b.phoneNumbers, withDeliveryReport: b.withDeliveryReport, ttl: b.ttl },
+      post: b ? { id: b.id, phoneNumbers: b.phoneNumbers, withDeliveryReport: b.withDeliveryReport, ttl: b.ttl } : null,
       auth: { scheme: p.authScheme, username: p.authUser, password_in_log: false },
-      words, chars: words.length, parts: rec.alerts.holding.parts,
-      holding: rec.alerts.holding, second_clock_started_at: rec.alerts.second_clock_started_at,
-      push: titleOf(push[0]),
+      words, chars: words.length, parts: rec.alerts.holding && rec.alerts.holding.parts,
+      holding: h, second_clock_started_at: rec.alerts.second_clock_started_at,
+      push: titleOf(one(push)),
     };
   }
 
@@ -327,8 +332,8 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     await runAt(CT(...DAY_C, 13, 0));
     const call = mine(a).filter((c) => /CALL THEM NOW/.test(titleOf(c)));
     eq(call.length, 1, '(7) ONE "CALL THEM NOW" push at 1:00 PM');
-    eq(titleOf(call[0]), `CALL THEM NOW · ${a} — two hours twice, no quote`, '(7) in his words');
-    eq(Number(call[0].p.get('priority')), 2, '(7) at priority 2');
+    eq(titleOf(one(call)), `CALL THEM NOW · ${a} — two hours twice, no quote`, '(7) in his words');
+    eq(Number(one(call).p.get('priority')), 2, '(7) at priority 2');
     const before = mine(a).length, gbefore = gate.requests.length;
     await runAt(CT(...DAY_C, 13, 5));
     await runAt(CT(...DAY_C, 13, 30));
@@ -339,7 +344,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     eq(rec.alerts.table.end_reason, 'call:two hours twice, no quote', '(7) the ladder is ended for good');
     R['7'] = {
       id: a, second_clock_pushes: slots, delivery_gets: gateGets(m.gate).length, holding_delivery: rec.alerts.holding.delivery,
-      call_them_now: titleOf(call[0]), call_push_at: rec.alerts.call_push_at, end_reason: rec.alerts.table.end_reason,
+      call_them_now: titleOf(one(call)), call_push_at: rec.alerts.call_push_at, end_reason: rec.alerts.table.end_reason,
       after_1pm_pushes: 0, after_1pm_gateway_calls: 0,
     };
   } }
@@ -365,15 +370,15 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     eq(gatePosts(m.gate).length, 0, '(6) no POST to the gateway at minute 120');
     const call = mine(a.id).filter((c) => /CALL THEM NOW/.test(titleOf(c)));
     eq(call.length, 1, '(6) ONE "CALL THEM NOW" push');
-    eq(titleOf(call[0]), `CALL THEM NOW · ${a.id} — no texts tick`, '(6) naming the reason');
-    eq(Number(call[0].p.get('priority')), 2, '(6) at priority 2');
+    eq(titleOf(one(call)), `CALL THEM NOW · ${a.id} — no texts tick`, '(6) naming the reason');
+    eq(Number(one(call).p.get('priority')), 2, '(6) at priority 2');
     const before = mine(a.id).length;
     await walk(CT(...DAY_C, 11, 5), CT(...DAY_C, 13, 30), 15);
     eq(mine(a.id).length, before, '(6) and nothing at all after it');
     const rec = await record(a.id);
     eq(rec.alerts.holding.state, 'skipped', '(6) the record marks the holding text skipped');
     eq(rec.alerts.second_clock_started_at, null, '(6) and no second clock started');
-    R['6'] = { id: a.id, consent_smsService: false, gateway_calls: 0, push: titleOf(call[0]), holding: rec.alerts.holding, pushes_after: 0 };
+    R['6'] = { id: a.id, consent_smsService: false, gateway_calls: 0, push: titleOf(one(call)), holding: rec.alerts.holding, pushes_after: 0 };
   } }
 
   /* ============================================================ (6b) a number that is not a US one */
@@ -388,15 +393,15 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     eq(gatePosts(m.gate).length, 0, '(6b) no POST to the gateway');
     const push = mine(a.id).filter((c) => /no US number/.test(titleOf(c)));
     eq(push.length, 1, '(6b) ONE push instead');
-    eq(titleOf(push[0]), `no US number on ${a.id} — call them`, '(6b) in the brief’s own words');
-    eq(Number(push[0].p.get('priority')), 2, '(6b) at priority 2');
+    eq(titleOf(one(push)), `no US number on ${a.id} — call them`, '(6b) in the brief’s own words');
+    eq(Number(one(push).p.get('priority')), 2, '(6b) at priority 2');
     const before = mine(a.id).length;
     await walk(CT(...DAY_C, 11, 5), CT(...DAY_C, 12, 30), 15);
     eq(mine(a.id).length, before, '(6b) and the ladder ends there');
     const rec = await record(a.id);
     eq(rec.alerts.table.end_reason, 'no_us_number', '(6b) the record says why');
     eq(rec.alerts.holding.state, 'skipped', '(6b) and the holding text is marked skipped');
-    R['6b'] = { id: a.id, phone_area: '787', gateway_calls: 0, push: titleOf(push[0]), end_reason: rec.alerts.table.end_reason, pushes_after: 0 };
+    R['6b'] = { id: a.id, phone_area: '787', gateway_calls: 0, push: titleOf(one(push)), end_reason: rec.alerts.table.end_reason, pushes_after: 0 };
   } }
 
   /* ============================================================ (8) once only */
@@ -443,7 +448,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
       eq(rec.alerts.holding.state, c.want, `(9) ${c.mode} → holding.state ${c.want}`);
       const push = mine(a.id).filter((p) => /HOLDING TEXT DID NOT GO/.test(titleOf(p)));
       eq(push.length, 1, `(9) ${c.mode} → one "HOLDING TEXT DID NOT GO … call them" push`);
-      eq(Number(push[0].p.get('priority')), 2, `(9) ${c.mode} → at priority 2`);
+      eq(Number(one(push).p.get('priority')), 2, `(9) ${c.mode} → at priority 2`);
       eq(rec.alerts.second_clock_started_at, null, `(9) ${c.mode} → no second clock`);
       await walk(CT(...DAY_C, 11, 5), CT(...DAY_C, 11, 50));     /* ten more runs */
       gate.state.mode = 'ok';
@@ -454,7 +459,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
       eq(mine(a.id).filter((p) => p.runNow && Date.parse(p.runNow) > Date.parse(CT(...DAY_C, 11, 0))).length, 0, `(9) ${c.mode} → and nothing after`);
       R['9'][c.mode] = {
         id: a.id, holding_state: rec.alerts.holding.state, http: rec.alerts.holding.status,
-        push: titleOf(push[0]), posts_across_eleven_runs: posts.length,
+        push: titleOf(one(push)), posts_across_eleven_runs: posts.length,
         gateway_log: posts.map((p) => ({ n: p.n, at: p.at, method: p.method, path: p.path, id: (bodyOf(p) || {}).id, mode: p.mode, answered: p.answered })),
         end_reason: after.alerts.table.end_reason,
       };
@@ -484,7 +489,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     eq(rec.alerts.second_clock_started_at, null, '(9b) and no second clock');
     const after = await record(a.id);
     eq(after.alerts.table.end_reason, 'holding_unknown', '(9b) the ladder ends there');
-    R['9b'] = { id: a.id, took_ms: took, holding_state: rec.alerts.holding.state, push: titleOf(push[0]), posts_across_eleven_runs: 1, end_reason: after.alerts.table.end_reason };
+    R['9b'] = { id: a.id, took_ms: took, holding_state: rec.alerts.holding.state, push: titleOf(one(push)), posts_across_eleven_runs: 1, end_reason: after.alerts.table.end_reason };
   } }
 
   /* ============================================================ (5) quiet hours */
@@ -544,11 +549,11 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     const at2059 = await runAt(CT(...D3, 20, 59));
     const last = mine(d.id).filter((c) => c.runNow === CT(...D3, 20, 59));
     eq(last.length, 1, '(5c) the minute-115 slot falls at 8:59 PM and fires');
-    eq(last[0].p.get('priority'), '1', '(5c) as priority 1, not 2 — 60 seconds of the day are left');
-    eq(last[0].p.get('expire'), null, '(5c) so Pushover is given no expire and no retry at all');
+    eq(one(last).p.get('priority'), '1', '(5c) as priority 1, not 2 — 60 seconds of the day are left');
+    eq(one(last).p.get('expire'), null, '(5c) so Pushover is given no expire and no retry at all');
     R['5c'] = {
       id: d.id, landed: at(CT(...D3, 19, 4)), run: '8:59 PM', seconds_to_2100: toClose(CT(...D3, 20, 59)),
-      title: titleOf(last[0]), priority: Number(last[0].p.get('priority')), expire: last[0].p.get('expire'),
+      title: titleOf(one(last)), priority: Number(one(last).p.get('priority')), expire: one(last).p.get('expire'),
       downgraded: (at2059.sent.find((s) => s.id === d.id) || {}).downgraded === true,
     };
     await noText(d.id);
