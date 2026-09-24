@@ -361,7 +361,7 @@ function openPage(env, v, code, nowIso, pickError) {
   form.push('</form>');
   parts.push(form.join('\n'));
 
-  parts.push(`<form method="post" action="/q/${esc(code)}/none"><input type="hidden" name="v" value="${esc(v.version)}"><button type="submit" class="qalt">${esc(w.none)}</button></form>`);
+  parts.push(`<form method="post" action="/q/${esc(code)}/none"><input type="hidden" name="v" value="${esc(v.version)}"><button type="submit" class="qalt">${esc(plural ? w.none : w.none_one)}</button></form>`);
   parts.push(`<p class="qsmall">${esc(w.small)}</p>`);
 
   const state = taken ? 'taken' : holdEnded ? 'hold_ended' : 'open';

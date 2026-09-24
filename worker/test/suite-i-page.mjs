@@ -230,7 +230,8 @@ export async function suitePage(ctx) {
     ok(t.includes("We're holding this time for you until Fri, Sep 25 at 10:00 AM."), 'the hold line reads the quote\'s hold_until in words');
     ok(t.includes('Mon, Oct 12 Arrival between 8 and 10 AM'), 'the one window, in words');
     ok(t.includes('$225') && t.includes('5 hours at $45') && t.includes('Primer, paint and cleanup included.'), 'the one price, its note and the included line');
-    ok(t.includes('Accept & confirm') && t.includes('None of these times work'), 'both buttons');
+    ok(t.includes('Accept & confirm') && t.includes("This time doesn't work"), 'both buttons (one time: "This time doesn\'t work")');
+    eq(t.includes('None of these times work'), false, 'QUOTE-WORDS-01: one time, so not "None of these times work"');
     ok(t.includes('Accepting books this visit at the price above. Questions? Reply to our text.'), 'the small print');
     eq(/<script/i.test(g1.text), false, 'no <script> anywhere on the page');
     R['2'] = {
@@ -446,6 +447,7 @@ export async function suitePage(ctx) {
     eq(group.checked, 0, 'no default: none is checked');
     ok(!/\bchecked\b/.test(h0.replace(/<style[\s\S]*?<\/style>/, '')), 'the markup carries no "checked" at all');
     ok(textOf(h0).includes("We're holding these times for you until Fri, Sep 25 at 10:00 AM."), '"these times" with two');
+    ok(textOf(h0).includes('None of these times work') && !textOf(h0).includes("This time doesn't work"), 'QUOTE-WORDS-01: two times keep "None of these times work", not "This time doesn\'t work"');
     await shot(p, '2-two-times.png');
     /* the browser's own required check: tapping Accept with nothing picked sends nothing */
     const n0 = proxied(P5.code, 'POST').length;
@@ -650,7 +652,7 @@ export async function suitePage(ctx) {
     const m2 = await measure(nc);
     const order = await nc.evaluate(() => document.body.textContent.replace(/\s+/g, ' '));
     /* QUOTE-PAGE-03: the strip, then the H1 "Your quote", the ticket (price, then the time), the hold, the work */
-    const seq = ['Umbra Domus', 'Received', 'Quoted', 'Your quote', 'Hi Rosalind,', 'Price', '$225', 'When', 'Mon, Oct 12', "We're holding this time", "What we'll do", 'Before you accept', 'Accept & confirm', 'None of these times work', 'Accepting books this visit'];
+    const seq = ['Umbra Domus', 'Received', 'Quoted', 'Your quote', 'Hi Rosalind,', 'Price', '$225', 'When', 'Mon, Oct 12', "We're holding this time", "What we'll do", 'Before you accept', 'Accept & confirm', "This time doesn't work", 'Accepting books this visit'];
     const pos = seq.map((s) => order.indexOf(s));
     ok(nc._blocked.length >= 1, 'the stylesheet request was blocked', JSON.stringify(nc._blocked));
     ok(pos.every((x, i) => x >= 0 && (i === 0 || x > pos[i - 1])), 'with no stylesheet the page still reads in order', JSON.stringify(seq.map((s, i) => [s, pos[i]])));
@@ -709,7 +711,7 @@ export async function suitePage(ctx) {
     expectIn('OPEN · no time picked', (await req('GET', qurl(P15.code, '?pick=1'), { headers: { 'x-umbra-test-now': CT(...WED, 15, 3) } })).text, ['pick_error']);
     /* P16: the one-window and the words-only states, in Spanish */
     const P16 = await quoted('Joaquín Ferrán', 'Grietas finas en la esquina del pasillo', [win('2026-10-30', '14:00', '16:00')], { extra: ES });
-    expectIn('OPEN · one time', (await getQ(P16.code, CT(...WED, 15, 4))).text, ['hold_one', 'h_when', 'when_line'], { window: 'las 2 y las 4 p.m.' });
+    expectIn('OPEN · one time', (await getQ(P16.code, CT(...WED, 15, 4))).text, ['hold_one', 'h_when', 'when_line', 'none_one'], { window: 'las 2 y las 4 p.m.' });
     expectIn('HOLD ENDED · one time', (await getQ(P16.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_one']);
     expectIn('HOLD ENDED · two times', (await getQ(P15.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_two']);
     await postQ(P15.code, { v: 1, w: 2 }, CT(...WED, 15, 5));
@@ -915,7 +917,8 @@ new_sqlite_classes = ["QuoteBook"]
     read.one_window = t1;
     ok(t1.includes('Martes 10 de noviembre Llegada entre las 8 y las 10 a.m.'), '(5) one window: "Martes 10 de noviembre Llegada entre las 8 y las 10 a.m."', t1.slice(0, 400));
     ok(t1.includes('Le apartamos este horario hasta el viernes 25 de septiembre a las 10:00 a.m.'), '(5) the hold: "Le apartamos este horario hasta el viernes 25 de septiembre a las 10:00 a.m."');
-    ok(t1.includes('Ninguno de estos horarios me acomoda'), '(5) R75 none: "Ninguno de estos horarios me acomoda"');
+    ok(t1.includes('Este horario no me acomoda'), '(5) R75 none, one window (QUOTE-WORDS-01): "Este horario no me acomoda"');
+    eq(t1.includes('Ninguno de estos horarios me acomoda'), false, 'QUOTE-WORDS-01: one window, so not "Ninguno de estos horarios me acomoda"');
     ok(t1.includes('Al aceptar, queda programada esta visita al precio de arriba. ¿Preguntas? Responda a nuestro mensaje de texto.'), '(5) R76 small: "Al aceptar, queda programada esta visita al precio de arriba. …"');
     ok(t1.includes('—una ventana al final del día o una lámpara montada directamente sobre la superficie—') && t1.includes('un parche con esa luz, se lo decimos'), '(5) R84 the lighting paragraph: attached rayas, "esa luz"');
     noDots('one window', t1); noOld('one window', t1);
@@ -924,6 +927,7 @@ new_sqlite_classes = ["QuoteBook"]
     read.two_windows = t2;
     ok(t2.includes('Miércoles 11 de noviembre Llegada entre las 8 y las 10 a.m.'), '(5) two windows, the first: "Miércoles 11 de noviembre Llegada entre las 8 y las 10 a.m."');
     ok(t2.includes('Viernes 13 de noviembre Llegada entre las 11 a.m. y la 1 p.m.'), '(5) two windows, across noon: "Viernes 13 de noviembre Llegada entre las 11 a.m. y la 1 p.m."');
+    ok(t2.includes('Ninguno de estos horarios me acomoda') && !t2.includes('Este horario no me acomoda'), 'QUOTE-WORDS-01: two windows keep "Ninguno de estos horarios me acomoda", not "Este horario no me acomoda"');
     ok(t2.includes('Le apartamos estos horarios hasta el viernes 25 de septiembre a la 1:00 p.m.'), '(5) a hold at 1 PM: "… hasta el viernes 25 de septiembre a la 1:00 p.m."');
     noDots('two windows', t2); noOld('two windows', t2);
 
@@ -1007,17 +1011,18 @@ new_sqlite_classes = ["QuoteBook"]
 
     /* Pinned from this same reading run on the base's own src (645c32d), before any edit of SPANISH-FIX-01; re-pinned by
        QUOTE-PAGE-03 (the new look changes every English page by design) from its own first run on its tip's src; re-pinned
-       again by BRAND-01 (the header's mark and its size change every whole English page; the two sections are unchanged). */
+       again by BRAND-01 (the header's mark and its size change every whole English page; the two sections are unchanged);
+       QUOTE-WORDS-01 re-pins the four pages that offer one time (their second button now reads "This time doesn't work"). */
     const EN_BASE = {
-      "OPEN · both notices (NOTICE_53255 \"true\")": '3d6f734303d6538c831f6bf4541ee87f9e8d15c4c14f4745852f5f4e8693664b',
-      "OPEN · one time": 'c32e00ed75168c7bca61301aa1c77ebeb3003be6cb93588ae412925152508f37',
+      "OPEN · both notices (NOTICE_53255 \"true\")": '4887b241b6d0fa48bdeaa63015a7964076c90cac25cddeb940242e0744f639b4',
+      "OPEN · one time": '53b8e7bc51ad8ef33ee7206790a388b731a5d55df1d9ac75d6f509d43604ca85',
       "OPEN · two times, one across noon": '656b89356680a54f3be618440fb5f61cc449a7bf72c095ca465278eeec9d08ea',
       "OPEN · from 12 and from 1, hold at 1 PM": '8d44fc2edd8ab323aee502c1fa9df64355080a8bdbf66e6eafdf5579e93571e2',
       "OPEN · no time picked (?pick=1)": '8db87d7b22f6613da9d7acd3bcb543e732ae807b1bda9c4f95baea127db9f8c7',
-      "HOLD ENDED · one time": 'a3e9d5f8498af61c545c92967e2db7359a5b8d260176f5dc271ed25cfc12e630',
+      "HOLD ENDED · one time": '35890fdd8c0d239141f48496771b3d6b6f297d46cf237f1f897222c6a8e92bf4',
       "HOLD ENDED · two times": '4b92f5fd3c365b50fd3cd15b1f988402c027d206f793b4f5be08826fc0b36d54',
       "TOO CLOSE": '0dd77b10df23451334b13d035a4e4158d4877f367f73afee8bde70e89ee2b939',
-      "TAKEN · one time free": '471f84746f18fd63aa10dcfdfb113696a4f492a1d116264b513e886d651091f6',
+      "TAKEN · one time free": 'acca87f8f26c756f8add3a881501b535c881256c7eb2da69bbe257af2fb80681',
       "TAKEN · no time free": '426947812ebe6d02bbb7278e75dc7973cbc495f4f06f8b9270722c0a5cb461ba',
       "BOOKED · one time": 'b89d10fddc9b8cefc4c2229b2f95b6f6fa7d6bf46cb6d50ba346f1c4fe8ffe78',
       "BOOKED · the second of two, across noon": 'c43b01c762dee314b75259c3d56d56c8815771cbed860c07982a14fb118e171d',
