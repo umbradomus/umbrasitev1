@@ -17,9 +17,18 @@ TELEGRAM_CHAT_ID=change-me
 # The secret path Pushover calls back on when he taps Acknowledge. Long and random, like ADMIN_KEY.
 HOOK_SECRET=change-me-to-something-long-and-random
 
+# --- THE HOLDING TEXT (REMINDERS-01) -----------------------------------------
+# The WHOLE pair SMSGate's app on the work phone generated — "username:password", one value, never
+# split, never logged. Absent (or not that shape) and no text is ever sent: at two hours the Worker
+# pushes "no texting key on the website — call them" instead, and the ladder ends there.
+SMSGATE_AUTH=change-me:change-me
+
 # --- local testing only, never set in production ----------------------------
 # Opens POST /__run-alerts (the cron body at a named moment) and the x-umbra-test-now header.
 ALLOW_TEST_HOOKS=false
-# Point the two senders at a local fake instead of the real services.
+# Point the senders at a local fake instead of the real services.
 # PUSHOVER_API_BASE=http://127.0.0.1:4773/pushover
 # TELEGRAM_API_BASE=http://127.0.0.1:4773/telegram
+# SMSGATE_API_BASE is honoured ONLY with ALLOW_TEST_HOOKS=true AND a 127.0.0.1 address; anything else
+# is ignored and the real gateway is used, so a production build can never be aimed at a fake.
+# SMSGATE_API_BASE=http://127.0.0.1:4770

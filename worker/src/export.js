@@ -31,7 +31,26 @@ function alertsCell(rec) {
   if (a.first_at) bits.push('first ' + a.first_at);
   if (a.channels && a.channels.length) bits.push('via ' + a.channels.join(' + '));
   bits.push(a.ack_at ? `acknowledged ${a.ack_at} (${a.ack_by || '?'})` : 'not acknowledged');
+  /* REMINDERS-01: which of his two clocks the request is on, and where the ladder stopped. */
+  if (a.table) {
+    bits.push(`his table, clock ${a.table.clock}${a.table.fired && a.table.fired.length ? ' · slots ' + a.table.fired.join(',') : ''}`);
+    if (a.table.ended_at) bits.push(`ladder ended ${a.table.ended_at} (${a.table.end_reason || '?'})`);
+  }
   return bits.join(' · ');
+}
+
+/* REMINDERS-01 §7 · what else the holding text left behind. Never the number, never its words. */
+function holdingCell(rec) {
+  const h = rec.alerts && rec.alerts.holding;
+  if (!h) return null;
+  const bits = [];
+  if (h.gateway_id) bits.push('id ' + h.gateway_id);
+  if (h.lang) bits.push(h.lang);
+  if (h.parts) bits.push(h.parts + (h.parts === 1 ? ' part' : ' parts'));
+  if (h.ttl) bits.push('ttl ' + h.ttl + ' s');
+  if (h.why) bits.push(h.why);
+  if (h.delivery) bits.push('phone said ' + h.delivery);
+  return bits.length ? bits.join(' · ') : null;
 }
 
 function title(rec) {
@@ -94,6 +113,7 @@ function answersSection(f) {
 
 export function renderJobMarkdown(rec, opts = {}) {
   const f = rec.fields || {};
+  const a = rec.alerts || {};
   const photos = Array.isArray(rec.photos) ? rec.photos : [];
   const mtq = rec.minutes_to_quote != null
     ? rec.minutes_to_quote
@@ -193,7 +213,14 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`quoted_at\` | ${mdCell(rec.quoted_at)} ← the tap |`);
   L.push(`| \`minutes_to_quote\` | ${mdCell(mtq)} ← clock minutes |`);
   L.push(`| \`quote due\` | ${mdCell(dueCell(rec))} ← 2 business hours, 7 AM–9 PM (R32) |`);
-  L.push(`| \`alerts\` | ${mdCell(alertsCell(rec))} ← the phone (ALERTS-01) |`);
+  L.push(`| \`alerts\` | ${mdCell(alertsCell(rec))} ← the phone (ALERTS-01 · his table, REMINDERS-01) |`);
+  /* REMINDERS-01 §7 · the four new columns. They print on every record; a request that never reached
+     two hours simply shows blanks, as every other unfilled slot in this file does. */
+  L.push(`| \`holding_sent_at\` | ${mdCell(a.holding ? a.holding.at : null)} ← the holding text, at two hours |`);
+  L.push(`| \`holding_state\` | ${mdCell(a.holding ? a.holding.state : null)} ← accepted · refused · unknown · skipped |`);
+  L.push(`| \`holding detail\` | ${mdCell(holdingCell(rec))} ← never the number, never the words |`);
+  L.push(`| \`second_clock_started_at\` | ${mdCell(a.second_clock_started_at || null)} ← the second two hours |`);
+  L.push(`| \`call_push_at\` | ${mdCell(a.call_push_at || null)} ← "CALL THEM NOW" |`);
   if (rec.nudged_at) L.push(`| \`nudged_at\` | ${mdCell(rec.nudged_at)} ← the retired Stage 1 push |`);
   L.push(`| **2-hour window met?** | ${mdCell(metWindow)} — *business minutes (R32). Ruled 09-17: "we know we will miss it." Recorded, not chased.* |`);
   L.push('');

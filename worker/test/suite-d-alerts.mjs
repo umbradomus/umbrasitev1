@@ -1,8 +1,17 @@
-/* SUITE D · THE PHONE (ALERTS-01, 2026-09-23). Replaces the Stage 1 "90-minute nudge" suite, whose
-   push service was removed by the same round. Thirteen readings, each against the real `wrangler dev`
-   and the fake Pushover / Telegram in lib/servers.mjs. Every moment is named with the test hooks
-   (x-umbra-test-now on a submission, ?now= on the cron body), so the ladder is walked in minutes of
-   wall time instead of hours. Readings are returned with their actual values for the round's close. */
+/* SUITE D · THE PHONE (ALERTS-01, 2026-09-23; HIS TABLE, REMINDERS-01, 2026-09-24). Replaces the Stage 1
+   "90-minute nudge" suite, whose push service was removed by the first of those rounds. Thirteen
+   readings, each against the real `wrangler dev` and the fake Pushover / Telegram in lib/servers.mjs.
+   Every moment is named with the test hooks (x-umbra-test-now on a submission, ?now= on the cron body),
+   so the ladder is walked in minutes of wall time instead of hours.
+
+   REMINDERS-01 MOVED THE LADDER UNDER THIS SUITE. Every request that lands from now on walks HIS TABLE
+   (15/30/45/60 at priority 1, then 70/80/90/95/100/105/110/115 at priority 2), and an acknowledgement no
+   longer stops it — only the quote going out does. The readings below were rewritten to read the ladder
+   that now exists; what they prove about the intake alert, the business clock, the 7 AM summary, the
+   retry rules, the de-duplication, the claim and the register is unchanged. His table's own new ground
+   — the holding text, the second clock and the night rule — is suite J.
+
+   Readings are returned with their actual values for the round's close. */
 
 import { chicagoWall } from '../src/biztime.js';
 
@@ -50,6 +59,9 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     return null;
   }
   const seen = (id, iso) => fetch(`${W}/admin/seen/${id}?k=${ADMIN_KEY}`, { method: 'POST', headers: iso ? { 'x-umbra-test-now': iso } : {} });
+  /* REMINDERS-01: on HIS TABLE an acknowledgement is not a stop. This is how a reading takes a request
+     off the board when it has finished with it, so the next reading sees only its own pushes. */
+  const done = (id, iso) => fetch(`${W}/admin/no-text/${id}?k=${ADMIN_KEY}`, { method: 'POST', headers: iso ? { 'x-umbra-test-now': iso } : {} });
   const tap = (id, type, at, extra = {}) => json(`${W}/api/job/${id}/event?k=${ADMIN_KEY}`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, at, ...extra }),
   });
@@ -69,7 +81,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
      their own. (This is also the first use of POST /admin/seen.) */
   {
     const jobs = (await json(`${W}/api/jobs?k=${ADMIN_KEY}`)).body.jobs;
-    for (const j of jobs) if (j.status === 'received') await seen(j.id);
+    for (const j of jobs) if (j.status === 'received') { await seen(j.id); await done(j.id); }
   }
 
   const DAY_A = [2026, 9, 24];   /* Thursday */
@@ -109,32 +121,49 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
   }
 
   /* ============================================================ (4) */
-  suite('D · (4) +16 min: one priority-2 push; +17 min: nothing');
+  suite('D · (4) +16: the minute-15 push at priority 1; +17: nothing; +71: priority 2, with its receipt');
   {
     const b = PO().length, bt = TG().length;
     const out16 = await runAt(plus(T0, 16));
     const po16 = PO().slice(b);
     eq(about(po16, alice.id).length, 1, 'the run at +16 sends exactly one push for it');
     const p = po16[0] && po16[0].p;
-    eq(p && p.get('priority'), '2', 'priority 2 (the repeating kind)');
-    eq(p && p.get('retry'), '120', 'retry 120');
-    eq(p && p.get('expire'), '1800', 'expire 1800');
-    eq(p && p.get('tags'), 'req_' + alice.id, 'tag req_<id>');
-    eq(p && p.get('callback'), `${W}/hooks/pushover/${FAKE.HOOK_SECRET}`, 'callback = PUBLIC_BASE_URL + /hooks/pushover/<HOOK_SECRET>');
+    /* REMINDERS-01: minute 15 is the first rung of HIS TABLE and is priority 1 — the repeating kind
+       starts at minute 70. Before this round minute 15 was the priority-2 rung. */
+    eq(p && p.get('priority'), '1', 'priority 1 (his table: priority 1 through minute 60)');
+    eq(p && p.get('retry'), null, 'no retry — a priority-1 push does not repeat');
+    eq(p && p.get('expire'), null, 'and no expire');
+    eq(p && p.get('title'), `STILL OPEN · ${alice.id} · 105 min left`, 'and it says the minutes left');
     ok(po16[0] && leaks(po16[0]).length === 0, 'the message itself carries no link and no secret', po16[0] && leaks(po16[0]).join(','));
     const b17 = PO().length, bt17 = TG().length;
     const out17 = await runAt(plus(T0, 17));
     eq(PO().length - b17, 0, 'the run at +17 sends nothing to Pushover');
     eq(TG().length - bt17, 0, 'and nothing to Telegram');
+    /* the first priority-2 rung: minute 70. 30, 45 and 60 are past too, so this run fires the latest
+       one and marks the earlier three skipped — never two pushes in one run. */
+    const b71 = PO().length;
+    const out71 = await runAt(plus(T0, 71));
+    const po71 = about(PO().slice(b71), alice.id);
+    eq(po71.length, 1, 'the run at +71 sends exactly one push, not four');
+    const q = po71[0] && po71[0].p;
+    eq(q && q.get('priority'), '2', 'priority 2 (the repeating kind), from minute 70');
+    eq(q && q.get('retry'), '120', 'retry 120');
+    ok(q && Number(q.get('expire')) > 0 && Number(q.get('expire')) <= 1800, 'expire at most 1800', q && q.get('expire'));
+    eq(q && q.get('tags'), 'req_' + alice.id, 'tag req_<id>');
+    eq(q && q.get('callback'), `${W}/hooks/pushover/${FAKE.HOOK_SECRET}`, 'callback = PUBLIC_BASE_URL + /hooks/pushover/<HOOK_SECRET>');
+    eq(q && q.get('title'), `STILL OPEN · ${alice.id} · 50 min left`, 'and it says fifty minutes left');
+    const rSkip = await row(alice.id);
+    eq(JSON.stringify(rSkip.alerts.table.fired), JSON.stringify([15, 30, 45, 60, 70]), 'the skipped rungs are marked fired, so they never fire late');
     R['4'] = {
-      run16: { pushover: PO().slice(b, b17).length, telegram: TG().slice(bt, bt17).length, priority: p && p.get('priority'), retry: p && p.get('retry'), expire: p && p.get('expire'), tags: p && p.get('tags'), callback_path: p && p.get('callback') && p.get('callback').replace(FAKE.HOOK_SECRET, '<HOOK_SECRET>'), title: p && p.get('title'), receipt_issued: Boolean(po16[0] && po16[0].receipt), sent: out16.sent.map((s) => s.step + ':' + s.id) },
-      run17: { pushover: PO().length - b17, telegram: TG().length - bt17, sent: out17.sent.length },
+      run16: { pushover: PO().slice(b, b17).length, telegram: TG().slice(bt, bt17).length, priority: p && p.get('priority'), retry: p && p.get('retry'), expire: p && p.get('expire'), title: p && p.get('title'), sent: out16.sent.map((x) => x.step + ':' + x.id) },
+      run17: { pushover: PO().length - b17 - po71.length, telegram: TG().length - bt17 - 1, sent: out17.sent.length },
+      run71: { pushover: po71.length, priority: q && q.get('priority'), retry: q && q.get('retry'), expire: q && q.get('expire'), tags: q && q.get('tags'), callback_path: q && q.get('callback') && q.get('callback').replace(FAKE.HOOK_SECRET, '<HOOK_SECRET>'), title: q && q.get('title'), receipt_issued: Boolean(po71[0] && po71[0].receipt), sent: out71.sent.map((x) => x.step + ':' + x.id), fired_after: rSkip.alerts.table.fired },
     };
-    R['4']._receipt = po16[0] && po16[0].receipt;
+    R['4']._receipt = po71[0] && po71[0].receipt;
   }
 
   /* ============================================================ (5) */
-  suite("D · (5) Pushover's Acknowledge callback");
+  suite("D · (5) Pushover's Acknowledge callback — it cancels that push, not the clock");
   {
     const receipt = R['4']._receipt;
     delete R['4']._receipt;
@@ -148,8 +177,8 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     eq(still(await row(alice.id)), before, 'and nothing was written');
     eq(CANCELS().length, c0, 'neither called cancel_by_tag');
     const good = await fetch(`${W}/hooks/pushover/${FAKE.HOOK_SECRET}`, {
-      method: 'POST', headers: { 'x-umbra-test-now': plus(T0, 19) },
-      body: new URLSearchParams({ receipt, acknowledged: '1', acknowledged_at: String(Math.floor(Date.parse(plus(T0, 19)) / 1000)), acknowledged_by: FAKE.PUSHOVER_USER }),
+      method: 'POST', headers: { 'x-umbra-test-now': plus(T0, 74) },
+      body: new URLSearchParams({ receipt, acknowledged: '1', acknowledged_at: String(Math.floor(Date.parse(plus(T0, 74)) / 1000)), acknowledged_by: FAKE.PUSHOVER_USER }),
     });
     eq(good.status, 200, 'the stored receipt is accepted');
     const r = await row(alice.id);
@@ -160,15 +189,26 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     ok(cancels[0] && cancels[0].url.includes('req_' + alice.id), 'for req_<id>', cancels[0] && cancels[0].url);
     const again = await fetch(`${W}/hooks/pushover/${FAKE.HOOK_SECRET}`, { method: 'POST', body: new URLSearchParams({ receipt, acknowledged: '1' }) });
     eq(CANCELS().length - c0, 1, 'a second callback with the same receipt cancels nothing more');
-    const b = PO().length, bt = TG().length;
-    for (const m of [46, 76, 121, 200]) await runAt(plus(T0, m));
-    eq(about(PO().slice(b), alice.id).length, 0, 'later runs (+46, +76, +121, +200) push nothing for it');
-    eq(about(TG().slice(bt), alice.id).length, 0, 'and send no Telegram');
+    /* REMINDERS-01 §2: the acknowledgement stopped THAT push repeating. It did not stop the clock. */
+    eq(r.alerts.table.ended_at, null, 'the ladder is not ended by the acknowledgement');
+    const b = PO().length;
+    await runAt(plus(T0, 81));
+    const next = about(PO().slice(b), alice.id);
+    eq(next.length, 1, 'the minute-80 rung still fires after the ack');
+    eq(next[0] && next[0].p.get('title'), `STILL OPEN · ${alice.id} · 40 min left`, 'saying forty minutes left');
+    /* and now Alice comes off the board, so the readings after this one see only their own pushes */
+    await done(alice.id, plus(T0, 82));
+    const b2 = PO().length, bt2 = TG().length;
+    for (const m of [86, 121, 200]) await runAt(plus(T0, m));
+    eq(about(PO().slice(b2), alice.id).length, 0, 'after the no-text tap, later runs push nothing for it');
+    eq(about(TG().slice(bt2), alice.id).length, 0, 'and send no Telegram');
     R['5'] = {
       wrong_secret: wrong.status, unknown_receipt: unknown.status, nothing_written_on_404: true,
       good: good.status, ack_at: r.alerts.ack_at, ack_by: r.alerts.ack_by,
       cancel_by_tag_calls: cancels.length, cancel_url: cancels[0] && cancels[0].url, repeat_callback_status: again.status,
-      later_runs_pushover: about(PO().slice(b), alice.id).length, later_runs_telegram: about(TG().slice(bt), alice.id).length,
+      ladder_ended_by_ack: r.alerts.table.ended_at, next_rung_after_ack: next[0] && next[0].p.get('title'),
+      later_runs_after_no_text_pushover: about(PO().slice(b2), alice.id).length,
+      later_runs_after_no_text_telegram: about(TG().slice(bt2), alice.id).length,
     };
   }
 
@@ -180,7 +220,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     await waitFor(() => about(PO(), sam.id).length >= 1);
     const b = PO().length;
     await runAt(CT(...DAY_A, 7, 56));
-    eq(about(PO().slice(b), tony.id).filter((c) => c.p.get('priority') === '2').length, 1, 'Tony got his priority-2 push at +16');
+    eq(about(PO().slice(b), tony.id).length, 1, 'Tony got his minute-15 push at 7:56');
     const c0 = CANCELS().length;
     const t = await tap(tony.id, 'quoted', CT(...DAY_A, 7, 58), { quote_amount: 180 });
     eq(t.status, 200, 'the Quoted tap is accepted');
@@ -204,24 +244,35 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     ok(rs.alerts.ack_at, 'ack_at is set', rs.alerts.ack_at);
     eq(rs.alerts.ack_by, 'seen', 'by /admin/seen');
     eq(CANCELS().length - c1, 1, 'cancel_by_tag called once');
+    /* REMINDERS-01 §2: the Quoted tap stops Tony's clock, because it is the quote going out. Sam was
+       only acknowledged, so his clock runs on — the rungs keep coming until he is taken off. */
     const b2 = PO().length;
     for (const m of [[8, 1], [8, 31], [9, 50]]) await runAt(CT(...DAY_A, ...m));
-    eq(about(PO().slice(b2), tony.id).length + about(PO().slice(b2), sam.id).length, 0, 'later runs are silent for both');
+    eq(about(PO().slice(b2), tony.id).length, 0, 'later runs are silent for Tony — his quote went out');
+    ok(about(PO().slice(b2), sam.id).length > 0, "but not for Sam: an acknowledgement is not a quote", String(about(PO().slice(b2), sam.id).length) + ' push(es)');
+    const samRungs = about(PO().slice(b2), sam.id).map((c) => c.p.get('title'));
+    await done(sam.id, CT(...DAY_A, 9, 51));
+    const b3 = PO().length;
+    for (const m of [[9, 56], [10, 30]]) await runAt(CT(...DAY_A, ...m));
+    eq(about(PO().slice(b3), sam.id).length, 0, 'the no-text tap does stop him');
     R['6'] = {
       tony: tony.id, tap_status: t.status, tap_ack_at: rt.alerts.ack_at, tap_ack_by: rt.alerts.ack_by, tap_cancel_calls: ct.length,
+      tony_later_runs: 0,
       sam: sam.id, seen_no_key: noKey.status, seen_bad_key: badKey.status, seen_with_key: yes.status, seen_ack_at: rs.alerts.ack_at, seen_ack_by: rs.alerts.ack_by, seen_cancel_calls: CANCELS().length - c1 - 0,
-      later_runs_pushover: about(PO().slice(b2), tony.id).length + about(PO().slice(b2), sam.id).length,
+      sam_rungs_after_the_ack: samRungs, sam_after_no_text: 0,
     };
   }
 
   /* ============================================================ (8) */
-  suite('D · (8) the ladder to OVERDUE, then silence');
+  suite("D · (8) his table end to end, then \"call them now\", then silence");
   let larry;
   {
+    /* Larry's request came from a page without the texts box, so his consent is null. At minute 120 the
+       rule is §5: no text and no second clock — one "call them now" push, and the ladder ends. */
     const t = CT(...DAY_A, 9, 0);
     larry = await submitAt(t, 'Late Larry');
     await waitFor(() => about(PO(), larry.id).length >= 1);
-    const plan = [16, 46, 76, 106, 121, 126, 180, 300, 715];   /* +715 = 8:55 PM */
+    const plan = [16, 31, 46, 61, 71, 81, 91, 96, 101, 106, 111, 116, 121, 126, 180, 300, 715];  /* +715 = 8:55 PM */
     const per = [];
     for (const m of plan) {
       const b = PO().length;
@@ -229,14 +280,17 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
       const got = about(PO().slice(b), larry.id);
       per.push({ at: '+' + m, pushes: got.length, priority: got.map((c) => c.p.get('priority')).join(','), title: got.map((c) => c.p.get('title')).join(' | ') });
     }
-    eq(per.map((x) => x.pushes).join(','), '1,1,1,1,1,0,0,0,0', 'one push at +16/+46/+76/+106, one at +121, then none');
-    eq(per[0].priority, '2', 'the +16 push is priority 2');
-    ok(per[4].title.startsWith('OVERDUE · ' + larry.id), 'the push one minute past due says OVERDUE', per[4].title);
-    eq(per.slice(5).reduce((n, x) => n + x.pushes, 0), 0, 'silence for the rest of the day');
+    eq(per.map((x) => x.pushes).join(','), '1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0', 'one push at each of his twelve rungs, one at +121, then none');
+    eq(per.slice(0, 12).map((x) => x.priority).join(','), '1,1,1,1,2,2,2,2,2,2,2,2', 'priority 1 through minute 60, priority 2 from minute 70');
+    eq(per.map((x) => (x.title.match(/(\d+) min left/) || [])[1]).slice(0, 12).join(','), '105,90,75,60,50,40,30,25,20,15,10,5', 'each rung says the minutes left');
+    ok(per[12].title.startsWith('CALL THEM NOW · ' + larry.id + ' — no texts tick'), 'at minute 120 with no texts tick: "call them now"', per[12].title);
+    eq(per[12].priority, '2', 'at priority 2');
+    eq(per.slice(13).reduce((n, x) => n + x.pushes, 0), 0, 'silence for the rest of the day');
     const r = await row(larry.id);
     eq(r.alerts.stage, 'done', 'the ladder is finished');
     eq(r.alerts.next_at, null, 'with no next step');
-    R['8'] = { id: larry.id, received: t, due_at: r.alerts.due_at, runs: per, stage: r.alerts.stage, count: r.alerts.count };
+    eq(r.alerts.table.end_reason, 'call:no texts tick', 'and the record says why it ended');
+    R['8'] = { id: larry.id, received: t, due_at: r.alerts.due_at, runs: per, stage: r.alerts.stage, count: r.alerts.count, end_reason: r.alerts.table.end_reason };
   }
 
   /* ============================================================ (9) */
@@ -275,7 +329,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     await runAt(plus(t, 21));
     await runAt(plus(t, 26));
     eq(about(PO().slice(b), fran.id).length, 0, 'the 400 is never retried (+21, +26: nothing)');
-    await seen(fran.id);
+    await done(fran.id);
     R['9'] = {
       id: fran.id, intake: { pushover: po0.length, pushover_answer: po0[0] && po0[0].answered, telegram: tg0.length },
       run5: { pushover_retry: retry.length, answer: retry[0] && retry[0].answered, telegram: 0 },
@@ -309,7 +363,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     const three = await submitAt(plus(t, 11), 'Double Dan');
     ok(three.id && three.id !== one.id, 'the same words 11 minutes later are a new request', three.id);
     await waitFor(() => about(PO(), three.id).length >= 1);
-    await seen(one.id); await seen(three.id);
+    await done(one.id); await done(three.id);
     R['10'] = { first: one.id, second_at_plus3: two.id, same_token: two.token === one.token, records_added: n1 - n0, pushover: about(PO(), one.id).length, telegram: about(TG(), one.id).length, third_at_plus11: three.id };
   }
 
@@ -329,7 +383,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     const how = (o, id) => (o.sent.some((s) => s.id === id) ? 'sent' : o.skipped_claims.includes(id) ? 'lost the claim' : 'found it already moved');
     const pair = [how(a1, rita.id), how(a2, rita.id)];
     eq(pair.filter((x) => x === 'sent').length, 1, 'one run sent it; the other did not', pair.join(' / '));
-    await seen(rita.id);
+    await done(rita.id);
 
     const t3 = CT(...DAY_A, 15, 30);
     const trio = [await submitAt(t3, 'Race Rhea'), await submitAt(t3, 'Race Ruth'), await submitAt(t3, 'Race Rosa')];
@@ -340,7 +394,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     const per = trio.map((x) => about(PO().slice(b3), x.id).length);
     eq(per.join(','), '1,1,1', 'three runs on three due records: one push each');
     const paths = trio.map((x) => outs.map((o) => how(o, x.id)));
-    for (const x of trio) await seen(x.id);
+    for (const x of trio) await done(x.id);
 
     /* The claim itself: both runs are held for 1 s between reading and claiming, so BOTH see the record
        due and BOTH write a claim. Only the claim that stuck may send. */
@@ -355,7 +409,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     const raePaths = both.map((o) => how(o, rae.id));
     eq(raeGot, 1, 'both runs claimed it: still exactly one push');
     ok(raePaths.includes('sent') && raePaths.includes('lost the claim'), 'one run sent, the other lost the claim', raePaths.join(' / '));
-    await seen(rae.id);
+    await done(rae.id);
     R['11'] = {
       pair: { id: rita.id, pushes: got.length, runs: pair },
       trio: trio.map((x, i) => ({ id: x.id, pushes: per[i], runs: paths[i] })),
@@ -398,7 +452,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     /* the other half of the rule: a visit on the calendar before the due time makes it urgent */
     const vic = await submitAt(CT(...DAY_B, 10, 0), 'Visit Vic');
     await tap(vic.id, 'scheduled', CT(...DAY_B, 10, 30), { scheduled_for: CT(...DAY_C, 8, 0) });
-    await seen(nate.id);
+    await done(nate.id);
     const ella = await submitAt(CT(...DAY_C, 5, 30), 'Early Ella');
     await sleep(1500);
     const e0 = about(PO(), ella.id).length;
@@ -411,7 +465,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     ok(u[0] && u[0].p.get('title').startsWith('QUOTE BEFORE YOU LEAVE'), '"quote before you leave"', u[0] && u[0].p.get('title'));
     ok(u[0] && u[0].p.get('message').includes('8:00 AM'), 'naming the visit time', u[0] && u[0].p.get('message'));
     eq(u[0] && u[0].p.get('tags'), 'req_' + ella.id, 'tagged so an ack cancels it');
-    await seen(ella.id);
+    await done(ella.id);
     R['7'].visit_variant = { id: ella.id, received: CT(...DAY_C, 5, 30), visit: CT(...DAY_C, 8, 0), pushes_before_7: e0, at_7: u.length, priority: u[0] && u[0].p.get('priority'), title: u[0] && u[0].p.get('title'), message: u[0] && u[0].p.get('message') };
   }
 

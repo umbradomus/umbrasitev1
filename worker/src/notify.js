@@ -32,8 +32,9 @@ async function bodyOf(res) {
 }
 
 /**
- * Pushover. `msg` = { title, message, priority (-2..2), tags?: string[] }.
+ * Pushover. `msg` = { title, message, priority (-2..2), tags?: string[], expire?, retry? }.
  * Priority 2 carries retry 120, expire 1800, the tags, and the callback that acknowledges it.
+ * REMINDERS-01 AMENDMENT 1 D: the clock hands in a shorter `expire` so no repeat ever rings past 9 PM.
  */
 export async function sendPushover(env, msg) {
   const channel = 'pushover';
@@ -46,8 +47,11 @@ export async function sendPushover(env, msg) {
   const priority = Number(msg.priority || 0);
   form.set('priority', String(priority));
   if (priority === 2) {
-    form.set('retry', '120');
-    form.set('expire', '1800');
+    const retry = Math.max(30, Number(msg.retry) || 120);
+    /* Pushover's own floor is 30 s retry and 30 s expire; the caller may only shorten the window. */
+    const expire = Math.max(30, Math.min(1800, Number(msg.expire) || 1800));
+    form.set('retry', String(retry));
+    form.set('expire', String(expire));
     if (msg.tags && msg.tags.length) form.set('tags', msg.tags.join(','));
     const cb = callbackUrl(env);
     if (cb) form.set('callback', cb);

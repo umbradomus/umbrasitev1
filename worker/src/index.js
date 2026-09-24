@@ -14,7 +14,11 @@
      POST /api/job/:id/event?k=        the taps               (admin key)
      GET  /api/export/:id.md?k=        the record as vault markdown (admin key)
      GET  /admin?k=                    the aging list as a page
-     POST /admin/seen/:id?k=           "I have it" — acknowledges the alerts (admin key; 401 without)
+     POST /admin/seen/:id?k=           "I have it" — marks the alert seen (admin key; 401 without).
+                                       REMINDERS-01: on HIS TABLE this cancels that push's repeats and
+                                       marks ack — it does NOT stop the clock. Only the quote does.
+     POST /admin/no-text/:id?k=        "No text — handled by phone" — stops the reminders and the holding
+                                       text for good (admin key; REMINDERS-01 AMENDMENT 1 C)
      POST /hooks/pushover/:secret      Pushover's Acknowledge callback (path secret + a receipt we issued)
      GET  /api/windows                 what the time screen may offer (Sundays, blocked dates) — public
      POST /admin/quote/:id?k=          a new version of the quote; answers the /q/<code> link ONCE (QUOTE-API.md)
@@ -39,7 +43,7 @@ import {
 } from './store.js';
 import { forwardToFormSubmit } from './forward.js';
 import {
-  initialAlerts, sendIntakeAlert, runAlerts, acknowledge, acknowledgeReceipt,
+  initialAlerts, sendIntakeAlert, runAlerts, acknowledge, acknowledgeReceipt, noTextByHand,
 } from './alerts.js';
 import { renderJobMarkdown } from './export.js';
 import { bizMinutes } from './biztime.js';
@@ -503,11 +507,18 @@ function adminRow(rec, nowIso) {
     scheduled_for: rec.scheduled_for,
     done_at: rec.done_at,
     quote_amount: rec.quote_amount,
-    /* ALERTS-01: where the phone's ladder stands for this request */
+    /* ALERTS-01: where the phone's ladder stands for this request.
+       REMINDERS-01: and which of his two clocks it is on, and whether the holding text has gone. */
     alerts: rec.alerts ? {
       first_at: rec.alerts.first_at, count: rec.alerts.count, next_at: rec.alerts.next_at,
       ack_at: rec.alerts.ack_at, ack_by: rec.alerts.ack_by || null, stage: rec.alerts.stage,
       due_at: rec.alerts.due_at || null, channels: rec.alerts.channels || [],
+      table: rec.alerts.table ? { clock: rec.alerts.table.clock, fired: rec.alerts.table.fired, ended_at: rec.alerts.table.ended_at, end_reason: rec.alerts.table.end_reason } : null,
+      holding_at: rec.alerts.holding ? rec.alerts.holding.at : null,
+      holding_state: rec.alerts.holding ? rec.alerts.holding.state : null,
+      second_clock_started_at: rec.alerts.second_clock_started_at || null,
+      call_push_at: rec.alerts.call_push_at || null,
+      no_text_at: rec.alerts.no_text_at || null,
     } : null,
     forward_failed: Boolean(rec.forward_failed),
     /* EMAIL-01: which leg was tried, which channel owned the email, and whether any email went at all */
@@ -616,6 +627,15 @@ async function handleSeen(request, env, url, id) {
   const acked = await acknowledge(env, id, 'seen', nowFor(request, env), rec);
   const back = await getRecord(env, id);
   return json({ ok: true, id, acknowledged_now: acked, ack_at: back && back.alerts ? back.alerts.ack_at : null });
+}
+
+/* REMINDERS-01 AMENDMENT 1 C · "No text — handled by phone". He has this one in hand already; the
+   reminders and the holding text stop for good, and nothing is sent to the customer. */
+async function handleNoText(request, env, url, id) {
+  if (!adminOk(env, url)) return json({ error: 'unauthorized' }, 401);
+  const r = await noTextByHand(env, id, nowFor(request, env));
+  if (!r) return notFound();
+  return json(r);
 }
 
 async function handlePushoverHook(request, env, secret) {
@@ -746,6 +766,9 @@ export default {
     if ((m = /^\/admin\/seen\/(U-\d{4,6})$/.exec(path)) && method === 'POST') {
       return handleSeen(request, env, url, m[1]);
     }
+    if ((m = /^\/admin\/no-text\/(U-\d{4,6})$/.exec(path)) && method === 'POST') {
+      return handleNoText(request, env, url, m[1]);
+    }
     if ((m = /^\/admin\/quote\/(U-\d{4,6})(?:\/(sent|accept|cancel))?$/.exec(path))) {
       return handleAdminQuote(request, env, url, m[1], m[2] || null, method);
     }
@@ -792,6 +815,20 @@ export default {
       if (method !== 'POST' || !testHookOk(env, url)) return adminDenied();
       const raw = await env.RECORDS.get(jobKey(m[1]));
       return raw === null ? notFound() : new Response(raw, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+    }
+
+    /* REMINDERS-01's one test hook, the same gate: bend a KV record by hand, so a reading can put the
+       mirror and the BOOK out of step on purpose — "quoted_at deleted from KV while the BOOK holds a
+       sent version" — and prove the holding text still refuses to go. `{ set: {...}, unset: [...] }`. */
+    if ((m = /^\/__poke\/(U-\d{4,6})$/.exec(path))) {
+      if (method !== 'POST' || !testHookOk(env, url)) return adminDenied();
+      const rec = await getRecord(env, m[1]);
+      if (!rec) return notFound();
+      const b = (await readJson(request)).body || {};
+      for (const k of (Array.isArray(b.unset) ? b.unset : [])) delete rec[String(k)];
+      Object.assign(rec, b.set && typeof b.set === 'object' ? b.set : {});
+      await putRecord(env, rec);
+      return json({ ok: true, id: m[1] });
     }
 
     return notFound();

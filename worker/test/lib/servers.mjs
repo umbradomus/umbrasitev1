@@ -158,6 +158,80 @@ export function staticServer({ port, root, proxy = null }) {
   });
 }
 
+/**
+ * REMINDERS-01 · A CONTRACT FAKE OF SMSGATE'S CLOUD SERVER, on 127.0.0.1 and nowhere else.
+ * The shape is FC-TEXT-01's `Bridge\FC-TEXT-01\fake-smsgate.mjs`, copied so both rounds prove the same
+ * contract. IT NEVER SENDS ANYTHING. It logs every request — method, path, the auth USERNAME only
+ * (never the password), and the whole body — and answers per `state.mode`:
+ *     ok      202 { id, state: "Pending" }        (SMSGate answers 202 Accepted, not 200)
+ *     401     401 { message: "unauthorized" }
+ *     500     500 { message: "boom" }
+ *     hang    no answer at all, ever — the caller's own twenty seconds must end it
+ *     404     a GET of a message answers 404
+ *     failed  a GET of a message answers state "Failed"
+ * A POST that repeats an id it has already accepted is a 409, whatever the mode — so a second POST for
+ * one request would be visible even if the Worker's own lock failed. `state.slowMs` delays every answer.
+ */
+export function smsgateServer({ port }) {
+  const requests = [];
+  const state = { mode: 'ok', slowMs: 0 };
+  const byId = new Map();
+  const held = [];                       /* sockets deliberately left hanging, cut when we close */
+
+  const server = http.createServer(async (req, res) => {
+    const body = (await readBody(req)).toString('utf8');
+    const auth = String(req.headers.authorization || '');
+    const sawBasic = /^Basic /.test(auth);
+    let user = null;
+    if (sawBasic) { try { user = Buffer.from(auth.slice(6), 'base64').toString('utf8').split(':')[0]; } catch (e) { user = '<unreadable>'; } }
+    const p = String(req.url || '').split('?')[0];
+    const row = {
+      n: requests.length + 1, at: new Date().toISOString(), method: req.method, path: p,
+      authUser: user, authScheme: sawBasic ? 'Basic' : (auth ? auth.split(' ')[0] : null), authLen: auth.length,
+      contentType: req.headers['content-type'] || null, host: req.headers.host || null,
+      bodyChars: body.length, body, mode: state.mode,
+    };
+    requests.push(row);
+
+    const send = (code, obj) => {
+      row.answered = code;
+      const b = Buffer.from(JSON.stringify(obj), 'utf8');
+      res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'content-length': b.length });
+      res.end(b);
+    };
+    const answer = () => {
+      if (state.mode === 'hang') { held.push(res); return; }
+      if (state.mode === '401') return send(401, { message: 'unauthorized' });
+      if (state.mode === '500') return send(500, { message: 'boom' });
+      if (req.method === 'POST' && p === '/3rdparty/v1/messages') {
+        let given = null; try { given = JSON.parse(body); } catch (e) { /* the fake still answers */ }
+        const id = given && typeof given.id === 'string' && given.id ? given.id : 'fake-' + row.n;
+        if (byId.has(id)) { row.repeat_of = byId.get(id); return send(409, { message: 'a message with that id already exists' }); }
+        byId.set(id, row.n);
+        return send(202, { id, state: 'Pending', recipients: [{ phoneNumber: '<the fake never echoes it>', state: 'Pending' }] });
+      }
+      if (req.method === 'GET' && /^\/3rdparty\/v1\/messages\/[^/]+$/.test(p)) {
+        const id = decodeURIComponent(p.split('/').pop());
+        if (state.mode === '404') return send(404, { message: 'not found' });
+        if (state.mode === 'failed') return send(200, { id, state: 'Failed' });
+        return send(200, { id, state: 'Delivered' });
+      }
+      return send(404, { message: 'the fake knows only POST /3rdparty/v1/messages and GET /3rdparty/v1/messages/<id>' });
+    };
+    if (state.slowMs > 0) setTimeout(answer, state.slowMs); else answer();
+  });
+
+  return new Promise((resolve) => {
+    server.listen(port, '127.0.0.1', () => resolve({
+      server, requests, state, port,
+      posts: () => requests.filter((r) => r.method === 'POST' && r.path === '/3rdparty/v1/messages'),
+      gets: () => requests.filter((r) => r.method === 'GET'),
+      cut: () => { for (const r of held) { try { r.destroy(); } catch (e) { /* already gone */ } } held.length = 0; },
+    }));
+  });
+}
+
 export function close(s) {
+  if (typeof s.cut === 'function') s.cut();
   return new Promise((r) => s.server.close(() => r()));
 }

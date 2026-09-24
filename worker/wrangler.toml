@@ -2,6 +2,10 @@
 #  Nothing secret lives in this file. ADMIN_KEY and the five alert secrets (PUSHOVER_TOKEN,
 #  PUSHOVER_USER, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, HOOK_SECRET — see ALERTS-SETUP.md) are set with
 #  `wrangler secret put` once, and read from worker/.dev.vars when running locally.
+#  REMINDERS-01 adds a sixth, SMSGATE_AUTH — the whole "user:pass" pair SMSGate's app on the work phone
+#  generated, kept in one secret and never split. Without it no holding text can go out and the Worker
+#  pushes "no texting key on the website — call them" instead. His hand, once:
+#      npx wrangler secret put SMSGATE_AUTH
 #  worker/.dev.vars is git-ignored and must never be committed.
 
 name = "umbra-intake"
@@ -61,9 +65,14 @@ binding = "PHOTOS"
 bucket_name = "umbra-job-photos"
 
 # --- THE ALERTS -------------------------------------------------------------
-# Every 5 minutes (ALERTS-01; was every 15). The ladder: +15 business minutes one
-# priority-2 push, then every 30, one OVERDUE at the due time; 9 PM-7 AM held to
-# one 7:00 AM summary. src/alerts.js.
+# Every 5 minutes (ALERTS-01; was every 15). src/alerts.js.
+# REMINDERS-01 · HIS TABLE replaces the old ladder for every request that lands from now on, counted in
+# business minutes from landing: 15/30/45/60, then 70/80/90, then 95/100/105/110/115 — one push each,
+# priority 1 through minute 60 and priority 2 from 70. At minute 120 with no quote sent, the holding
+# text goes to the customer through SMSGate (src/holding.js) and a second two-hour clock starts on the
+# same table; at its end, one "CALL THEM NOW" push and the ladder ends for good. Nothing at all leaves
+# 9 PM-7 AM, and the overnight wait still comes out as one 7:00 AM summary. Records that landed before
+# this round keep ALERTS-01's own ladder (+15 priority 2, then every 30, one OVERDUE at the due time).
 [triggers]
 crons = ["*/5 * * * *"]
 

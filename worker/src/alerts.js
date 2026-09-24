@@ -1,25 +1,48 @@
-/* THE PHONE KNOWS — ALERTS-01, 2026-09-23.
+/* THE PHONE KNOWS — ALERTS-01, 2026-09-23 · HIS TABLE — REMINDERS-01, 2026-09-24.
    His words: "whenever someone fills out the form i want to get notified ... make sure i get it even if
    im not logged into that email."
 
-   THE LADDER (FLUX-UX-v1 §5), counted in BUSINESS minutes from the moment the request landed:
-     0      one normal push + one Telegram message: "NEW REQUEST U-NNNN · quote due h:mm AM"
-     +15    one priority-2 push — Pushover repeats it every 2 minutes for 30 minutes until he taps Acknowledge
-     +45, +75, +105   a normal push each
-     due (+120)       one OVERDUE push, then nothing more for that request
-   Outside 7 AM–9 PM Central nothing is sent. At the first run after 7:00 AM one SUMMARY push names every
-   request still waiting from overnight — priority 2 ("quote before you leave") when a visit is on the
-   calendar before the last of their due times.
-   ACKNOWLEDGED (any one stops the ladder and cancels Pushover's repeats): Pushover's callback with a
-   receipt we issued · the Quoted / Scheduled / Done tap · POST /admin/seen/<id>.
+   ═══ HIS TABLE (REMINDERS-01), his words 09-23 17:1x CDT: "first hour ill get notified on the phone
+   every 15 mins. second hour will be every 10 mins. last 30 mins will be notified every 5 mins."
+   Counted in BUSINESS minutes from the moment the request landed (7 AM–9 PM Central, seven days):
 
-   THE CLAIM. KV has no lock. Before a run sends anything it writes the record's next step forward with
-   its own claim token, waits for concurrent writers to land (ALERT_CLAIM_SETTLE_MS, 1.5 s), re-reads, and
-   sends only if its token is the one that stuck. Two runs on one due record therefore send once.
+     0                          the arrival push, as before
+     15 · 30 · 45 · 60          one push each, priority 1
+     70 · 80 · 90               one push each, priority 2
+     95 · 100 · 105 · 110 · 115 one push each, priority 2
+     120, no quote sent         the HOLDING TEXT to the customer (holding.js), and a SECOND two-hour
+                                clock on the same table
+     the second clock's 120     ONE "CALL THEM NOW" push, and the ladder ends for good
+
+   Each push says the minutes left. The cron stays every five minutes: a slot is due when its minute is at
+   or past it and it has not fired; never two in one run — the latest due slot fires and the earlier ones
+   are marked skipped in the log.
+
+   WHAT STOPS IT (AMENDMENT 1 C): the quote going out — the quote API's /sent, the Quoted tap, or a SENT
+   version in the BOOK read fresh · the request leaving "received" (Scheduled, Done, withdrawn) · the
+   admin page's "No text — handled by phone". From then nothing fires for that request.
+   ACKNOWLEDGEMENT DOES NOT STOP IT: a Pushover receipt, the callback or /admin/seen cancels that one
+   push's repeats (cancel_by_tag) and marks ack — the next slot still fires.
+
+   NIGHT, EXACTLY (AMENDMENT 1 D): nothing at all leaves between 9 PM and 7 AM. Before every priority-2
+   push the request's tag is cancelled, so only one repeat chain is ever alive; expire is cut to the
+   seconds left before 9 PM, and inside the last two minutes the push goes as priority 1 with no repeats.
+
+   ═══ THE LADDER BEFORE THIS ROUND (ALERTS-01) is kept, untouched, for records that already carry it:
+   +15 priority 2, +45/+75/+105 normal, one OVERDUE at the due time. A record with no `alerts` block is
+   left alone, as ALERTS-01 left the ones before it. Only records that land from now on carry `table`.
+
+   THE 7:00 AM SUMMARY is unchanged: one push naming every request still waiting from overnight.
+
+   THE CLAIM. KV has no lock. Before a run sends anything it writes the record's claim token, waits for
+   concurrent writers to land (ALERT_CLAIM_SETTLE_MS, 1.5 s), re-reads, and acts only if its token is the
+   one that stuck. The holding text has a harder lock still: an insert-if-absent row in the BOOK Durable
+   Object, so two runs can never both POST (ALERTS-01 FOUND 4 — KV is not a lock).
 
    Every message is built in this file and is given only the job id, the service, the customer's own
    first 120 characters (with any link, phone number or email address in them removed), and clock
-   times. Never a link (R25), never the admin key, never a phone, an address or an email. */
+   times. Never a link (R25), never the admin key, never a phone, an address, an email, the texting key
+   or the holding text's own words. */
 
 import { getRecord, putRecord, listRecords, addEvent } from './store.js';
 import { sendAlert, cancelPushoverTag, CHANNELS } from './notify.js';
@@ -27,13 +50,31 @@ import {
   bizAdvance, bizMinutes, replyDue, isOpen, nextOpen, openOf, clock, chicagoDay, chicagoParts,
 } from './biztime.js';
 import { newToken } from './util.js';
+import { quoteWentOut, markOnce, markSet } from './booklock.js';
+import {
+  usNumber, holdingText, ttlFor, secondsToClose, hasKey, postHolding, getHoldingState,
+  MIN_TTL, SENDING_STALE_MS, DELIVERY_GRACE_MS, DONE_STATES, FAILED_STATES,
+} from './holding.js';
 
-export const URGENT_AFTER = 15;            /* business minutes */
+export const URGENT_AFTER = 15;            /* business minutes — the ALERTS-01 ladder, for older records */
 export const REPEAT_EVERY = 30;
 export const MAX_ATTEMPTS = 3;             /* a 5xx channel is tried at most this many times per step */
 const INTAKE_GRACE_MS = 2 * 60000;         /* the cron leaves a fresh intake alone this long */
 const RETRY_AFTER_MS = 5000;
 const LOG_KEEP = 60;
+
+/* ─── HIS TABLE ─── every 15 minutes in the first hour, every 10 in the second, every 5 in the last half
+   hour. Priority 1 through minute 60, priority 2 from minute 70. The clock is two hours long. */
+export const TABLE = [15, 30, 45, 60, 70, 80, 90, 95, 100, 105, 110, 115];
+export const CLOCK_MIN = 120;
+export const prioritySlot = (slot) => (slot <= 60 ? 1 : 2);
+/* AMENDMENT 1 D: inside this many seconds of 9 PM a priority-2 push goes as priority 1, so nothing rings
+   after the wire. Pushover's own floor for retry and expire is 30 s. */
+const NO_REPEAT_UNDER_S = 120;
+
+export const isTable = (rec) => Boolean(rec && rec.alerts && rec.alerts.table);
+const holdKey = (id) => 'hold:' + id;
+const holdGatewayId = (id) => id + '-hold';
 
 /* ------------------------------------------------------------ the words */
 
@@ -111,6 +152,73 @@ export function tagOf(id) {
   return 'req_' + id;
 }
 
+/* ------------------------------------------------------------ HIS TABLE · the words */
+
+/** Which clock a table record is on, and where that clock started. */
+export function anchorOf(rec) {
+  const a = rec.alerts;
+  return a.table.clock === 2 ? Date.parse(a.second_clock_started_at) : Date.parse(rec.received_at);
+}
+
+/** When this clock runs out — the quote's due time on clock 1, the second promise on clock 2. */
+export function endOf(rec) {
+  return rec.alerts.table.clock === 2 ? bizAdvance(anchorOf(rec), CLOCK_MIN) : dueOf(rec);
+}
+
+/** "STILL OPEN · U-0012 · 45 min left" — his own words for a slot on the table. */
+function buildSlot(rec, slot) {
+  const second = rec.alerts.table.clock === 2;
+  return {
+    title: `STILL OPEN · ${rec.id} · ${CLOCK_MIN - slot} min left`,
+    message: whatLine(rec)
+      + `\n${second ? 'Second clock — the holding text has gone. Quote by' : 'Quote due'} ${clock(endOf(rec))}.`,
+    priority: prioritySlot(slot),
+    ...(prioritySlot(slot) === 2 ? { tags: [tagOf(rec.id)] } : {}),
+  };
+}
+
+/** The last word on a request: he picks up the phone. Never anything after it. */
+function buildCallThem(rec, why) {
+  return {
+    title: `CALL THEM NOW · ${rec.id} — ${why}`,
+    message: whatLine(rec) + '\nThe ladder ends here. Nothing more will fire for this request.',
+    priority: 2,
+    tags: [tagOf(rec.id)],
+  };
+}
+
+/** The holding text's own three words. The push names the job id and never the number or the text. */
+function buildHolding(rec, kind) {
+  const W = {
+    queued: { title: `HOLDING TEXT QUEUED · ${rec.id}`, priority: 1, line: 'The two-hour holding text is with the phone. A second two-hour clock has started.' },
+    delivered: { title: `HOLDING TEXT DELIVERED · ${rec.id}`, priority: 1, line: 'The phone reported it delivered. The second clock is running.' },
+    failed: { title: `HOLDING TEXT DID NOT GO · ${rec.id} — call them`, priority: 2, line: 'The text did not go and will not be tried again.' },
+    silent: { title: `HOLDING TEXT · ${rec.id} — no delivery word, call them`, priority: 2, line: 'The phone never said what became of it.' },
+    nokey: { title: `no texting key on the website — call them · ${rec.id}`, priority: 2, line: 'SMSGATE_AUTH is not set on the Worker, so no text can go.' },
+    nonumber: { title: `no US number on ${rec.id} — call them`, priority: 2, line: 'The request carries no ten-digit US number.' },
+    bookdown: { title: `HOLDING TEXT NOT SENT · ${rec.id} — call them`, priority: 2, line: 'The quote book would not answer, so nothing was sent rather than something wrong.' },
+  }[kind];
+  return {
+    title: W.title,
+    message: whatLine(rec) + '\n' + W.line,
+    priority: W.priority,
+    ...(W.priority === 2 ? { tags: [tagOf(rec.id)] } : {}),
+  };
+}
+
+/* AMENDMENT 1 D · NIGHT, EXACTLY. A priority-2 push may not outlive the business day: its expire is cut
+   to the seconds left before 9 PM, and inside the last two minutes it goes as priority 1 — no retry
+   chain at all, so nothing can ring after the wire. */
+function nightSafe(msg, nowMs) {
+  if (Number(msg.priority) !== 2) return msg;
+  const left = secondsToClose(nowMs);
+  if (left < NO_REPEAT_UNDER_S) {
+    const { tags, ...rest } = msg;
+    return { ...rest, priority: 1, downgraded: true };
+  }
+  return { ...msg, expire: Math.min(1800, left) };
+}
+
 /* ------------------------------------------------------------ the clock */
 
 /** The ladder's step times for a request, in order. */
@@ -147,6 +255,14 @@ export function initialAlerts(receivedIso) {
     retry: null,
     claim: open ? newToken() : null,
     log: [],
+    /* REMINDERS-01 · HIS TABLE. Only records that land from now on carry this block; a record that
+       already holds an ALERTS-01 `alerts` block keeps the ladder it was born with, and a record with no
+       `alerts` block at all is left alone, exactly as ALERTS-01 left the ones before it. */
+    table: { clock: 1, fired: [], skipped: [], ended_at: null, end_reason: null },
+    holding: null,
+    second_clock_started_at: null,
+    call_push_at: null,
+    no_text_at: null,
   };
 }
 
@@ -188,24 +304,41 @@ function stamp(rec, step, msg, results, nowIso, attempts = 1) {
   addEvent(rec, 'alerted', { step, priority: msg.priority, channels: channelWord(results) }, nowIso);
 }
 
+/* The keys a step decides for itself. On HIS TABLE the step also owns the table block and the holding
+   block, because the run just moved them on. */
+const STEP_KEYS = ['stage', 'next_at', 'urgent_at', 'overdue_at', 'retry'];
+const TABLE_KEYS = ['table', 'holding', 'second_clock_started_at', 'call_push_at'];
+
 async function deliver(env, rec, step, msg, nowIso, only, attempts) {
+  /* AMENDMENT 1 D: one retry chain at a time. Before a priority-2 push goes out, this request's own tag
+     is cancelled, so six overlapping chains can never ring at once. */
+  if (isTable(rec) && Number(msg.priority) === 2) {
+    const c = await cancelPushoverTag(env, tagOf(rec.id));
+    if (!c.ok && !c.skipped) console.error('pre-push cancel_by_tag failed for', rec.id, c.status);
+  }
   const results = await sendAlert(env, msg, only);
   const receipt = (results.find((r) => r.receipt) || {}).receipt;
   if (receipt) await rememberReceipt(env, receipt, [rec.id]);
   /* re-read so a tap that landed while we were sending is not overwritten */
   const fresh = (await getRecord(env, rec.id)) || rec;
   if (!fresh.alerts) fresh.alerts = rec.alerts;
-  if (fresh.alerts.ack_at) {
+  /* On HIS TABLE an acknowledgement does NOT stop the clock, so a mid-send ack never swallows the step. */
+  if (fresh.alerts.ack_at && !isTable(fresh)) {
     /* he acknowledged mid-send: keep his ack, just note what went */
     addEvent(fresh, 'alerted', { step, priority: msg.priority, channels: channelWord(results), after_ack: true }, nowIso);
   } else {
     /* the step's own decisions travel on `rec`; everything else is KV's */
-    for (const k of ['stage', 'next_at', 'urgent_at', 'overdue_at', 'retry']) fresh.alerts[k] = rec.alerts[k];
+    for (const k of STEP_KEYS) fresh.alerts[k] = rec.alerts[k];
+    if (isTable(rec)) for (const k of TABLE_KEYS) fresh.alerts[k] = rec.alerts[k];
     stamp(fresh, step, msg, results, nowIso, attempts);
     fresh.alerts.claim = null;
   }
   await putRecord(env, fresh);
-  return { id: rec.id, step, priority: msg.priority, results: results.map((r) => ({ channel: r.channel, status: r.status, ok: r.ok })) };
+  return {
+    id: rec.id, step, priority: msg.priority, ...(msg.expire ? { expire: msg.expire } : {}),
+    ...(msg.downgraded ? { downgraded: true } : {}),
+    results: results.map((r) => ({ channel: r.channel, status: r.status, ok: r.ok })),
+  };
 }
 
 /** The intake alert, sent right after the record is stored (the submission route, via waitUntil). */
@@ -214,7 +347,7 @@ export async function sendIntakeAlert(env, id, claim, nowIso) {
   if (!rec || !rec.alerts || rec.alerts.stage !== 'intake' || rec.alerts.claim !== claim || rec.alerts.ack_at) return null;
   const nowMs = Date.parse(nowIso);
   rec.alerts.stage = 'ladder';
-  rec.alerts.next_at = nextStepAfter(rec, nowMs);
+  rec.alerts.next_at = isTable(rec) ? nextTableAt(rec, nowMs) : nextStepAfter(rec, nowMs);
   return deliver(env, rec, 'intake', buildIntake(rec), nowIso, CHANNELS, 1);
 }
 
@@ -225,6 +358,278 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function settleMs(env) {
   const v = parseInt(env.ALERT_CLAIM_SETTLE_MS || '1500', 10);
   return isFinite(v) && v >= 0 ? v : 1500;
+}
+
+/* ============================================================ HIS TABLE · the run
+
+   Everything below runs only for a record born with a `table` block. The order inside one run is fixed:
+   ask whether anything still stops the clock, then the delivery watch, then at most ONE slot, then
+   minute 120. Nothing here ever fires outside 7 AM–9 PM: runAlerts has already returned by then. */
+
+/** The wall time of the next thing owed on this clock — for the admin list and the register. */
+function nextTableAt(rec, nowMs) {
+  const a = rec.alerts;
+  if (a.table.ended_at) return null;
+  if (a.stage === 'intake' || a.stage === 'held') return a.next_at;
+  const anchor = anchorOf(rec);
+  const fired = new Set(a.table.fired || []);
+  for (const s of TABLE) if (!fired.has(s)) return new Date(bizAdvance(anchor, s)).toISOString();
+  return new Date(bizAdvance(anchor, CLOCK_MIN)).toISOString();
+}
+
+/**
+ * AMENDMENT 1 C · WHAT STOPS THE CLOCK. Answers null when the ladder may go on, else why it may not.
+ * The BOOK is asked fresh every time, because the KV `quoted_at` is only its mirror.
+ *
+ * 'book_down' is NOT a stop: the book could not be reached this minute, which is not the same as a
+ * quote having gone out. The run carries on — a reminder to his own phone is harmless either way — and
+ * runHolding asks the book again itself, right before the POST, which is the one moment that matters.
+ * A book still down then ends in ONE "call them" push, never in silence.
+ */
+export async function stopReason(env, rec) {
+  if (rec.quoted_at) return 'quoted';
+  if (rec.status !== 'received') return 'status:' + rec.status;
+  if (rec.alerts.no_text_at) return 'no_text_tap';
+  const b = await quoteWentOut(env, rec.id);
+  if (b.unreadable) return 'book_down';
+  if (b.sent) return 'book_sent';
+  return null;
+}
+
+/** What this run owes a table record: a watch, at most one slot, or minute 120. */
+function tableDue(rec, nowMs) {
+  const a = rec.alerts, t = a.table;
+  if (t.ended_at) return null;
+  if (a.stage === 'intake' || a.stage === 'held') {
+    return a.next_at && Date.parse(a.next_at) <= nowMs ? { intake: true } : null;
+  }
+  const owed = {};
+  /* a channel that answered 5xx on an earlier step is tried again here, exactly as on the old ladder */
+  if (a.retry && Date.parse(a.retry.at) <= nowMs) owed.retry = a.retry;
+  /* AMENDMENT 1 E: while a queued text has no word back, one GET per run until it has one. */
+  if (a.holding && a.holding.state === 'accepted' && !a.holding.settled_at) owed.watch = true;
+  const m = bizMinutes(anchorOf(rec), nowMs);
+  const fired = new Set(t.fired || []);
+  const due = TABLE.filter((s) => s <= m && !fired.has(s));
+  if (due.length) {
+    /* never two slots in one run: the latest due one fires, the earlier ones are marked skipped */
+    owed.slot = due[due.length - 1];
+    owed.skipped = due.slice(0, -1);
+  } else if (m >= CLOCK_MIN) {
+    owed.end = true;
+  }
+  return (owed.retry || owed.watch || owed.slot || owed.end) ? owed : null;
+}
+
+/** Ends the ladder for good. Nothing fires for this request afterwards, ever. */
+function endLadder(rec, why, nowIso) {
+  rec.alerts.table.ended_at = nowIso;
+  rec.alerts.table.end_reason = why;
+  rec.alerts.stage = 'done';
+  rec.alerts.next_at = null;
+  rec.alerts.retry = null;
+}
+
+/** ONE priority-2 "call them now", and the ladder is over. */
+async function callThemNow(env, rec, why, nowIso, nowMs, out) {
+  rec.alerts.call_push_at = nowIso;
+  endLadder(rec, 'call:' + why, nowIso);
+  out.sent.push(await deliver(env, rec, 'call_them', nightSafe(buildCallThem(rec, why), nowMs), nowIso, CHANNELS, 1));
+}
+
+/** One push about the holding text itself (never its words, never the number). */
+async function holdingPush(env, rec, kind, nowIso, nowMs, out) {
+  out.sent.push(await deliver(env, rec, 'holding:' + kind, nightSafe(buildHolding(rec, kind), nowMs), nowIso, CHANNELS, 1));
+}
+
+/* ------------------------------------------------------------ minute 120: the holding text */
+
+/**
+ * AMENDMENT 1 E. ONE POST, ever, for one request. The order matters: every refusal is decided before
+ * the mark is taken, so a request that can never be texted does not burn the mark; and the mark is
+ * taken before the call, so two runs can never both POST.
+ */
+async function runHolding(env, rec, nowIso, nowMs, out) {
+  const a = rec.alerts;
+
+  /* §5 · no texts tick: no text and no second clock, one push, the ladder ends */
+  if (!(rec.consent && rec.consent.smsService === true)) {
+    a.holding = { at: nowIso, state: 'skipped', why: 'no_consent' };
+    return callThemNow(env, rec, 'no texts tick', nowIso, nowMs, out);
+  }
+  /* §6 · no phone, or a number that is not a US one */
+  const n = usNumber(rec.fields && rec.fields.phone);
+  if (n.error) {
+    a.holding = { at: nowIso, state: 'skipped', why: n.error };
+    endLadder(rec, 'no_us_number', nowIso);
+    return holdingPush(env, rec, 'nonumber', nowIso, nowMs, out);
+  }
+  /* §3 · no key on the Worker: no call is made at all */
+  if (!hasKey(env)) {
+    a.holding = { at: nowIso, state: 'skipped', why: 'no_key' };
+    endLadder(rec, 'no_key', nowIso);
+    return holdingPush(env, rec, 'nokey', nowIso, nowMs, out);
+  }
+  /* AMENDMENT 1 A · the words, filled. A text still holding a brace never leaves. */
+  const words = holdingText(rec, nowMs);
+  if (words.error) {
+    a.holding = { at: nowIso, state: 'skipped', why: words.error };
+    endLadder(rec, 'bad_text:' + words.error, nowIso);
+    return holdingPush(env, rec, 'failed', nowIso, nowMs, out);
+  }
+  /* AMENDMENT 1 D · the floor: under ten minutes of the day left and the text waits for 7:00 AM.
+     Nothing is written and nothing is sent — the first run after 7:00 picks it up. */
+  const ttl = ttlFor(nowMs);
+  if (ttl < MIN_TTL) {
+    out.held_for_morning.push({ id: rec.id, seconds_to_close: secondsToClose(nowMs) });
+    return null;
+  }
+  /* AMENDMENT 1 C · the BOOK, read FRESH, immediately before the POST */
+  const book = await quoteWentOut(env, rec.id);
+  if (book.unreadable) {
+    /* The book would not answer at the one moment we must not guess. Nothing goes to the customer, and
+       he is TOLD — a request that reaches two hours never just goes quiet. */
+    a.holding = { at: nowIso, state: 'skipped', why: 'book_down' };
+    endLadder(rec, 'book_down', nowIso);
+    return holdingPush(env, rec, 'bookdown', nowIso, nowMs, out);
+  }
+  if (book.sent) {
+    endLadder(rec, 'book_sent', nowIso);
+    await putRecord(env, rec);
+    out.stopped.push({ id: rec.id, why: 'book_sent' });
+    return null;
+  }
+
+  /* AMENDMENT 1 E · the once-only mark: insert-if-absent in the BOOK, never a KV read-then-write */
+  const gid = holdGatewayId(rec.id);
+  const key = holdKey(rec.id);
+  const claim = await markOnce(env, key, rec.id, 'sending', nowIso, gid);
+  if (!claim.won) {
+    const held = claim.mark || {};
+    /* a "sending" this old means a run died inside the call: unknown, and never a second POST */
+    if (held.state === 'sending' && nowMs - Date.parse(held.at) > SENDING_STALE_MS) {
+      await markSet(env, key, 'unknown', null, nowIso, 'stale_sending');
+      a.holding = { at: held.at, gateway_id: gid, state: 'unknown', settled_at: nowIso, why: 'stale_sending' };
+      endLadder(rec, 'holding_unknown', nowIso);
+      return holdingPush(env, rec, 'silent', nowIso, nowMs, out);
+    }
+    out.skipped_claims.push(rec.id);
+    return null;
+  }
+
+  /* the record says "sending" BEFORE the call, under the claim */
+  a.holding = { at: nowIso, gateway_id: gid, state: 'sending', ttl, lang: words.lang, parts: words.parts };
+  addEvent(rec, 'holding_text', { state: 'sending', gateway: gid, lang: words.lang, parts: words.parts }, nowIso);
+  await putRecord(env, rec);
+
+  const r = await postHolding(env, { id: gid, e164: n.e164, text: words.text, ttl });
+  await markSet(env, key, r.state, r.gateway_id || null, new Date().toISOString(), 'http ' + r.status);
+  a.holding = {
+    at: nowIso, gateway_id: r.gateway_id || gid, state: r.state, ttl, lang: words.lang, parts: words.parts,
+    status: r.status, ...(r.state === 'accepted' ? { gateway_state: r.gateway_state } : { settled_at: nowIso }),
+  };
+  addEvent(rec, 'holding_text', { state: r.state, gateway: a.holding.gateway_id, status: r.status }, nowIso);
+  /* written before the push: deliver() re-reads the record from KV, so an event left only in memory
+     here would be lost and the record would never say how the one call ended */
+  await putRecord(env, rec);
+
+  if (r.state !== 'accepted') {
+    /* NEVER a retry, and never a second POST for this request */
+    endLadder(rec, 'holding_' + r.state, nowIso);
+    return holdingPush(env, rec, 'failed', nowIso, nowMs, out);
+  }
+  /* §4 · THE SECOND CLOCK starts the moment the text is accepted, on the same table */
+  a.second_clock_started_at = nowIso;
+  a.table = { clock: 2, fired: [], skipped: [], ended_at: null, end_reason: null };
+  a.next_at = new Date(bizAdvance(nowMs, TABLE[0])).toISOString();
+  return holdingPush(env, rec, 'queued', nowIso, nowMs, out);
+}
+
+/* ------------------------------------------------------------ the delivery watch */
+
+/** AMENDMENT 1 E · ONE GET per run until the phone says what became of the text. */
+async function runWatch(env, rec, nowIso, nowMs, out) {
+  const a = rec.alerts, h = a.holding;
+  const g = await getHoldingState(env, h.gateway_id);
+  const word = g && g.state ? g.state : null;
+  h.checked_at = nowIso;
+  h.checks = (h.checks || 0) + 1;
+  out.watched.push({ id: rec.id, state: word, status: g && g.status });
+
+  if (word && DONE_STATES.test(word)) {
+    h.settled_at = nowIso;
+    h.delivery = word;
+    return holdingPush(env, rec, 'delivered', nowIso, nowMs, out);
+  }
+  if ((word && FAILED_STATES.test(word)) || (g && g.gone)) {
+    h.settled_at = nowIso;
+    h.delivery = word || 'gone';
+    endLadder(rec, 'delivery_' + h.delivery, nowIso);
+    return holdingPush(env, rec, 'failed', nowIso, nowMs, out);
+  }
+  /* ttl plus ten minutes with no word at all: he is told to call, and the ladder ends */
+  if (nowMs - Date.parse(h.at) > (h.ttl || 0) * 1000 + DELIVERY_GRACE_MS) {
+    h.settled_at = nowIso;
+    h.delivery = 'no_word';
+    endLadder(rec, 'delivery_silent', nowIso);
+    return holdingPush(env, rec, 'silent', nowIso, nowMs, out);
+  }
+  /* still Pending or Processed: keep the watch, write what we learned, send nothing */
+  await putRecord(env, rec);
+  return null;
+}
+
+/* ------------------------------------------------------------ one table record, one run */
+
+async function runTable(env, rec, owed, nowIso, nowMs, out) {
+  /* `rec` is replaced in place after every send, so nothing here holds on to a stale alerts block. */
+  const reread = async () => {
+    const back = await getRecord(env, rec.id);
+    if (back && back.alerts) Object.assign(rec, back);
+    return rec.alerts;
+  };
+
+  /* the intake alert is the table's own minute 0 and is unchanged from ALERTS-01 */
+  if (owed.intake) {
+    rec.alerts.stage = 'ladder';
+    rec.alerts.next_at = nextTableAt(rec, nowMs);
+    out.sent.push(await deliver(env, rec, 'intake', buildIntake(rec), nowIso, CHANNELS, 1));
+    return;
+  }
+
+  /* a step whose channel answered 5xx is carried here, as it always was, before anything new goes */
+  if (owed.retry) {
+    rec.alerts.retry = owed.retry;
+    out.sent.push(await deliver(env, rec, 'retry', owed.retry.msg, nowIso, owed.retry.channels, (owed.retry.attempts || 1) + 1));
+    if ((await reread()).table.ended_at) return;
+  }
+
+  if (owed.watch) {
+    await runWatch(env, rec, nowIso, nowMs, out);
+    if (rec.alerts.table.ended_at) return;   /* Failed or silent: nothing else this run, or ever */
+    await reread();
+    if (rec.alerts.table.ended_at) return;
+  }
+
+  if (owed.slot) {
+    const t = rec.alerts.table;
+    if (owed.skipped && owed.skipped.length) {
+      t.skipped.push({ at: nowIso, slots: owed.skipped, fired: owed.slot });
+      t.fired.push(...owed.skipped);
+    }
+    t.fired.push(owed.slot);
+    rec.alerts.next_at = nextTableAt(rec, nowMs);
+    out.sent.push(await deliver(env, rec, 'slot:' + owed.slot, nightSafe(buildSlot(rec, owed.slot), nowMs), nowIso, CHANNELS, 1));
+    return;
+  }
+
+  if (owed.end) {
+    if (rec.alerts.table.clock === 2) {
+      /* §4 · two hours twice, no quote */
+      return callThemNow(env, rec, 'two hours twice, no quote', nowIso, nowMs, out);
+    }
+    return runHolding(env, rec, nowIso, nowMs, out);
+  }
 }
 
 /* ------------------------------------------------------------ the summary */
@@ -245,7 +650,10 @@ function visitsBefore(all, included, fromMs, untilMs) {
 
 async function runSummary(env, all, nowMs, nowIso) {
   const open7 = openOf(nowMs);
-  const waiting = all.filter((r) => r.status === 'received' && r.alerts && !r.alerts.ack_at
+  /* On HIS TABLE an acknowledgement is not a stop, so what makes a request "still waiting" there is the
+     ladder still being alive — not ack_at. Everything else about the 7 AM summary is unchanged. */
+  const stillWaiting = (r) => (isTable(r) ? !r.alerts.table.ended_at : !r.alerts.ack_at);
+  const waiting = all.filter((r) => r.status === 'received' && r.alerts && stillWaiting(r)
     && ['held', 'intake', 'ladder'].includes(r.alerts.stage) && Date.parse(r.received_at) < open7)
     .sort((a, b) => Date.parse(a.received_at) - Date.parse(b.received_at));
   if (!waiting.length) return null;
@@ -267,10 +675,16 @@ async function runSummary(env, all, nowMs, nowIso) {
 
   for (const r of waiting) {
     const fresh = await getRecord(env, r.id);
-    if (!fresh || !fresh.alerts || fresh.alerts.ack_at) continue;
+    if (!fresh || !fresh.alerts || (fresh.alerts.ack_at && !isTable(fresh))) continue;
     stamp(fresh, 'summary', msg, results, nowIso, 1);
     fresh.alerts.summary_at = nowIso;
-    if (dueOf(fresh) <= nowMs) {
+    if (isTable(fresh)) {
+      /* HIS TABLE decides its own stage and its own next step: the summary only says it went out.
+         (Without this the summary would mark a request past its two hours "done" and the holding
+         text would never leave.) */
+      fresh.alerts.stage = 'ladder';
+      fresh.alerts.next_at = nextTableAt(fresh, nowMs);
+    } else if (dueOf(fresh) <= nowMs) {
       fresh.alerts.stage = 'done';
       fresh.alerts.overdue_at = nowIso;
       fresh.alerts.next_at = null;
@@ -312,11 +726,16 @@ function planFor(rec, nowMs) {
 
 /**
  * The scheduled body. Every 5 minutes. Returns what it did, for the log and the tests.
+ * Two ladders run side by side: HIS TABLE for records born with one, and ALERTS-01's own for the
+ * records that were already on it when this round landed.
  */
 export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {}) {
   const nowMs = Date.parse(nowIso);
-  const out = { now: nowIso, open: isOpen(nowMs), summary: null, sent: [], skipped_claims: [] };
-  if (!out.open) return out;                 /* 9 PM – 7 AM: nothing leaves */
+  const out = {
+    now: nowIso, open: isOpen(nowMs), summary: null, sent: [], skipped_claims: [],
+    stopped: [], held_for_morning: [], watched: [], book_down: [],
+  };
+  if (!out.open) return out;                 /* 9 PM – 7 AM: nothing leaves — no push, no text */
 
   let all = await listRecords(env);
   out.summary = await runSummary(env, all, nowMs, nowIso);
@@ -329,7 +748,16 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
   const token = newToken();
   const plans = new Map();
   for (const rec of all) {
-    if (rec.status !== 'received' || !rec.alerts || rec.alerts.ack_at) continue;
+    if (rec.status !== 'received' || !rec.alerts) continue;
+    if (isTable(rec)) {
+      const owed = tableDue(rec, nowMs);
+      if (!owed) continue;
+      rec.alerts.claim = token;              /* the table's own due-ness comes from `fired`, not next_at */
+      await putRecord(env, rec);
+      plans.set(rec.id, { table: owed });
+      continue;
+    }
+    if (rec.alerts.ack_at) continue;         /* the ALERTS-01 ladder: an ack is still a full stop */
     const plan = planFor(rec, nowMs);
     if (!plan) continue;
     rec.alerts.claim = token;
@@ -344,9 +772,32 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
   await sleep(settleMs(env));
   for (const [id, plan] of plans) {
     const rec = await getRecord(env, id);
-    if (!rec || !rec.alerts || rec.alerts.claim !== token || rec.alerts.ack_at) { out.skipped_claims.push(id); continue; }
+    if (!rec || !rec.alerts || rec.alerts.claim !== token) { out.skipped_claims.push(id); continue; }
 
-    /* 3 · send */
+    /* 3 · HIS TABLE: ask what stops it, fresh, then do at most one thing */
+    if (plan.table) {
+      const why = await stopReason(env, rec);
+      if (why === 'book_down') {
+        /* Not a stop, and not a silence either. The book would not answer this minute, which is not the
+           same as a quote having gone out. A reminder push to his own phone is harmless if it turns out
+           one had; the TEXT is the one that cannot be taken back, and runHolding asks the book again
+           itself, right before the POST, and tells him if it still will not answer. */
+        out.book_down.push(id);
+      } else if (why) {
+        endLadder(rec, why, nowIso);
+        rec.alerts.claim = null;
+        await putRecord(env, rec);
+        out.stopped.push({ id, why });
+        continue;
+      }
+      await runTable(env, rec, plan.table, nowIso, nowMs, out);
+      const back = await getRecord(env, id);
+      if (back && back.alerts && back.alerts.claim === token) { back.alerts.claim = null; await putRecord(env, back); }
+      continue;
+    }
+    if (rec.alerts.ack_at) { out.skipped_claims.push(id); continue; }
+
+    /* 3b · the ALERTS-01 ladder, unchanged */
     if (plan.retry) {
       rec.alerts.retry = plan.retry;
       out.sent.push(await deliver(env, rec, 'retry', plan.retry.msg, nowIso, plan.retry.channels, (plan.retry.attempts || 1) + 1));
@@ -372,23 +823,58 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
 /**
  * Marks a request seen and cancels Pushover's repeats for it. `by` = 'pushover' | 'tap:quoted' | 'seen'.
  * Returns true if this call is the one that acknowledged it.
+ *
+ * REMINDERS-01 §2: on HIS TABLE this cancels THAT push's repeats and marks the ack — and the next slot
+ * still fires. Only the quote going out stops the clock (the Quoted tap does that separately, by
+ * stamping `quoted_at`). On the ALERTS-01 ladder an ack is still a full stop, as it always was.
  */
-export async function acknowledge(env, id, by, nowIso = new Date().toISOString(), rec = null) {
+export async function acknowledge(env, id, by, nowIso = new Date().toISOString(), rec = null, key = null) {
   rec = rec || await getRecord(env, id);
   if (!rec) return false;
   if (!rec.alerts) rec.alerts = { first_at: null, count: 0, next_at: null, ack_at: null, receipt: null, receipts: [], channels: [], stage: 'acked', retry: null, claim: null, log: [] };
-  if (rec.alerts.ack_at) return false;
+  const table = isTable(rec);
+  if (rec.alerts.ack_at && !table) return false;
+  /* On HIS TABLE every push may be acknowledged in its turn, but ONE push is acknowledged once: a
+     repeated callback carrying a receipt already answered for cancels nothing a second time. */
+  if (table) {
+    /* a receipt names one push; a tap names the moment he made it */
+    const k = key || (by + ':' + nowIso);
+    const seen = rec.alerts.ack_keys || [];
+    if (seen.includes(k)) return false;
+    rec.alerts.ack_keys = [...seen, k].slice(-40);
+  }
   rec.alerts.ack_at = nowIso;
   rec.alerts.ack_by = by;
-  rec.alerts.stage = 'acked';
-  rec.alerts.next_at = null;
-  rec.alerts.retry = null;
-  rec.alerts.claim = null;
-  addEvent(rec, 'alerts_acknowledged', { by }, nowIso);
+  if (table) {
+    rec.alerts.acks = (rec.alerts.acks || 0) + 1;
+  } else {
+    rec.alerts.stage = 'acked';
+    rec.alerts.next_at = null;
+    rec.alerts.retry = null;
+    rec.alerts.claim = null;
+  }
+  addEvent(rec, 'alerts_acknowledged', { by, ...(table ? { clock_runs_on: true } : {}) }, nowIso);
   await putRecord(env, rec);
   const c = await cancelPushoverTag(env, tagOf(rec.id));
   if (!c.ok && !c.skipped) console.error('cancel_by_tag failed for', rec.id, c);
   return true;
+}
+
+/** AMENDMENT 1 C · the admin page's one new button: "No text — handled by phone". Stops everything. */
+export async function noTextByHand(env, id, nowIso = new Date().toISOString()) {
+  const rec = await getRecord(env, id);
+  if (!rec) return null;
+  if (!rec.alerts) return { id, ok: true, table: false, no_text_at: null };
+  if (!rec.alerts.no_text_at) {
+    rec.alerts.no_text_at = nowIso;
+    if (isTable(rec)) endLadder(rec, 'no_text_tap', nowIso);
+    else { rec.alerts.stage = 'acked'; rec.alerts.next_at = null; rec.alerts.retry = null; }
+    addEvent(rec, 'no_text_by_hand', {}, nowIso);
+    await putRecord(env, rec);
+    const c = await cancelPushoverTag(env, tagOf(rec.id));
+    if (!c.ok && !c.skipped) console.error('cancel_by_tag failed for', rec.id, c.status);
+  }
+  return { id, ok: true, table: isTable(rec), no_text_at: rec.alerts.no_text_at };
 }
 
 /** Pushover's callback: the receipt must be one we issued. Anything else is a 404 with nothing written. */
@@ -402,7 +888,8 @@ export async function acknowledgeReceipt(env, receipt, nowIso) {
   for (const id of ids) {
     const rec = await getRecord(env, id);
     if (!rec || !rec.alerts || !(rec.alerts.receipts || []).includes(receipt)) continue;
-    if (await acknowledge(env, id, 'pushover', nowIso, rec)) done.push(id);
+    /* the receipt is the key: one push, one acknowledgement, one cancel_by_tag */
+    if (await acknowledge(env, id, 'pushover', nowIso, rec, 'pushover:' + receipt)) done.push(id);
   }
   return done;
 }
