@@ -1,7 +1,9 @@
 /* UMBRA DOMUS — one stylesheet, every page. No framework, no icon font, no hotlinked type.
-   Palette: his 2026-09-07 logo — teal #0D7471 for every fill and rule, black under the umbrella, olive / purple / rust
-   only as small marks. --teal-type is the one lighter tint minted for type on the dark grounds: 5.42:1 on the nav ink,
-   5.87:1 on black (OG143, 2026-09-11; #0D7471 itself reads 3.47:1 on the ink). */
+   Palette: the official logo (2026-09-21) — Prussian #003153 for every fill and rule, black under the
+   canopy, olive / purple / rust only as small marks. Type on a Prussian or black ground is --white
+   (13.43:1 on Prussian, 21:1 on black); a hover or an active state darkens Prussian to --black, the
+   logo's own pair, and white on black reads 21:1. SITE-THEME-01, 2026-09-24: the three retired tokens
+   left :root with the colour they named, and no rule names that colour any more. */
 @font-face {
   font-family: "Jost";
   font-style: normal;
@@ -14,9 +16,6 @@
 :root {
   --tyrian: #66023C;
   --ink: #0F0B1A;
-  --teal: #0D7471;
-  --teal-deep: #0A5C5A;
-  --teal-type: #119793;
   --olive: #3A4E36;
   --purple: #251736;
   --rust: #92310E;
@@ -58,7 +57,7 @@ body {
   background: var(--paper);
 }
 img, svg { max-width: 100%; height: auto; display: block; }
-a { color: var(--teal); text-underline-offset: 3px; }
+a { color: var(--prussian); text-underline-offset: 3px; }
 a:hover { color: var(--ink); }
 h1, h2, h3 { font-weight: 600; line-height: 1.08; letter-spacing: -0.015em; margin: 0 0 0.5em; }
 h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); }
@@ -74,7 +73,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .dark { background: var(--ink); color: var(--white); }
 .dark a { color: var(--white); }
 .dark a:hover { color: var(--green); }
-.kicker { text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.8rem; font-weight: 600; color: var(--teal); margin-bottom: 0.9rem; }
+.kicker { text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.8rem; font-weight: 600; color: var(--prussian); margin-bottom: 0.9rem; }
 .dark .kicker { color: var(--green); }
 
 /* ---------- header ---------- */
@@ -82,9 +81,9 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .top .wrap { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.5rem 1rem; padding-block: 0.6rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--white); text-decoration: none; min-height: 44px; }
 .brand img { width: 40px; height: 40px; }
-.brand .wm { height: 14px; width: auto; color: var(--teal-type); }
-.call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--teal); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
-.call:hover { color: var(--white); background: var(--teal-deep); }
+.brand .wm { height: 14px; width: auto; color: var(--white); }
+.call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--prussian); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
+.call:hover { color: var(--white); background: var(--black); }
 .call svg { width: 18px; height: 18px; }
 .call .num { display: inline; font-size: .9rem; }
 .menu { grid-column: 1 / -1; display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0 -1.25rem; padding: 0 1.25rem 0.35rem; }
@@ -106,29 +105,37 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 }
 
 /* the response promise — Drew's blank until he fills it */
-.promise { margin: 0; background: var(--teal); color: var(--white); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.18); text-align: center; padding: 0.55rem 1rem; font-size: 0.95rem; }
+.promise { margin: 0; background: var(--prussian); color: var(--white); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.18); text-align: center; padding: 0.55rem 1rem; font-size: 0.95rem; }
 .promise strong { font-weight: 600; }
 .promise svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 0.3rem; }
 
-/* ---------- hero: the umbrella on his ground, teal over black ---------- */
-.hero { --um: 160px; --top: 38px; --split: calc(var(--top) + var(--um) * 0.585); padding: var(--top) 0 clamp(3rem, 8vw, 5rem); color: var(--white); text-align: center;
-  background: linear-gradient(to bottom, var(--teal) 0, var(--teal) var(--split), var(--black) var(--split), var(--black) 100%); }
-.hero .lockup { display: grid; justify-items: center; gap: calc(var(--um) * 0.1); margin-bottom: 2.25rem; }
-.hero .mark { width: auto; height: var(--um); }
-.hero .wm { height: 20px; width: auto; color: var(--teal-type); }
+/* ---------- hero: the official logo on its own ground, Prussian over black ----------
+   --f is the picture's own line. In the kit's UMBRA-DOMUS-OFFICIAL-LOGO-2100x1200.png the first
+   row whose every channel is under 10 is y = 532, at x = 4 and at x = 2095 alike; 532 / 1200 =
+   44.33%. The 1050x600 file agrees exactly: its first black row is 266 of 600. Row 0 is Prussian
+   (0,49,83). The band below is as wide as the window and exactly the picture's height, and carries
+   the same two-stop gradient, so the ground's line meets the picture's line at every width.
+   Above the band the hero is Prussian (the top padding), below it black. */
+.hero { --top: 38px; --f: 44.33%; padding: var(--top) 0 clamp(3rem, 8vw, 5rem); color: var(--white); text-align: center; overflow-x: clip;
+  background: linear-gradient(to bottom, var(--prussian) 0, var(--prussian) var(--top), var(--black) var(--top), var(--black) 100%); }
+.hero .lockup { display: grid; justify-items: center; margin-bottom: 2.25rem;
+  width: 100vw; margin-left: calc(50% - 50vw);
+  background: linear-gradient(to bottom, var(--prussian) 0, var(--prussian) var(--f), var(--black) var(--f), var(--black) 100%); }
+.hero .hero-logo { display: block; width: 100%; max-width: 720px; height: auto; margin: 0 auto; }
 .hero h1 { max-width: 14ch; margin-inline: auto; }
 .hero .lead { margin-inline: auto; max-width: 34rem; }
 .hero .sub { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.95rem; color: rgba(255,255,255,0.8); margin-bottom: 2rem; }
 .hero .cta-row, .hero .links-row { justify-content: center; }
 .hero a:not(.btn) { color: var(--white); }
-.hero a:not(.btn):hover { color: var(--teal-type); }
-@media (min-width: 760px) { .hero { --um: 240px; --top: 48px; } .hero .wm { height: 30px; } }
+/* the type pick is --white, and it is already this link's colour: the underline is the hover's mark */
+.hero a:not(.btn):hover { color: var(--white); }
+@media (min-width: 760px) { .hero { --top: 48px; } }
 .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }
 .links-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-weight: 500; }
 
 /* ---------- buttons ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 54px; padding: 0.7rem 1.4rem; border-radius: var(--radius); background: var(--teal); color: var(--white); text-decoration: none; font-weight: 600; font-size: 1.05rem; border: 2px solid var(--teal); cursor: pointer; font-family: inherit; }
-.btn:hover { background: var(--teal-deep); border-color: var(--teal-deep); color: var(--white); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 54px; padding: 0.7rem 1.4rem; border-radius: var(--radius); background: var(--prussian); color: var(--white); text-decoration: none; font-weight: 600; font-size: 1.05rem; border: 2px solid var(--prussian); cursor: pointer; font-family: inherit; }
+.btn:hover { background: var(--black); border-color: var(--black); color: var(--white); }
 .btn.ghost { background: transparent; color: inherit; border-color: currentColor; }
 .btn.ghost:hover { background: rgba(255,255,255,0.08); color: inherit; }
 .btn.wide { width: 100%; }
@@ -142,20 +149,20 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .tile:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(15,11,26,0.12); color: inherit; }
 .tile .ph { aspect-ratio: 4 / 3; background: var(--paper-2); }
 .tile .ph img { width: 100%; height: 100%; object-fit: cover; }
-.tile .ph.panel { display: grid; place-items: center; background: linear-gradient(135deg, var(--teal), var(--teal-deep)); color: var(--white); }
+.tile .ph.panel { display: grid; place-items: center; background: linear-gradient(135deg, var(--prussian), var(--black)); color: var(--white); }
 .tile .ph.panel svg { width: 34%; height: auto; }
 .tile .body { padding: 1rem 1.1rem 1.15rem; }
 .tile h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
 .tile h3 svg { width: 20px; height: 20px; flex: none; }
 .tile p { margin: 0; color: var(--muted); font-size: 0.98rem; }
-.tile .lic { margin-top: 0.6rem; font-size: 0.85rem; color: var(--teal); font-weight: 500; }
+.tile .lic { margin-top: 0.6rem; font-size: 0.85rem; color: var(--prussian); font-weight: 500; }
 .step { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem; }
-.step .n { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--teal); color: var(--white); font-weight: 600; margin-bottom: 0.7rem; }
+.step .n { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--prussian); color: var(--white); font-weight: 600; margin-bottom: 0.7rem; }
 /* the three panels of the umbrella, as three small marks */
 .step:nth-child(1) .n { background: var(--olive); }
 .step:nth-child(2) .n { background: var(--purple); }
 .step:nth-child(3) .n { background: var(--rust); }
-.note { border-left: 4px solid var(--teal); background: var(--white); padding: 0.9rem 1.1rem; border-radius: 0 var(--radius) var(--radius) 0; }
+.note { border-left: 4px solid var(--prussian); background: var(--white); padding: 0.9rem 1.1rem; border-radius: 0 var(--radius) var(--radius) 0; }
 .note.blue { border-color: var(--blue-edge); }
 
 /* ---------- forms ---------- */
@@ -185,14 +192,14 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .track { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; counter-reset: s; }
 .track li { display: grid; grid-template-columns: 34px 1fr; gap: 0.8rem; align-items: start; padding: 0.8rem 0.9rem; background: var(--white); border: 1px solid var(--line); border-radius: 12px; }
 .track li::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--paper-2); color: var(--ink); font-weight: 600; }
-.track li.done::before { content: "✓"; background: var(--teal); color: var(--white); }
-.track li.now { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,116,113,0.18); }
-.track li.now::before { background: var(--teal); color: var(--white); }
+.track li.done::before { content: "✓"; background: var(--prussian); color: var(--white); }
+.track li.now { border-color: var(--prussian); box-shadow: 0 0 0 3px rgba(0,49,83,0.18); }
+.track li.now::before { background: var(--prussian); color: var(--white); }
 .track strong { display: block; }
 .track small { color: var(--muted); }
 
 /* ---------- about ---------- */
-.portrait { margin: 0 0 1.5rem; background: var(--teal); border-radius: var(--radius); aspect-ratio: 4 / 5; display: grid; place-items: center; color: var(--white); text-align: center; padding: 1.5rem; max-width: 22rem; }
+.portrait { margin: 0 0 1.5rem; background: var(--prussian); border-radius: var(--radius); aspect-ratio: 4 / 5; display: grid; place-items: center; color: var(--white); text-align: center; padding: 1.5rem; max-width: 22rem; }
 .portrait img { width: 100px; height: 100px; margin-bottom: 0.75rem; }
 .portrait figcaption { font-size: 0.95rem; opacity: 0.9; }
 /* the same slot once a real photo of Drew is in it: the photo fills the frame, the caption sits under it */
@@ -202,15 +209,15 @@ textarea.field { min-height: 8rem; resize: vertical; }
 @media (min-width: 760px) { .about { display: grid; grid-template-columns: 22rem 1fr; gap: 3rem; align-items: start; } .portrait { position: sticky; top: 6.5rem; } }
 .arc { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; gap: 0.35rem; }
 .arc li { padding-left: 1.1rem; position: relative; }
-.arc li::before { content: ""; position: absolute; left: 0; top: 0.68em; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+.arc li::before { content: ""; position: absolute; left: 0; top: 0.68em; width: 8px; height: 8px; border-radius: 50%; background: var(--prussian); }
 
 /* ---------- footer ---------- */
-.foot { background: var(--black); color: var(--white); padding: 2.5rem 0 2rem; border-top: 4px solid var(--teal); }
+.foot { background: var(--black); color: var(--white); padding: 2.5rem 0 2rem; border-top: 4px solid var(--prussian); }
 .foot a { color: var(--white); }
-.foot a:hover { color: var(--teal-type); }
+.foot a:hover { color: var(--white); }
 .foot .cols { display: grid; gap: 1.5rem; }
 @media (min-width: 760px) { .foot .cols { grid-template-columns: 1.3fr 1fr 1fr; } }
-.foot .wm { height: 15px; width: auto; color: var(--teal-type); margin-bottom: 0.8rem; }
+.foot .wm { height: 15px; width: auto; color: var(--white); margin-bottom: 0.8rem; }
 .foot nav { display: grid; gap: 0.35rem; }
 .foot p { margin-bottom: 0.5rem; }
 .foot .fine { color: rgba(255,255,255,0.72); margin-top: 1.5rem; }
@@ -302,28 +309,28 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .intake .chip { position: relative; font-weight: 500; }
 .intake .chip input { position: absolute; opacity: 0; width: 100%; height: 100%; left: 0; top: 0; margin: 0; cursor: pointer; }
 .intake .chip span { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 0.85rem; border: 1.5px solid var(--line); border-radius: 999px; background: var(--paper); min-height: 40px; font-weight: 500; cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s; }
-.intake .chip input:checked + span { background: var(--teal); border-color: var(--teal); color: var(--white); }
-.intake .chip input:focus-visible + span { outline: 2px solid var(--teal-type); outline-offset: 2px; }
+.intake .chip input:checked + span { background: var(--prussian); border-color: var(--prussian); color: var(--white); }
+.intake .chip input:focus-visible + span { outline: 2px solid var(--prussian); outline-offset: 2px; }
 .intake .dot { display: inline-block; border-radius: 50%; background: currentColor; opacity: 0.85; flex: none; }
 /* the room, seen from inside: the chips do the selecting, the picture teaches the word */
 .intake .room { background: var(--paper-2); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 0.5rem; margin: 0 0 0.7rem; }
 .intake .room svg { width: 100%; }
-.intake .zone { fill: transparent; stroke: var(--teal); stroke-width: 1.6; vector-effect: non-scaling-stroke; transition: fill 0.15s; }
-.intake .zone.on { fill: var(--teal); fill-opacity: 0.22; }
-.intake .edge { stroke: var(--teal); stroke-width: 1.6; fill: none; vector-effect: non-scaling-stroke; }
+.intake .zone { fill: transparent; stroke: var(--prussian); stroke-width: 1.6; vector-effect: non-scaling-stroke; transition: fill 0.15s; }
+.intake .zone.on { fill: var(--prussian); fill-opacity: 0.22; }
+.intake .edge { stroke: var(--prussian); stroke-width: 1.6; fill: none; vector-effect: non-scaling-stroke; }
 .intake .edge.on { stroke: var(--vermillion-ink); stroke-width: 3.4; }
 .intake .lbl { font-size: 9px; fill: var(--muted); letter-spacing: 0.04em; }
 /* one card per place they tapped */
 .intake .area { border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--paper-2); padding: 0.85rem 0.9rem 0.5rem; margin: 0 0 0.7rem; }
 .intake .area h3 { margin: 0 0 0.7rem; font-size: 1.05rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-.intake .area h3 .pin { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); flex: none; }
+.intake .area h3 .pin { width: 9px; height: 9px; border-radius: 50%; background: var(--prussian); flex: none; }
 .intake .area .q { font-size: 0.97rem; margin-top: 0.55rem; }
 .intake .area .chip span { background: var(--white); }
-.intake .area .chip input:checked + span { background: var(--teal); }
+.intake .area .chip input:checked + span { background: var(--prussian); }
 .intake .exact { display: flex; align-items: center; gap: 0.5rem; margin: 0.15rem 0 0.1rem; font-size: 0.9rem; color: var(--muted); }
 .intake .exact input { width: 5.5rem; min-height: 44px; font: inherit; font-size: 1rem; padding: 0.35rem 0.6rem; border: 1.5px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
 /* the honesty gate — the reference's .note / .noprice rules, nothing new */
-.req .gate { font-size: 0.9rem; color: var(--muted); border-left: 3px solid var(--teal); padding-left: 0.75rem; margin: 0.9rem 0 0; }
+.req .gate { font-size: 0.9rem; color: var(--muted); border-left: 3px solid var(--prussian); padding-left: 0.75rem; margin: 0.9rem 0 0; }
 .req .gate.warn { border-left-color: var(--vermillion-ink); }
 /* the photo guidance lines (R17d) — the reference's .guide rules */
 .req .guide { margin: 0 0 0.8rem; padding-left: 1.35rem; font-size: 0.93rem; color: var(--muted); }
@@ -347,7 +354,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .intake2 .fstep { display: grid; gap: 0.6rem; }
 /* the thin progress line */
 .v2bar { height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 0 0 1.1rem; }
-.v2bar i { display: block; height: 100%; width: 0; background: var(--teal); transition: width 0.18s ease-out; }
+.v2bar i { display: block; height: 100%; width: 0; background: var(--prussian); transition: width 0.18s ease-out; }
 /* the surface banner: which one this screen is about */
 .intake2 .v2where { margin: 0 0 0.15rem; }
 .intake2 .v2where span { display: inline-block; padding: 0.3rem 0.85rem; border-radius: 999px;
@@ -370,11 +377,11 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .req .v2opt .v2mark { flex: none; width: 24px; height: 24px; border: 2px solid var(--muted); background: var(--white);
   border-radius: 6px; display: block; box-sizing: border-box; }
 .req .v2opt.v2radio .v2mark { border-radius: 50%; }
-.req .v2opt:has(input:checked), .req .v2opt.on { background: var(--teal); border-color: var(--teal); color: var(--white); }
+.req .v2opt:has(input:checked), .req .v2opt.on { background: var(--prussian); border-color: var(--prussian); color: var(--white); }
 .req .v2opt:has(input:checked) .v2mark, .req .v2opt.on .v2mark { border-color: var(--white); background: var(--white);
   background-repeat: no-repeat; background-position: center; background-size: 16px 16px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 8.5l3.2 3.2L13 5' fill='none' stroke='%230D7471' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>"); }
-.req .v2opt.v2radio:has(input:checked) .v2mark, .req .v2opt.v2radio.on .v2mark { background-image: none; box-shadow: inset 0 0 0 6px var(--teal); }
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 8.5l3.2 3.2L13 5' fill='none' stroke='%23003153' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>"); }
+.req .v2opt.v2radio:has(input:checked) .v2mark, .req .v2opt.v2radio.on .v2mark { background-image: none; box-shadow: inset 0 0 0 6px var(--prussian); }
 .req .v2opt:has(input:focus-visible) { outline: 3px solid var(--tyrian); outline-offset: 2px; }
 /* "Something else" sits last, after a divider */
 .v2opts li.v2last { margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--line); }
@@ -412,7 +419,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .req .wday .wdow { font-size: 0.85rem; font-weight: 600; text-transform: capitalize; }
 .req .wday .wdate { font-size: 1.05rem; font-weight: 700; }
 .req .wday .whas { font-size: 0.72rem; font-weight: 600; margin-top: 0.1rem; }
-.req .wday.has { border-width: 2.5px; border-color: var(--teal); }
+.req .wday.has { border-width: 2.5px; border-color: var(--prussian); }
 .req .wday[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--white); }
 .req .wday[aria-pressed="true"]::after { content: ""; position: absolute; bottom: -8px; left: 50%; margin-left: -7px;
   border: 7px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
@@ -424,7 +431,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .req .wblock { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 52px;
   padding: 0.55rem 0.85rem; border: 1.5px solid var(--muted); border-radius: 10px; background: var(--paper);
   color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
-.req .wblock.on { background: var(--teal); border-color: var(--teal); color: var(--white); }
+.req .wblock.on { background: var(--prussian); border-color: var(--prussian); color: var(--white); }
 .req .wblock .wbon { font-size: 0.85rem; white-space: nowrap; }
 .req .wblock[disabled] { cursor: not-allowed; opacity: 0.55; text-decoration: line-through; }
 .wfull { margin: 0.5rem 0 0; font-size: 0.95rem; font-weight: 600; }
@@ -432,10 +439,10 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .wpicks { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .wpicks li { margin: 0; }
 .req .wpick { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 44px; padding: 0.4rem 0.5rem 0.4rem 0.4rem;
-  border: 1.5px solid var(--teal); border-radius: 999px; background: var(--white); color: var(--ink);
+  border: 1.5px solid var(--prussian); border-radius: 999px; background: var(--white); color: var(--ink);
   font: inherit; font-weight: 600; cursor: pointer; }
 .req .wpick .wpn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
-  border-radius: 50%; background: var(--teal); color: var(--white); font-size: 0.9rem; }
+  border-radius: 50%; background: var(--prussian); color: var(--white); font-size: 0.9rem; }
 .req .wpick .wpx { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
   border-radius: 50%; border: 1.5px solid var(--muted); font-size: 0.85rem; }
 .intake2 .wnq { font-size: 1.05rem; }
