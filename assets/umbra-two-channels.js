@@ -102,6 +102,48 @@
     return v && typeof v === 'object' && 'size' in v && 'name' in v;
   }
 
+  /* EMAIL-SUBJECT-01 (2026-09-23) · EVERY JOB'S EMAIL GETS ITS OWN SUBJECT.
+     Measured on Drew's own phone, not assumed. Every email carried the same
+     subject, so Gmail stacked them into ONE conversation, and after the first
+     one his phone only updated the old notification: the screen lit up with no
+     sound (TEST 3). The same email with its own subject rang (TEST 5). So the
+     page adds the customer's first name and the Central time:
+       "Service request from umbradomus.com · Maria · 9/23 8:27 PM".
+     Both copies carry it: the browser's copy, and the post the Worker's
+     fallback forwards. The Worker leaves `_subject` out of its same-request
+     match, so a resend a minute later is still one request. The base subject
+     is kept on the input, so a second pass never stamps twice. */
+  function centralStamp() {
+    var d = new Date();
+    try {
+      var p = {};
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true
+      }).formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+      if (p.month && p.day && p.hour && p.minute && p.dayPeriod) {
+        return p.month + '/' + p.day + ' ' + p.hour + ':' + p.minute + ' ' + String(p.dayPeriod).toUpperCase();
+      }
+    } catch (e) { /* no Intl time zones: fall through to the phone's own clock */ }
+    var h = d.getHours(), m = d.getMinutes();
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM');
+  }
+
+  function stampSubject(form) {
+    var el = form.querySelector('input[type="hidden"][name="_subject"]');
+    if (!el) return;
+    var base = el.getAttribute('data-base-subject');
+    if (base === null) { base = String(el.value || ''); el.setAttribute('data-base-subject', base); }
+    if (!base) return;
+    var parts = [base];
+    var nameEl = form.querySelector('[name="name"]');
+    /* the first word of the name only, with anything that could break a mail header taken out */
+    var first = nameEl ? String(nameEl.value || '').replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').trim().split(/\s+/)[0] : '';
+    if (first) parts.push(first.length > 24 ? first.slice(0, 24) : first);
+    parts.push(centralStamp());
+    el.value = parts.join(' \u00b7 ');
+  }
+
   /* THE EMAIL LEG. `done(true)` only when FormSubmit redirected us home. */
   function sendEmailCopy(form, id, done) {
     var settled = false, frame = null, temp = null, timer = null;
@@ -196,6 +238,7 @@
     if (!action || action.indexOf('formsubmit.co') !== -1) { proceed(); return; }
     if (form.__umbraEmailLeg) { proceed(); return; }
     form.__umbraEmailLeg = true;
+    stampSubject(form);
     busyButton(form);
     var id = copyId();
     setField(form, 'email_copy_id', id);

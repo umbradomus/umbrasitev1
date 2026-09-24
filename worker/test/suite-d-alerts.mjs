@@ -24,7 +24,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
   let serial = 0;
   async function submitAt(iso, name, extra = {}) {
     const fd = new FormData();
-    fd.set('_subject', 'Service request from umbradomus.com');
+    fd.set('_subject', extra.subject || 'Service request from umbradomus.com');
     fd.set('_next', 'https://www.umbradomus.com/request-received');
     fd.set('name', name);
     fd.set('phone', '(956) 555-0142');
@@ -293,11 +293,15 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     const f0 = stub.captured.filter((c) => c.url.startsWith('/formsubmit')).length;
     const one = await submitAt(t, 'Double Dan');
     const two = await submitAt(plus(t, 3), 'Double Dan');
+    /* EMAIL-SUBJECT-01: the page stamps the subject with the minute it was sent, so a real resend
+       differs from the first post in `_subject` alone. It must still be the same request. */
+    const twoStamped = await submitAt(plus(t, 4), 'Double Dan', { subject: 'Service request from umbradomus.com · Double · 1/1 2:04 PM' });
     await waitFor(() => about(PO(), one.id).length >= 1);
     await sleep(2000);
     const n1 = (await json(`${W}/api/jobs?k=${ADMIN_KEY}`)).body.count;
     eq(two.id, one.id, 'the second post lands on the same request number');
     eq(two.token, one.token, 'with the same status link');
+    eq(twoStamped.id, one.id, 'EMAIL-SUBJECT-01: a resend whose only difference is the stamped subject is the same request');
     eq(n1 - n0, 1, 'one record');
     eq(about(PO(), one.id).length, 1, 'one push');
     eq(about(TG(), one.id).length, 1, 'one Telegram message');

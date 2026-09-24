@@ -64,9 +64,11 @@ const PHOTO_FIELD = /^attachment(\d*)$/;
 
 /* THE SAME REQUEST TWICE. A double tap, a Back-and-resend, or a phone that retried the post: the same
    words and the same photos inside ten minutes are one request — one record, one alert, one email.
-   The browser's own copy id and timings differ between two posts and are left out of the match. */
+   The browser's own copy id and timings differ between two posts and are left out of the match.
+   EMAIL-SUBJECT-01: so is `_subject`, which the page now stamps with the first name and the minute
+   it was sent, so that Gmail gives every job its own conversation (and its own ring). */
 const DEDUP_WINDOW_MS = 10 * 60000;
-const DEDUP_IGNORE = /^(email_sent|email_copy_id|email_copy_ms|_next)$/;
+const DEDUP_IGNORE = /^(email_sent|email_copy_id|email_copy_ms|_next|_subject)$/;
 
 /** The moment this request is handled. A test may name it, and only when test hooks are on. */
 function nowFor(request, env) {

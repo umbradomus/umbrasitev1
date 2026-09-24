@@ -414,6 +414,7 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
   let recA = null, tokenA = null;
   {
     const before = forwards().length;
+    const beforeRelay = relayPosts().length;
     const landed = await fillAndSubmit(page, SITE + '/services#request', { photos: [photoA, photoB] });
     ok(landed.startsWith(`http://127.0.0.1:${PORT.siteWorker}/request-received`), 'redirect landed on the confirmation page', landed);
     const u = new URL(landed);
@@ -475,6 +476,14 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
       eq(ff.length, 2, 'both photos are forwarded');
       ok(ff[0].sha256 !== ff[1].sha256, 'the two forwarded photos are different files (MULTIPLE-FILES-ONE-NAME stays closed)');
       ok(!names.includes('_honey') || fieldValue(parts, '_honey') === '', 'the honeypot is not forwarded with a value');
+      /* EMAIL-SUBJECT-01: every job's email carries its own subject — the first name and the Central
+         time — so Gmail never stacks two jobs in one conversation (a stacked one arrives silent). */
+      const subj = fieldValue(parts, '_subject') || '';
+      ok(/^Service request from umbradomus\.com · Testy · \d{1,2}\/\d{1,2} \d{1,2}:\d{2} (AM|PM)$/.test(subj),
+        'EMAIL-SUBJECT-01: the subject carries the first name and the Central time, stamped once', subj);
+      const copies = relayPosts().slice(beforeRelay);
+      const copySubj = copies.length ? (fieldValue(parseMultipart(copies[0].body, copies[0].headers['content-type']), '_subject') || '') : null;
+      eq(copySubj, subj, "EMAIL-SUBJECT-01: the browser's own copy carries the very same subject");
     }
     /* the record knows the email went */
     const jobs2 = await json(`${W}/api/jobs?k=${ADMIN_KEY}`);
