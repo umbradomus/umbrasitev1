@@ -81,7 +81,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .top { background: var(--ink); color: var(--white); position: sticky; top: 0; z-index: 20; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .top .wrap { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.5rem 1rem; padding-block: 0.6rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--white); text-decoration: none; min-height: 44px; }
-.brand img { width: 38px; height: 40px; }
+.brand img { width: 40px; height: 40px; }
 .brand .wm { height: 14px; width: auto; color: var(--teal-type); }
 .call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--teal); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
 .call:hover { color: var(--white); background: var(--teal-deep); }
@@ -94,7 +94,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .menu a[aria-current="page"] { color: var(--white); background: rgba(255,255,255,0.14); }
 @media (min-width: 760px) {
   .top .wrap { grid-template-columns: auto 1fr auto; padding-block: 0.8rem; }
-  .brand img { width: 46px; height: 48px; }
+  .brand img { width: 48px; height: 48px; }
   .brand .wm { height: 19px; }
   .menu { grid-column: auto; justify-content: center; margin: 0; padding: 0; overflow: visible; }
   /* A ninth item (Work) is wider than the header can hold, and on a tablet the overspill
@@ -193,7 +193,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 
 /* ---------- about ---------- */
 .portrait { margin: 0 0 1.5rem; background: var(--teal); border-radius: var(--radius); aspect-ratio: 4 / 5; display: grid; place-items: center; color: var(--white); text-align: center; padding: 1.5rem; max-width: 22rem; }
-.portrait img { width: 96px; height: 100px; margin-bottom: 0.75rem; }
+.portrait img { width: 100px; height: 100px; margin-bottom: 0.75rem; }
 .portrait figcaption { font-size: 0.95rem; opacity: 0.9; }
 /* the same slot once a real photo of Drew is in it: the photo fills the frame, the caption sits under it */
 .portrait.has-photo { display: block; padding: 0; overflow: hidden; aspect-ratio: auto; }

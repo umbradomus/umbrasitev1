@@ -1006,24 +1006,25 @@ new_sqlite_classes = ["QuoteBook"]
     enHash('FORBIDDEN · the English section', (await postQ(E6.code, { v: 1 }, at(17, 26), { origin: 'https://evil.example' })).text, true);
 
     /* Pinned from this same reading run on the base's own src (645c32d), before any edit of SPANISH-FIX-01; re-pinned by
-       QUOTE-PAGE-03 (the new look changes every English page by design) from its own first run on its tip's src. */
+       QUOTE-PAGE-03 (the new look changes every English page by design) from its own first run on its tip's src; re-pinned
+       again by BRAND-01 (the header's mark and its size change every whole English page; the two sections are unchanged). */
     const EN_BASE = {
-      "OPEN · both notices (NOTICE_53255 \"true\")": '9dffd17264ddf9d9ff5cd62df67eed6fa3b5f3f8b48f92c35361b425ed217493',
-      "OPEN · one time": 'b30b5e6be1bf0e8680f3e8728121abf9ec091a0b202179b2fe371e82514513c4',
-      "OPEN · two times, one across noon": 'fe35a8a5831bf90a434b6f06585b80139bfc58b80742f08656c11869490196a2',
-      "OPEN · from 12 and from 1, hold at 1 PM": 'ec2b91cac1d79c9c94ad1a1da3f7ee1e6ad349528d97dc6ac1fa72642aebecf0',
-      "OPEN · no time picked (?pick=1)": '87c0cb09b34f4fa962abd5e0c8c05cd2d94d2fa69d2ac9f7eeef2877b69fd41d',
-      "HOLD ENDED · one time": '9d369bb86117628d1713db8db40c510067ef7ecad455212e983cb5d6b2b832b7',
-      "HOLD ENDED · two times": '4e8beaf92237cb5a2de96fa9a370e42187ac3d36dddd5d13953ca62dc6dde554',
-      "TOO CLOSE": '8775a7d08bd35aa00315c5909c4632ef5fba18bedd42762efac34c95b1a159c5',
-      "TAKEN · one time free": '02e371304c000664e453ba3ee44a3ed52a97cd9c61c9b2abf0f6d85cf525c0ea',
-      "TAKEN · no time free": '67cb72806d32c7b3b652e8b15da66ef4f304a8754eba8a40d47354acc9b7bb4a',
-      "BOOKED · one time": '47d429d2cae2808ec69786adff5ab994b352ac696578e3dde4e9e3c7d0ace33e',
-      "BOOKED · the second of two, across noon": 'cd6af8e437435e1e8ec1c39b9e66ccaf0f4338ad7e01161dd75d708c416351ea',
-      "UPDATING": '3f511a950cf1f85f63f435017e63e2f8eb6659215016bdc7279d21bb67a6d9bc',
-      "REPLACED": '3aede732c18877a9831173f63addaa0bccc207df3ec9b05d3201348e972bbe7b',
-      "RECEIVED": 'f8ab4b5c437809014c3727ea3e4783e3fca1719cd97d971ed752f2666f0a4d09',
-      "WITHDRAWN": 'd4762d5281fe5ceffea2d7f2080bb9c551d6f4ea94615c6ee9ad4df9c247aa09',
+      "OPEN · both notices (NOTICE_53255 \"true\")": '3d6f734303d6538c831f6bf4541ee87f9e8d15c4c14f4745852f5f4e8693664b',
+      "OPEN · one time": 'c32e00ed75168c7bca61301aa1c77ebeb3003be6cb93588ae412925152508f37',
+      "OPEN · two times, one across noon": '656b89356680a54f3be618440fb5f61cc449a7bf72c095ca465278eeec9d08ea',
+      "OPEN · from 12 and from 1, hold at 1 PM": '8d44fc2edd8ab323aee502c1fa9df64355080a8bdbf66e6eafdf5579e93571e2',
+      "OPEN · no time picked (?pick=1)": '8db87d7b22f6613da9d7acd3bcb543e732ae807b1bda9c4f95baea127db9f8c7',
+      "HOLD ENDED · one time": 'a3e9d5f8498af61c545c92967e2db7359a5b8d260176f5dc271ed25cfc12e630',
+      "HOLD ENDED · two times": '4b92f5fd3c365b50fd3cd15b1f988402c027d206f793b4f5be08826fc0b36d54',
+      "TOO CLOSE": '0dd77b10df23451334b13d035a4e4158d4877f367f73afee8bde70e89ee2b939',
+      "TAKEN · one time free": '471f84746f18fd63aa10dcfdfb113696a4f492a1d116264b513e886d651091f6',
+      "TAKEN · no time free": '426947812ebe6d02bbb7278e75dc7973cbc495f4f06f8b9270722c0a5cb461ba',
+      "BOOKED · one time": 'b89d10fddc9b8cefc4c2229b2f95b6f6fa7d6bf46cb6d50ba346f1c4fe8ffe78',
+      "BOOKED · the second of two, across noon": 'c43b01c762dee314b75259c3d56d56c8815771cbed860c07982a14fb118e171d',
+      "UPDATING": 'f38a0e9c72972dc58186236f918c841d002f6c6a6823f8547c1bd89a5e12b6b2',
+      "REPLACED": '075494f5714538d9f18fb7880b0c9d8a1e9b4f8b8e5891e79aca9f51448260e4',
+      "RECEIVED": '56f6a65dc08c0f7b33d362c328d206bd1399de959ee62b22aea456d31c310ebd',
+      "WITHDRAWN": 'a46e825303770e83595271c7ff4589e74fd1d32119c3e3fa5d15e6327f34d5cb',
       "NOT VALID · the English section": '138000509adc7aa28e633ed18b2acea71fabadac9edf01dfb0c5e5f455b8bd30',
       "FORBIDDEN · the English section": '469ce356233913d669a7349f17b212818d5e950eb22cc96ee6f61a32c46aa181',
     };

@@ -121,7 +121,7 @@ const STYLE = `
 body{background:#F6F3EE;color:#0F0B1A}
 .qtop{background:#fff;border-bottom:1px solid #D9D2C7;padding:.7rem 0}
 .qbrand{display:flex;align-items:center;gap:.6rem;margin:0;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:1rem}
-.qbrand img{width:34px;height:auto;display:block}
+.qbrand img{width:36px;height:36px;display:block}
 .q{padding:1.1rem 0 3rem}
 .q svg{width:1.25em;height:1.25em;flex:none}
 .qsteps{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0 0 1.4rem;padding:0}
@@ -244,7 +244,7 @@ function frame(lang, state, inner, { bilingual = false } = {}) {
 <style>${STYLE}</style>
 </head>
 <body data-state="${esc(state)}">
-<header class="qtop"><div class="wrap narrow"><p class="qbrand"><img src="/assets/mark-128.png?v=3" width="34" height="36" alt=""><span>Umbra Domus</span></p></div></header>
+<header class="qtop"><div class="wrap narrow"><p class="qbrand"><img src="/assets/apple-touch-icon.png?v=5" width="36" height="36" alt=""><span>Umbra Domus</span></p></div></header>
 <main class="q"><div class="wrap narrow">
 ${inner}
 </div></main>
