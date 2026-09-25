@@ -22,9 +22,11 @@ import { SMS_WORDING } from '../src/windows.js';
 /* SPANISH-FIX-01: read as a namespace, so a Worker without SMS_WORDINGS (the base) still loads and reads red */
 import * as WIN from '../src/windows.js';
 
-const PORT_SUNDAY_WORKER = 4776;
-const PORT_SUNDAY_SITE = 4777;
-const PORT_SUNDAY_INSPECTOR = 4778;
+/* REMINDERS-01: these three were 4776 / 4777 / 4778 here. They come from run-all's PORT table now, so
+   UMBRA_TEST_PORT_SHIFT moves them with everything else. The defaults are the same numbers. */
+let PORT_SUNDAY_WORKER = 4776;
+let PORT_SUNDAY_SITE = 4777;
+let PORT_SUNDAY_INSPECTOR = 4778;
 
 /* Wed 23 Sep 2026, 10:00 AM Central (CDT = UTC-5) */
 const T = '2026-09-23T15:00:00.000Z';
@@ -33,6 +35,8 @@ const sha = (s) => crypto.createHash('sha256').update(Buffer.from(s, 'utf8')).di
 
 export async function suiteWindows(ctx) {
   const { browser, W, stub, relay, ADMIN_KEY, suite, ok, eq, json, sleep, PORT, TMP, WORKER_DIR, flipConstant, copyTree } = ctx;
+  /* REMINDERS-01: the Sunday Worker's three ports come from the shared table (see run-all's PORT). */
+  if (PORT.extraA) { PORT_SUNDAY_WORKER = PORT.extraA; PORT_SUNDAY_SITE = PORT.extraB; PORT_SUNDAY_INSPECTOR = PORT.extraC; }
   const R = {};
   const SITE = `http://127.0.0.1:${PORT.siteWorker}`;
   const PICS = process.env.FW_PICTURES_DIR || '';

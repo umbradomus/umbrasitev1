@@ -62,6 +62,26 @@
     return (j.minutes_open != null && j.minutes_open >= 120) ? 'late' : 'open';
   }
 
+  /* REMINDERS-01 AMENDMENT 1 C. Nothing left to stop: the quote went out, the request moved on, the
+     ladder already ended, or he has tapped this once. */
+  function noTextOff(j) {
+    if (j.quoted_at || j.status !== 'received') return true;
+    var a = j.alerts;
+    if (!a || !a.table) return true;
+    return Boolean(a.no_text_at || a.table.ended_at);
+  }
+
+  /* One line under the buttons, so he can see which clock a request is on without opening anything. */
+  function clockLine(j) {
+    var a = j.alerts;
+    if (!a || !a.table) return '';
+    if (a.table.ended_at) return '<p class="meta">reminders ended &mdash; ' + esc(a.table.end_reason || '') + '</p>';
+    var bits = ['clock ' + a.table.clock + ' of 2'];
+    if (a.holding_state) bits.push('holding text ' + esc(a.holding_state));
+    if (a.next_at) bits.push('next ' + new Date(a.next_at).toLocaleTimeString());
+    return '<p class="meta">' + bits.join(' &middot; ') + '</p>';
+  }
+
   function render(data) {
     stamp.textContent = 'as of ' + new Date(data.now).toLocaleTimeString();
     var open = data.jobs.filter(function (j) { return !j.quoted_at; }).length;
@@ -88,8 +108,12 @@
         '<p class="meta">' + esc(j.service || '(no category)') + (j.address ? ' · ' + esc(j.address) : '') + '</p>' +
         '<p class="what">' + esc(j.what) + '</p>' +
         (pix ? '<ul class="pix">' + pix + '</ul>' : '') +
+        clockLine(j) +
         '<div class="btns">' +
           '<button data-act="quoted" data-id="' + esc(j.id) + '"' + (j.quoted_at ? ' disabled' : '') + '>Quoted</button>' +
+          /* REMINDERS-01 AMENDMENT 1 C: the one button this round adds to this page. It stops the
+             reminders and the holding text for good, for a job he has already handled by phone. */
+          '<button data-act="no-text" data-id="' + esc(j.id) + '"' + (noTextOff(j) ? ' disabled' : '') + '>No text — handled by phone</button>' +
           '<button data-act="scheduled" data-id="' + esc(j.id) + '"' + (j.scheduled_at ? ' disabled' : '') + '>Scheduled</button>' +
           '<button data-act="done" data-id="' + esc(j.id) + '"' + (j.done_at ? ' disabled' : '') + '>Done</button>' +
           '<a class="btn" href="/api/export/' + esc(j.id) + '.md?k=' + encodeURIComponent(KEY) + '" target="_blank" rel="noopener">Markdown</a>' +
@@ -112,6 +136,17 @@
     if (!b) return;
     var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
     var extra = {};
+    /* REMINDERS-01: this one is its own route, not a job event, and it asks first — it is the one tap
+       that tells the Worker never to text this customer. */
+    if (act === 'no-text') {
+      if (!confirm('Stop every reminder for ' + id + ', and send no holding text?\n\nUse this when you have already handled it by phone.')) return;
+      b.disabled = true;
+      fetch('/admin/no-text/' + id + '?k=' + encodeURIComponent(KEY), { method: 'POST' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(load)
+        .catch(function (err) { b.disabled = false; alert('That did not save: ' + err.message); });
+      return;
+    }
     if (act === 'quoted') {
       var amt = prompt('Quote amount for ' + id + ' (dollars, optional — leave blank to just stamp the time):', '');
       if (amt === null) return;

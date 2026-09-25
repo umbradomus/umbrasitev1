@@ -21,14 +21,18 @@ import { staticServer, close } from './lib/servers.mjs';
 
 /* The notice Workers: wrangler dev on 4779, its site copy (with the /q proxy) on 4776, inspector on 4778.
    All three belong to the website range; suite G's Sunday Worker used 4776–4778 and has closed them by now. */
-const PORT_NOTICE_WORKER = 4779;
-const PORT_NOTICE_SITE = 4776;
-const PORT_NOTICE_INSPECTOR = 4778;
+/* REMINDERS-01: these three were 4779 / 4776 / 4778 here. They come from run-all's PORT table now, so
+   UMBRA_TEST_PORT_SHIFT moves them with everything else. The defaults are the same numbers. */
+let PORT_NOTICE_WORKER = 4779;
+let PORT_NOTICE_SITE = 4776;
+let PORT_NOTICE_INSPECTOR = 4778;
 
 const READY4 = 'C:/Users/andre/Umbra/Boss/Bridge/SITE-ROWS-READY-01/READY-4-status-page-disclosures.md';
 
 export async function suitePage(ctx) {
-  const { browser, W, stub, sw, siteWorker, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, TMP, WORKER_DIR, REPO_DIR, wlogRef } = ctx;
+  const { browser, W, stub, sw, siteWorker, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, PORT, TMP, WORKER_DIR, REPO_DIR, wlogRef } = ctx;
+  /* REMINDERS-01: the notice Worker's three ports come from the shared table (see run-all's PORT). */
+  if (PORT && PORT.extraD) { PORT_NOTICE_WORKER = PORT.extraD; PORT_NOTICE_SITE = PORT.extraA; PORT_NOTICE_INSPECTOR = PORT.extraC; }
   const R = {};
   const PIC = path.join(TMP, 'page-pictures');
   fs.rmSync(PIC, { recursive: true, force: true });

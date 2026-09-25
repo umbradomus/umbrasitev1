@@ -16,12 +16,13 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
-import { captureServer, staticServer, close } from './lib/servers.mjs';
+import { captureServer, staticServer, smsgateServer, close } from './lib/servers.mjs';
 import { parseMultipart, fieldValue, files as filesOf } from './lib/multipart.mjs';
 import { suiteAlerts } from './suite-d-alerts.mjs';
 import { suiteWindows } from './suite-g-windows.mjs';
 import { suiteBook } from './suite-h-book.mjs';
 import { suitePage } from './suite-i-page.mjs';
+import { suiteReminders } from './suite-j-reminders.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -36,15 +37,38 @@ const TMP = path.join(HERE, '.tmp');
 const ORIGINAL_SITE = process.env.UMBRA_ORIGINAL_SITE || REPO_DIR;
 
 /* ALERTS-01 (2026-09-23) moved the five stand-ins from 8788–8792 to 4771–4775: several rounds share
-   this PC and that is the range this Worker's tests were given. The Worker itself stays on 8787. */
+   this PC and that is the range this Worker's tests were given. The Worker itself stays on 8787.
+   REMINDERS-01: several rounds now run this same suite on this same PC at the same time, and they
+   cannot all have 8787 and 4771-4776. The defaults below are unchanged; UMBRA_TEST_WORKER_PORT and
+   UMBRA_TEST_PORT_SHIFT move a run out of the way without touching anybody else's, and without
+   anybody having to kill a process that is not theirs. */
+const SHIFT = Number(process.env.UMBRA_TEST_PORT_SHIFT || 0);
+const P = (n) => n + SHIFT;
 const PORT = {
-  worker: 8787,
-  formsubmitTls: 4771,      /* https, reached as https://formsubmit.co via a host-resolver rule */
-  siteWorker: 4772,         /* the modified site, constant flipped to the Worker */
-  stub: 4773,               /* http, what the Worker itself calls: FormSubmit + Pushover + Telegram */
-  siteNew: 4774,            /* the modified site, constant left on FormSubmit */
-  siteOld: 4775,            /* the site exactly as it was before this round */
+  worker: Number(process.env.UMBRA_TEST_WORKER_PORT || 8787),
+  formsubmitTls: P(4771),   /* https, reached as https://formsubmit.co via a host-resolver rule */
+  siteWorker: P(4772),      /* the modified site, constant flipped to the Worker */
+  stub: P(4773),            /* http, what the Worker itself calls: FormSubmit + Pushover + Telegram */
+  siteNew: P(4774),         /* the modified site, constant left on FormSubmit */
+  siteOld: P(4775),         /* the site exactly as it was before this round */
+  /* REMINDERS-01: the contract fake of SMSGate's cloud server. Nothing is ever sent from it. */
+  smsgate: P(4770),
+  /* The second Workers two suites stand up for a moment of their own: suite G's Sunday Worker (it
+     closes them before suite I opens them again) and suite I's notice Worker. They were four bare
+     numbers inside those files; they live here now so that ONE shift moves the whole suite out of
+     another round's way, and none of them is left behind on somebody else's port. */
+  extraA: P(4776), extraB: P(4777), extraC: P(4778), extraD: P(4779),
 };
+/* Two of these landing on the same number kills workerd at startup with "std::terminate() called with
+   no exception" and nothing else — half an hour to work out, once. Say it here instead. */
+{
+  const seen = new Map();
+  for (const [name, n] of Object.entries(PORT)) {
+    if (seen.has(n)) throw new Error(`two test ports are the same: ${seen.get(n)} and ${name} are both ${n}. `
+      + 'UMBRA_TEST_WORKER_PORT and UMBRA_TEST_PORT_SHIFT have been set so that they collide.');
+    seen.set(n, name);
+  }
+}
 
 const ADMIN_KEY = 'test-admin-key-' + crypto.randomBytes(9).toString('hex');
 /* FAKE alert secrets, fresh each run, so a grep of any message can prove none of them leaked. */
@@ -55,6 +79,9 @@ const FAKE = {
   TELEGRAM_CHAT_ID: '-100' + String(crypto.randomInt(1e9)),
   HOOK_SECRET: 'FAKEhook' + crypto.randomBytes(10).toString('hex'),
 };
+/* REMINDERS-01: the SMSGate pair is one value, "user:pass", and it is FAKE. It is kept out of FAKE above
+   because the leak scan treats every FAKE value as a single token, and this one is deliberately a pair. */
+const FAKE_SMSGATE_AUTH = 'FAKEsmsuser' + crypto.randomBytes(5).toString('hex') + ':FAKEsmspass' + crypto.randomBytes(8).toString('hex');
 /** The Chrome that puppeteer-core drives. CHROME_PATH wins; otherwise the first
     of the usual install locations that exists on this machine. No Chrome is a
     loud stop, never a silent skip. */
@@ -265,6 +292,8 @@ async function main() {
   const sw = await staticServer({ port: PORT.siteWorker, root: siteWorker, proxy: `http://127.0.0.1:${PORT.worker}` });
   const sn = await staticServer({ port: PORT.siteNew, root: siteNew });
   const so = await staticServer({ port: PORT.siteOld, root: siteOld });
+  /* REMINDERS-01: the fake SMSGate. It never sends anything; it logs and answers. */
+  const gate = await smsgateServer({ port: PORT.smsgate });
 
   /* --- wrangler dev ------------------------------------------------------ */
   const devVars = [
@@ -277,6 +306,10 @@ async function main() {
     `PUBLIC_BASE_URL=http://127.0.0.1:${PORT.worker}`,
     'IGNORE_NEXT_ORIGIN=true',
     'ALLOW_TEST_HOOKS=true',
+    /* REMINDERS-01: a FAKE pair, fresh each run, and a 127.0.0.1 base the Worker only honours because
+       ALLOW_TEST_HOOKS is on. Drew's real SMSGATE_AUTH is never read, written or printed by this suite. */
+    `SMSGATE_AUTH=${FAKE_SMSGATE_AUTH}`,
+    `SMSGATE_API_BASE=http://127.0.0.1:${PORT.smsgate}`,
     /* ACCEPT-PAGE-01: the quote link points at the local site copy, never umbradomus.com */
     `QUOTE_LINK_BASE=http://127.0.0.1:${PORT.siteWorker}`,
     '',
@@ -320,6 +353,9 @@ new_sqlite_classes = ["QuoteBook"]
     process.execPath,
     [path.join(WORKER_DIR, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
       'dev', '--config', cfg, '--port', String(PORT.worker), '--ip', '127.0.0.1',
+      /* REMINDERS-01: wrangler's inspector is 9229 by default and two rounds on this PC would fight
+         over it — the runtime dies at startup with no useful word. It moves with the shift. */
+      '--inspector-port', String(9229 + SHIFT),
       '--local', '--log-level', 'warn',
       '--persist-to', path.join(TMP, 'wrangler-state')],
     {
@@ -370,11 +406,11 @@ new_sqlite_classes = ["QuoteBook"]
   const cleanup = async () => {
     try { await browser.close(); } catch (e) {}
     wrangler.kill('SIGTERM');
-    await Promise.all([close(stub), close(relay), close(sw), close(sn), close(so)]);
+    await Promise.all([close(stub), close(relay), close(sw), close(sn), close(so), close(gate)]);
   };
 
   try {
-    await runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, wlogRef: () => wlog, sw, siteWorker });
+    await runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, shaB, wlogRef: () => wlog, sw, siteWorker });
   } finally {
     await cleanup();
   }
@@ -394,7 +430,14 @@ new_sqlite_classes = ["QuoteBook"]
 
 /* ------------------------------------------------------------------- suites */
 
-async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, wlogRef, sw, siteWorker }) {
+async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, shaB, wlogRef, sw, siteWorker }) {
+  /* REMINDERS-01 · UMBRA_ONLY="J" runs one suite and skips the rest. It exists for the mutant pass:
+     a mutant has to be RED on one named reading, and running the whole suite seven times over to see
+     it would take an hour. Unset — every ordinary run, and the run whose count goes in a close — every
+     suite runs, in order, as it always did. */
+  const ONLY = process.env.UMBRA_ONLY ? new Set(process.env.UMBRA_ONLY.split(',').map((x) => x.trim())) : null;
+  const want = (letter) => !ONLY || ONLY.has(letter);
+  if (ONLY) console.log('UMBRA_ONLY=' + [...ONLY].join(',') + ' — the other suites are skipped');
   const SITE = `http://127.0.0.1:${PORT.siteWorker}`;
   let lastDialog = null;
   const page = await browser.newPage();
@@ -410,8 +453,9 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
   };
 
   /* ===================================================================== A1 */
-  suite('A · intake from the real form (2 photos)');
   let recA = null, tokenA = null;
+  if (want('A')) {
+  suite('A · intake from the real form (2 photos)');
   {
     const before = forwards().length;
     const beforeRelay = relayPosts().length;
@@ -745,7 +789,8 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
     }));
     ok(shape.jobs.length > 0, 'the aging list renders on a 390px screen', shape.jobs.join(','));
     eq(shape.firstIsOpen, true, 'the top row is an unquoted request');
-    eq(shape.buttons.join('/'), 'Quoted/Scheduled/Done', 'each job carries the three taps');
+    eq(shape.buttons.join('/'), 'Quoted/No text — handled by phone/Scheduled/Done',
+      'each job carries the three taps, and REMINDERS-01’s one more');
     eq(shape.overflow, true, 'and the page does not scroll sideways on a phone');
 
     const target = shape.jobs[0];
@@ -762,15 +807,18 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
     await ap.close();
   }
 
+  }   /* end of A, B and C */
+
   /* ====================================================================== D */
   /* ALERTS-01: the phone. The Stage 1 nudge suite was retired with its push service; the thirteen
      readings live in suite-d-alerts.mjs and are written to .tmp/readings.json for the round's close. */
-  {
+  if (want('D')) {
     const readings = await suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep });
     fs.writeFileSync(path.join(TMP, 'readings.json'), JSON.stringify(readings, null, 2));
   }
 
   /* ====================================================================== E */
+  if (want('E')) {
   suite('E · the markdown export');
   {
     const bad = await fetch(`${W}/api/export/${recA}.md?k=wrong`);
@@ -835,16 +883,18 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
     }
   }
 
+  }   /* end of E and F */
+
   /* ====================================================================== G */
   /* FORM-WINDOWS-01: the time screen and the text box. Its eleven readings go to .tmp/windows-readings.json. */
-  {
+  if (want('G')) {
     const readings = await suiteWindows({ browser, W, stub, relay, ADMIN_KEY, suite, ok, eq, json, sleep, PORT, TMP, WORKER_DIR, flipConstant, copyTree });
     fs.writeFileSync(path.join(TMP, 'windows-readings.json'), JSON.stringify(readings, null, 2));
   }
 
   /* ====================================================================== H */
   /* ACCEPT-PAGE-01: the book behind the quote link. Its readings go to .tmp/book-readings.json. */
-  {
+  if (want('H')) {
     const readings = await suiteBook({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep, SITE, wlogRef });
     fs.writeFileSync(path.join(TMP, 'book-readings.json'), JSON.stringify(readings, null, 2));
   }
@@ -852,7 +902,7 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
   /* ====================================================================== I */
   /* ACCEPT-PAGE-02: the customer's page at /q/<code>, through the site's own /q proxy. Readings go to
      .tmp/page-readings.json and its pictures to .tmp/page-pictures/. */
-  {
+  if (want('I')) {
     /* A throw inside suite I is a named FAIL and the tally still prints: the readings after it did not run,
        and the count says so rather than the run dying without a TOTAL. */
     try {
@@ -861,6 +911,19 @@ async function runSuites({ browser, W, stub, relay, photoA, photoB, shaA, shaB, 
     } catch (err) {
       suite('I · the suite ran to its end');
       ok(false, 'suite I stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
+    }
+  }
+
+  /* ====================================================================== J */
+  /* REMINDERS-01: his table, the holding text and the second clock. Its readings go to
+     .tmp/reminders-readings.json for the round's close. */
+  if (want('J')) {
+    try {
+      const readings = await suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSGATE_AUTH, suite, ok, eq, json, sleep });
+      fs.writeFileSync(path.join(TMP, 'reminders-readings.json'), JSON.stringify(readings, null, 2));
+    } catch (err) {
+      suite('J · the suite ran to its end');
+      ok(false, 'suite J stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
     }
   }
 

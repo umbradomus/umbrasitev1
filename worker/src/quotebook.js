@@ -58,6 +58,18 @@ const SCHEMA = [
      version INTEGER NOT NULL,
      booked_at TEXT NOT NULL
    )`,
+  /* REMINDERS-01: the once-only marks. One row per thing that may happen at most once for a job — today
+     only `hold:<U-id>`, the holding text. KV cannot say no to the second writer (ALERTS-01 FOUND 4); an
+     insert-if-absent here can, because it runs inside this object's own turn with no await in it. */
+  `CREATE TABLE IF NOT EXISTS marks (
+     key TEXT PRIMARY KEY,
+     job_id TEXT NOT NULL,
+     state TEXT NOT NULL,
+     gateway_id TEXT,
+     at TEXT NOT NULL,
+     changed_at TEXT,
+     note TEXT
+   )`,
   'CREATE INDEX IF NOT EXISTS bookings_by_date ON bookings (date)',
   'CREATE INDEX IF NOT EXISTS quotes_by_job ON quotes (job_id, version)',
 ];
@@ -306,12 +318,53 @@ export class QuoteBook extends DurableObject {
     });
   }
 
+  /* ------------------------------------------------------------ REMINDERS-01 · what stops the clock */
+
+  /**
+   * Has a quote for this job actually gone out? AMENDMENT 1 C: the BOOK is asked fresh just before any
+   * holding text, because the KV mirror can lag or be edited and the customer cannot be un-texted.
+   * A withdrawn version that was sent still counts: the customer has it.
+   */
+  quoteWentOut(jobId) {
+    const rows = this.sql.exec('SELECT version, status, sent_at FROM quotes WHERE job_id = ? AND sent_at IS NOT NULL ORDER BY version', jobId).toArray();
+    return { sent: rows.length > 0, versions: rows.map((r) => ({ version: r.version, status: r.status, sent_at: r.sent_at })) };
+  }
+
+  /* ------------------------------------------------------------ REMINDERS-01 · the once-only mark */
+
+  /** Insert if absent. `won` is true for the ONE caller that put the row there; every other gets the row. */
+  markOnce(key, jobId, state, nowIso, note) {
+    return this.ctx.storage.transactionSync(() => {
+      const had = this.sql.exec('SELECT * FROM marks WHERE key = ?', key).toArray()[0];
+      if (had) return { won: false, mark: had };
+      this.sql.exec('INSERT INTO marks (key, job_id, state, gateway_id, at, changed_at, note) VALUES (?, ?, ?, NULL, ?, ?, ?)',
+        key, jobId, state, nowIso, nowIso, note || null);
+      return { won: true, mark: this.sql.exec('SELECT * FROM marks WHERE key = ?', key).toArray()[0] };
+    });
+  }
+
+  /** How the one call ended. Only the writer that won the mark ever calls this. */
+  markSet(key, state, gatewayId, nowIso, note) {
+    return this.ctx.storage.transactionSync(() => {
+      const had = this.sql.exec('SELECT * FROM marks WHERE key = ?', key).toArray()[0];
+      if (!had) return { ok: false };
+      this.sql.exec('UPDATE marks SET state = ?, gateway_id = COALESCE(?, gateway_id), changed_at = ?, note = ? WHERE key = ?',
+        state, gatewayId || null, nowIso, note || null, key);
+      return { ok: true, mark: this.sql.exec('SELECT * FROM marks WHERE key = ?', key).toArray()[0] };
+    });
+  }
+
+  markGet(key) {
+    return this.sql.exec('SELECT * FROM marks WHERE key = ?', key).toArray()[0] || null;
+  }
+
   /* ------------------------------------------------------------ tests only (reached through gated hooks) */
 
   dump() {
     return {
       quotes: this.sql.exec('SELECT * FROM quotes ORDER BY job_id, version').toArray(),
       bookings: this.sql.exec('SELECT * FROM bookings ORDER BY date, start_min').toArray(),
+      marks: this.sql.exec('SELECT * FROM marks ORDER BY key').toArray(),
     };
   }
 }
