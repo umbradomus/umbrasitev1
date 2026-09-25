@@ -73,9 +73,10 @@ export async function suiteSeat({ W, stub, gate, ADMIN_KEY, suite, ok, eq, json,
     const s = await submit(t0, who('Adopt Accepted'));
     const id = s.id;
     ok(!!id, '(1) the request lands', String(s.status));
+    const pBase = posts().length;                                   /* suite J's own POSTs sit in the same log */
     await walk(CT(2026, 10, 19, 9, 5), CT(2026, 10, 19, 11, 0));
     const p0 = posts().length, q0 = mine(id).filter((c) => titleOf(c).startsWith('HOLDING TEXT QUEUED')).length;
-    eq(p0, 1, '(1) one POST at 11:00');
+    eq(p0 - pBase, 1, '(1) one POST at 11:00');
     eq(q0, 1, '(1) one QUEUED push at 11:00');
     const before = await record(id);
     eq(before.alerts.holding.state, 'accepted', '(1) KV says accepted');
