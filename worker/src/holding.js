@@ -144,8 +144,9 @@ export function holdingText(rec, nowMs) {
   const endMs = bizAdvance(nowMs, 120);
   const name = firstNameOf(rec);
   const text = (lang === 'es' ? HOLDING_ES : HOLDING_EN)
-    .replace('{name}', name ? ' ' + name : '')
-    .replace('{time}', promiseTime(endMs, nowMs, lang))
+    /* SEAT FIX (1Supe7, 2026-09-25, review N5): a replacer FUNCTION, so a name holding "$&" or "$'" is text, not a pattern */
+    .replace('{name}', () => (name ? ' ' + name : ''))
+    .replace('{time}', () => promiseTime(endMs, nowMs, lang))
     /* "las 9:00 a. m." already ends the sentence; the template's own full stop would double it */
     .replace(/\.\.(?!\.)/g, '.');
   if (/[{}]/.test(text)) return { error: 'unfilled' };      /* AMENDMENT 1 A, mutant (d) */

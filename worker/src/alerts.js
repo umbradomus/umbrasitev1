@@ -500,6 +500,20 @@ async function runHolding(env, rec, nowIso, nowMs, out) {
     return null;
   }
 
+  /* SEAT FIX (1Supe7, 2026-09-25, review S2): the KV stops, read fresh too. The BOOK was asked above; a No-text,
+     Quoted, Scheduled or Done tap that landed in KV while this run was working is the other thing that must stop
+     the text, and the record this run holds is a snapshot from before those calls. */
+  const live = await getRecord(env, rec.id);
+  const liveStop = kvStop(live);
+  if (liveStop) {
+    Object.assign(rec, live);
+    if (!(rec.alerts.table && rec.alerts.table.ended_at)) endLadder(rec, liveStop, nowIso);
+    rec.alerts.claim = null;
+    await putRecord(env, rec);
+    out.stopped.push({ id: rec.id, why: liveStop });
+    return null;
+  }
+
   /* AMENDMENT 1 E · the once-only mark: insert-if-absent in the BOOK, never a KV read-then-write */
   const gid = holdGatewayId(rec.id);
   const key = holdKey(rec.id);
@@ -513,36 +527,118 @@ async function runHolding(env, rec, nowIso, nowMs, out) {
       endLadder(rec, 'holding_unknown', nowIso);
       return holdingPush(env, rec, 'silent', nowIso, nowMs, out);
     }
+    /* SEAT FIX (1Supe7, 2026-09-25, review B1): the BOOK's word is terminal and KV fell behind it — the run that won
+       the mark lost a write after the call, or died before it. The mark is the record's own truth: take it, once,
+       and finish that run's step; never another POST. Without this the request went quiet for good. */
+    if (TERMINAL_MARK.has(held.state) && behindMark(a, held)) return adoptMark(env, rec, held, gid, nowIso, nowMs, out);
     out.skipped_claims.push(rec.id);
     return null;
   }
 
-  /* the record says "sending" BEFORE the call, under the claim */
-  a.holding = { at: nowIso, gateway_id: gid, state: 'sending', ttl, lang: words.lang, parts: words.parts };
-  addEvent(rec, 'holding_text', { state: 'sending', gateway: gid, lang: words.lang, parts: words.parts }, nowIso);
-  await putRecord(env, rec);
-
+  /* SEAT FIX (1Supe7, 2026-09-25, review B1): the record no longer says "sending" in KV before the call — the BOOK's
+     mark already does, the admin page reads clock 1 for the second the call takes, and one fewer write to the same
+     key inside one second is one fewer 429. A run that dies inside the call is the stale-mark case above. */
   const r = await postHolding(env, { id: gid, e164: n.e164, text: words.text, ttl });
-  await markSet(env, key, r.state, r.gateway_id || null, new Date().toISOString(), 'http ' + r.status);
+  const settledIso = new Date().toISOString();
+  await markSet(env, key, r.state, r.gateway_id || null, settledIso, 'http ' + r.status);
   a.holding = {
     at: nowIso, gateway_id: r.gateway_id || gid, state: r.state, ttl, lang: words.lang, parts: words.parts,
     status: r.status, ...(r.state === 'accepted' ? { gateway_state: r.gateway_state } : { settled_at: nowIso }),
   };
   addEvent(rec, 'holding_text', { state: r.state, gateway: a.holding.gateway_id, status: r.status }, nowIso);
-  /* written before the push: deliver() re-reads the record from KV, so an event left only in memory
-     here would be lost and the record would never say how the one call ended */
-  await putRecord(env, rec);
 
   if (r.state !== 'accepted') {
     /* NEVER a retry, and never a second POST for this request */
     endLadder(rec, 'holding_' + r.state, nowIso);
+    await putOwn(env, rec, nowIso);                      /* SEAT FIX (1Supe7): ours onto KV's now, never a snapshot back */
     return holdingPush(env, rec, 'failed', nowIso, nowMs, out);
   }
   /* §4 · THE SECOND CLOCK starts the moment the text is accepted, on the same table */
   a.second_clock_started_at = nowIso;
   a.table = { clock: 2, fired: [], skipped: [], ended_at: null, end_reason: null };
   a.next_at = new Date(bizAdvance(nowMs, TABLE[0])).toISOString();
+  /* written before the push: deliver() re-reads the record from KV, so an event left only in memory here would be
+     lost and the record would never say how the one call ended. SEAT FIX (1Supe7): folded onto the record as KV
+     holds it NOW — a tap that landed during the call keeps its stop, and then no second clock runs. */
+  await putOwn(env, rec, nowIso);
   return holdingPush(env, rec, 'queued', nowIso, nowMs, out);
+}
+
+/* SEAT FIX (1Supe7, 2026-09-25, review B1/S2) · the helpers the fixes above use */
+const TERMINAL_MARK = new Set(['accepted', 'refused', 'unknown']);
+
+/** KV's own stops on a record read fresh (the BOOK's stop is asked separately). */
+function kvStop(rec) {
+  if (!rec || !rec.alerts) return null;
+  if (rec.quoted_at) return 'quoted';
+  if (rec.status !== 'received') return 'status:' + rec.status;
+  if (rec.alerts.no_text_at) return 'no_text_tap';
+  if (rec.alerts.table && rec.alerts.table.ended_at) return rec.alerts.table.end_reason || 'ended';
+  return null;
+}
+
+/** Is the record behind a terminal mark? (the mark says how the call ended; KV never learned it) */
+function behindMark(a, held) {
+  const h = a.holding || {};
+  if (h.state !== held.state) return true;
+  if (held.state === 'accepted') return !a.second_clock_started_at && !(a.table && a.table.ended_at);
+  return !(a.table && a.table.ended_at);
+}
+
+/** The mark's word becomes the record's, once, and the step that was owed on it is finished: the second clock and
+    the QUEUED push for an accepted text, the DID-NOT-GO push and the end of the ladder for a refused or unknown one.
+    The mark's own time anchors the second clock, so the promise the customer was texted still holds. */
+async function adoptMark(env, rec, held, gid, nowIso, nowMs, out) {
+  const a = rec.alerts;
+  const gateway = held.gateway_id || gid;
+  const status = Number((/^http (\d{3})$/.exec(String(held.note || '')) || [])[1]) || undefined;
+  const prior = a.holding || {};
+  a.holding = {
+    at: held.at || nowIso, gateway_id: gateway, state: held.state,
+    ttl: prior.ttl || null, lang: prior.lang || null, parts: prior.parts || null,
+    ...(status ? { status } : {}), adopted_at: nowIso,
+    ...(held.state === 'accepted' ? {} : { settled_at: nowIso }),
+  };
+  addEvent(rec, 'holding_text', { state: held.state, gateway, adopted: true }, nowIso);
+  out.adopted.push({ id: rec.id, state: held.state });
+  if (held.state !== 'accepted') {
+    endLadder(rec, 'holding_' + held.state, nowIso);
+    await putOwn(env, rec, nowIso);
+    return holdingPush(env, rec, 'failed', nowIso, nowMs, out);
+  }
+  const settled = Date.parse(held.at);                   /* the mark's insert time: the run's own named minute, a second before the call */
+  const anchorMs = isFinite(settled) && settled <= nowMs ? settled : nowMs;
+  a.second_clock_started_at = new Date(anchorMs).toISOString();
+  a.table = { clock: 2, fired: [], skipped: [], ended_at: null, end_reason: null };
+  a.next_at = new Date(bizAdvance(anchorMs, TABLE[0])).toISOString();
+  await putOwn(env, rec, nowIso);
+  return holdingPush(env, rec, 'queued', nowIso, nowMs, out);
+}
+
+const eventKey = (e) => JSON.stringify(e);
+
+/** Write THIS RUN'S OWN blocks onto the record as KV holds it now — never a snapshot back over a tap that landed
+    meanwhile. A stop that landed (No text, Quoted, Scheduled, Done) is kept and ends the ladder; the holding block
+    (what the one call did) is always ours. `rec` is replaced in place so the caller keeps working on the merged record. */
+async function putOwn(env, rec, nowIso) {
+  const fresh = await getRecord(env, rec.id);
+  if (fresh && fresh.alerts) {
+    const mine = rec.alerts;
+    const stop = kvStop(fresh);
+    fresh.alerts.holding = mine.holding;
+    fresh.alerts.claim = mine.claim;
+    if (stop) {
+      if (!(fresh.alerts.table && fresh.alerts.table.ended_at)) endLadder(fresh, stop, nowIso);
+    } else {
+      for (const k of STEP_KEYS) fresh.alerts[k] = mine[k];
+      for (const k of TABLE_KEYS) fresh.alerts[k] = mine[k];
+    }
+    const have = new Set((fresh.events || []).map(eventKey));
+    for (const e of (rec.events || [])) if (!have.has(eventKey(e))) { if (!Array.isArray(fresh.events)) fresh.events = []; fresh.events.push(e); }
+    for (const k of Object.keys(rec)) if (!(k in fresh)) delete rec[k];
+    Object.assign(rec, fresh);
+  }
+  await putRecord(env, rec);
 }
 
 /* ------------------------------------------------------------ the delivery watch */
@@ -575,7 +671,7 @@ async function runWatch(env, rec, nowIso, nowMs, out) {
     return holdingPush(env, rec, 'silent', nowIso, nowMs, out);
   }
   /* still Pending or Processed: keep the watch, write what we learned, send nothing */
-  await putRecord(env, rec);
+  await putOwn(env, rec, nowIso);                          /* SEAT FIX (1Supe7): ours onto KV's now, never a snapshot back */
   return null;
 }
 
@@ -600,7 +696,9 @@ async function runTable(env, rec, owed, nowIso, nowMs, out) {
   /* a step whose channel answered 5xx is carried here, as it always was, before anything new goes */
   if (owed.retry) {
     rec.alerts.retry = owed.retry;
-    out.sent.push(await deliver(env, rec, 'retry', owed.retry.msg, nowIso, owed.retry.channels, (owed.retry.attempts || 1) + 1));
+    /* SEAT FIX (1Supe7, 2026-09-25, review S1): the retried push is cut to the day exactly like a first send — the
+       stored message carried the expire of the minute it was first built, which could ring past 9 PM. */
+    out.sent.push(await deliver(env, rec, 'retry', nightSafe(owed.retry.msg, nowMs), nowIso, owed.retry.channels, (owed.retry.attempts || 1) + 1));
     if ((await reread()).table.ended_at) return;
   }
 
@@ -733,7 +831,7 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
   const nowMs = Date.parse(nowIso);
   const out = {
     now: nowIso, open: isOpen(nowMs), summary: null, sent: [], skipped_claims: [],
-    stopped: [], held_for_morning: [], watched: [], book_down: [],
+    stopped: [], held_for_morning: [], watched: [], book_down: [], adopted: [], failed: [],
   };
   if (!out.open) return out;                 /* 9 PM – 7 AM: nothing leaves — no push, no text */
 
@@ -750,6 +848,12 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
   for (const rec of all) {
     if (rec.status !== 'received' || !rec.alerts) continue;
     if (isTable(rec)) {
+      /* SEAT FIX (1Supe7, 2026-09-25, review S2): the claim goes onto the record AS KV HOLDS IT NOW, not onto the
+         listing's snapshot — a tap that landed since the listing (No text, Quoted, Scheduled, Done) would otherwise be
+         written over by the claim itself, and the text would still go. */
+      const now = await getRecord(env, rec.id);
+      if (now && now.alerts) { for (const k of Object.keys(rec)) if (!(k in now)) delete rec[k]; Object.assign(rec, now); }
+      if (rec.status !== 'received' || !rec.alerts) continue;
       const owed = tableDue(rec, nowMs);
       if (!owed) continue;
       rec.alerts.claim = token;              /* the table's own due-ness comes from `fired`, not next_at */
@@ -790,9 +894,16 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
         out.stopped.push({ id, why });
         continue;
       }
-      await runTable(env, rec, plan.table, nowIso, nowMs, out);
-      const back = await getRecord(env, id);
-      if (back && back.alerts && back.alerts.claim === token) { back.alerts.claim = null; await putRecord(env, back); }
+      /* SEAT FIX (1Supe7, 2026-09-25, review B1): a write that fails on ONE record (KV's 429, a transient error) is
+         logged and that record is left for the next run; the others still get their step this run. */
+      try {
+        await runTable(env, rec, plan.table, nowIso, nowMs, out);
+        const back = await getRecord(env, id);
+        if (back && back.alerts && back.alerts.claim === token) { back.alerts.claim = null; await putRecord(env, back); }
+      } catch (err) {
+        console.error('table run failed for', id, String((err && err.message) || err).slice(0, 200));
+        out.failed.push({ id, error: String((err && err.message) || err).slice(0, 120) });
+      }
       continue;
     }
     if (rec.alerts.ack_at) { out.skipped_claims.push(id); continue; }

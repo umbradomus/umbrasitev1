@@ -23,8 +23,13 @@ function cut(s, n) {
   return s.length <= n ? s : s.slice(0, n - 1) + '…';
 }
 
-function base(v, fallback) {
-  return String(v || fallback).replace(/\/+$/, '');
+/* SEAT FIX (1Supe7, 2026-09-25, review N4 · AMENDMENT 1 F, the Pushover half): an override of where the pushes go is
+   honoured only with the test hooks on AND a 127.0.0.1 address — the same door holding.js keeps for SMSGate — so a
+   production build cannot be pointed anywhere but the real service. */
+function base(env, v, fallback) {
+  const o = String(v || '').replace(/\/+$/, '');
+  if (o && String((env || {}).ALLOW_TEST_HOOKS) === 'true' && /^http:\/\/127\.0\.0\.1(:\d{1,5})?(\/[^\s]*)?$/.test(o)) return o;
+  return String(fallback).replace(/\/+$/, '');
 }
 
 async function bodyOf(res) {
@@ -57,7 +62,7 @@ export async function sendPushover(env, msg) {
     if (cb) form.set('callback', cb);
   }
   try {
-    const res = await fetch(base(env.PUSHOVER_API_BASE, 'https://api.pushover.net') + '/1/messages.json', {
+    const res = await fetch(base(env, env.PUSHOVER_API_BASE, 'https://api.pushover.net') + '/1/messages.json', {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: form.toString(),
@@ -79,7 +84,7 @@ export async function sendTelegram(env, msg) {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return { ok: false, channel, status: 0, skipped: true, retry: false, error: 'TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set' };
   const text = cut(msg.title + '\n' + msg.message, TELEGRAM_MAX_TEXT);
   try {
-    const res = await fetch(base(env.TELEGRAM_API_BASE, 'https://api.telegram.org') + '/bot' + env.TELEGRAM_BOT_TOKEN + '/sendMessage', {
+    const res = await fetch(base(env, env.TELEGRAM_API_BASE, 'https://api.telegram.org') + '/bot' + env.TELEGRAM_BOT_TOKEN + '/sendMessage', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, disable_web_page_preview: true }),
@@ -113,7 +118,7 @@ export async function sendAlert(env, msg, only = CHANNELS) {
 export async function cancelPushoverTag(env, tag) {
   if (!env.PUSHOVER_TOKEN) return { ok: false, skipped: true };
   try {
-    const res = await fetch(base(env.PUSHOVER_API_BASE, 'https://api.pushover.net') + '/1/receipts/cancel_by_tag/' + encodeURIComponent(tag) + '.json', {
+    const res = await fetch(base(env, env.PUSHOVER_API_BASE, 'https://api.pushover.net') + '/1/receipts/cancel_by_tag/' + encodeURIComponent(tag) + '.json', {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ token: env.PUSHOVER_TOKEN }).toString(),

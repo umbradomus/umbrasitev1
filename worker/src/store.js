@@ -49,8 +49,21 @@ export async function getRecord(env, id) {
   }
 }
 
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* SEAT FIX (1Supe7, 2026-09-25, review B1): Workers KV allows ONE write to a key per second and throws a 429 on the
+   next one inside that second. A step that writes the same job twice in quick succession (the claim and then the
+   send's stamp; the gateway's answer and then the push's stamp) would otherwise lose its second write and leave
+   the record behind the BOOK. One wait of 1.1 s and one more try; a second refusal, or any other error, stands. */
 export async function putRecord(env, rec) {
-  await env.RECORDS.put(jobKey(rec.id), JSON.stringify(rec));
+  const key = jobKey(rec.id), body = JSON.stringify(rec);
+  try {
+    await env.RECORDS.put(key, body);
+  } catch (err) {
+    if (!/\b429\b|too many requests/i.test(String((err && err.message) || err))) throw err;
+    await sleepMs(1100);
+    await env.RECORDS.put(key, body);
+  }
 }
 
 export async function listRecords(env) {

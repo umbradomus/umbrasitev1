@@ -23,6 +23,7 @@ import { suiteWindows } from './suite-g-windows.mjs';
 import { suiteBook } from './suite-h-book.mjs';
 import { suitePage } from './suite-i-page.mjs';
 import { suiteReminders } from './suite-j-reminders.mjs';
+import { suiteSeat } from './suite-s-seat.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -924,6 +925,20 @@ async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, 
     } catch (err) {
       suite('J · the suite ran to its end');
       ok(false, 'suite J stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
+    }
+  }
+
+  /* ====================================================================== S */
+  /* The seat's readings on REMINDERS-01 (1Supe7, 2026-09-25): the lost write after the BOOK mark, the tap that
+     lands mid-run, the retry after 9 PM, KV's 429, the push base gate, the name as a pattern. Readings go to
+     .tmp/seat-readings.json. */
+  if (want('S')) {
+    try {
+      const readings = await suiteSeat({ W, stub, gate, ADMIN_KEY, suite, ok, eq, json, sleep });
+      fs.writeFileSync(path.join(TMP, 'seat-readings.json'), JSON.stringify(readings, null, 2));
+    } catch (err) {
+      suite('S · the suite ran to its end');
+      ok(false, 'suite S stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
     }
   }
 
