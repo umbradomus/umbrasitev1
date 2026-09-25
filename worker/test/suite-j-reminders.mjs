@@ -92,9 +92,13 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
   });
 
   async function runAt(iso) {
-    const before = PO().length;
+    const before = PO().length, g0 = gate.requests.length;
     const r = (await json(`${W}/__run-alerts?k=${ADMIN_KEY}&now=${encodeURIComponent(iso)}`, { method: 'POST' })).body;
     for (const c of PO().slice(before)) c.runNow = iso;
+    /* SEAT FIX (1Supe7, 2026-09-25): the gateway's requests are tagged with the run's NAMED minute too, so reading
+       (10) reads the hour the Worker was told it was, not the wall clock of the machine running the suite — the
+       suite run at 9 PM Central counted its six daytime holding texts as night sends. */
+    for (const q of gate.requests.slice(g0)) q.runNow = iso;
     return r;
   }
   /** every `step` minutes from one moment to another, as the cron would. */
@@ -574,7 +578,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     const all = since(m);
     const nightPush = all.po.filter((x) => { const h = hourOf(x.runNow || new Date(Number(x.at)).toISOString()); return h >= 21 || h < 7; });
     eq(nightPush.length, 0, '(10) zero pushes with a Chicago hour of 21:00–06:59, across 48 hours');
-    const nightGate = all.gate.filter((r) => { const h = hourOf(r.at); return h >= 21 || h < 7; });
+    const nightGate = all.gate.filter((r) => { const h = hourOf(r.runNow || r.at); return h >= 21 || h < 7; });
     eq(nightGate.length, 0, '(10) and zero gateway calls in those hours');
     const overhang = all.po.filter((x) => x.runNow && x.p.get('priority') === '2'
       && Date.parse(x.runNow) + Number(x.p.get('expire')) * 1000 > closeOf(x.runNow));
