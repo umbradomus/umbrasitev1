@@ -530,6 +530,28 @@ textarea.field { min-height: 8rem; resize: vertical; }
   color: var(--muted); }
 .req .ch-tap.on .ch-sub, .req .ch-tap:has(input:checked) .ch-sub { color: var(--white); opacity: 0.85; }
 
+/* ONE SCREEN ON A PHONE. The ignite asks for the heading and every tile on one
+   390-wide screen, so on a phone the tiles run tight: the words stay full size to
+   the thumb, the padding and the second line give up the room. Each tile is still
+   well over a 44pt target. Nothing here changes a colour or a font. */
+@media (max-width: 480px) {
+  /* the band the chooser lives in, and nothing else on the site */
+  section.band:has([data-chooser-tiles]) { padding-top: 0.9rem; }
+  section.band:has([data-chooser-tiles]) > .wrap > h2 { font-size: 1.35rem; line-height: 1.12; margin-bottom: 0.25em; }
+  section.band:has([data-chooser-tiles]) > .wrap > .lead { font-size: 1rem; line-height: 1.35; margin-bottom: 0.55rem; }
+  .ch-heading { font-size: 1.1rem; margin-bottom: 0.25rem; }
+  .ch-hint { font-size: 0.88rem; line-height: 1.3; margin: 0 0 0.5rem; }
+  .req .ch-tiles { gap: 0.3rem; }
+  .req .ch-tiles .ch-tap { min-height: 52px; padding: 0.45rem 0.7rem; gap: 0.55rem; }
+  .req .ch-tiles .ch-label { font-size: 0.97rem; line-height: 1.18; }
+  /* The second line goes on a phone. Eight tiles and their second lines do not fit
+     on one 390-wide screen in English and come nowhere near it in Spanish, and the
+     ignite asks for one screen. The label names the symptom; the screen that follows
+     the tap asks the detail the second line was hinting at. From 481 px up there is
+     room and it is back. */
+  .req .ch-tiles .ch-sub { display: none; }
+}
+
 /* "While we're there" — the second thing on the chooser's screen, under the tiles */
 .ch-while { margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
 .req .ch-list .ch-tap { min-height: 52px; }

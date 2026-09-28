@@ -126,11 +126,19 @@
   var chooserStep = stepOf('chooser');
   if (!chooserStep) return;
 
-  var head = el('h3', 'v2q ch-heading', W.heading);
+  /* THE HEADING IS THE PAGE'S OWN when the page has one. /services and /es/servicios
+     carry it in their HTML, so it is there with JavaScript off and it is there before
+     this file runs — and saying it twice, once in the band and once again three lines
+     below, reads like a mistake. On a page without one, the chooser says it itself. */
+  var pageHead = document.getElementById('request-top') || document.getElementById('pedir-top');
+  var head = pageHead;
+  if (!head) {
+    head = el('h3', 'v2q ch-heading', W.heading);
+    head.id = 'chooser-heading';
+    chooserStep.appendChild(head);
+    chooserStep.appendChild(el('p', 'v2hint ch-hint', W.hint));
+  }
   head.setAttribute('data-chooser-heading', '1');
-  head.id = 'chooser-heading';
-  chooserStep.appendChild(head);
-  chooserStep.appendChild(el('p', 'v2hint', W.hint));
 
   var tileList = el('ul', 'v2opts ch-tiles');
   tileList.setAttribute('data-chooser-tiles', '1');
@@ -503,7 +511,9 @@
     if (wl.length) reviewHost.appendChild(group(W.sWhile, wl, 'chooser'));
 
     var photos = form.querySelectorAll('[data-photo-list] li');
-    var pg = group(W.sPhotos, [String(photos.length)], 'photos');
+    var pg = group(W.sPhotos, [photos.length
+      ? (photos.length === 1 ? W.photoOne : photos.length + W.photoMany)
+      : W.photosNone], 'photos');
     if (photos.length) {
       var strip = el('div', 'ch-thumbs');
       for (var p = 0; p < photos.length; p++) {
@@ -671,6 +681,50 @@
   drawPhotoAsk();
   drawReview();
   if (restored) markStarted();
+
+  /* ============================================== "FIX SOMETHING" LANDS ON THE TOP
+     His words: "i have to scroll up from the drywall form that it just starts us
+     already on to even see any of these options." So the tap on Fix something puts
+     the TOP of the chooser at the top of the screen — not the middle of a form, and
+     not a field. The browser's own jump to #request happens before the chooser is
+     drawn and before the pictures below settle, which is exactly how he ended up
+     halfway down it; this puts it right once everything has its height.
+     Nothing is focused. The customer's thumb is already where it needs to be. */
+  var band = root.closest('.band') || root;
+  function toTop() {
+    /* the site's header sticks to the top of the screen, so the landing sits below
+       it — otherwise the first line of the chooser lands underneath the logo */
+    var top = document.querySelector('.top');
+    var lid = 0;
+    if (top) {
+      var pos = window.getComputedStyle ? window.getComputedStyle(top).position : '';
+      if (pos === 'sticky' || pos === 'fixed') lid = top.getBoundingClientRect().height;
+    }
+    var y = Math.max(0, Math.round(band.getBoundingClientRect().top - lid +
+      (window.pageYOffset || document.documentElement.scrollTop || 0)));
+    /* The page's own CSS scrolls smoothly, which is right for a link two screens
+       down and wrong for this one: the chooser sits six thousand pixels below the
+       top of /services, and a six-second slide is not a landing. The smooth is put
+       aside for this one jump and handed straight back. */
+    var de = document.documentElement;
+    var was = de.style.scrollBehavior;
+    de.style.scrollBehavior = 'auto';
+    window.scrollTo(0, y);
+    de.style.scrollBehavior = was;
+  }
+  function askedForIt(h) { return h === '#request' || h === '#pedir' || h === '#' + band.id; }
+  if (askedForIt(location.hash)) {
+    toTop();
+    if (document.readyState !== 'complete') window.addEventListener('load', toTop);
+  }
+  /* a tap on any "Fix something" link already on this page does the same */
+  var links = document.querySelectorAll('a[href^="#"]');
+  for (var li = 0; li < links.length; li++) {
+    (function (a) {
+      if (!askedForIt(a.getAttribute('href'))) return;
+      a.addEventListener('click', function () { setTimeout(toTop, 0); });
+    })(links[li]);
+  }
 
   window.UmbraChooser = {
     lit: lit,
