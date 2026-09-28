@@ -186,10 +186,60 @@
         }
         block.appendChild(ul);
         block.setAttribute('data-answer-name', nm);
+        /* SITE-FIX-01.1 · a question that is only asked sometimes says so here, and
+           applyWhen() below is the one place that decides. */
+        if (qq.when) {
+          block.setAttribute('data-when-name', 'a_' + tl.key + '_' + qq.when.q);
+          block.setAttribute('data-when-opts', qq.when.opts.join(','));
+          block.setAttribute('data-when-of', tl.key + '/' + qq.when.q);
+        }
         sec.appendChild(block);
       }
       tileHost.appendChild(sec);
       tileSteps[tl.key] = sec;
+    }
+  }
+
+  /* SITE-FIX-01.1 · THE QUESTIONS THAT ARE ONLY SOMETIMES ASKED. AMEND A6.2: "how many
+     rooms" only when the walls or the whole room get paint. A question whose turn has not
+     come is hidden AND forgets whatever was tapped in it, so nothing a customer cannot see
+     travels to Drew. The options are matched BY POSITION, which is why the rule reads the
+     same in English and in Spanish. */
+  function optionValues(tileKey, qKey, positions) {
+    for (var t = 0; t < TILES.length; t++) {
+      if (TILES[t].key !== tileKey) continue;
+      for (var q = 0; q < TILES[t].questions.length; q++) {
+        if (TILES[t].questions[q].key !== qKey) continue;
+        var opts = TILES[t].questions[q][LANG].opts, out = [];
+        for (var p = 0; p < positions.length; p++) out.push(opts[positions[p]]);
+        return out;
+      }
+    }
+    return [];
+  }
+  function askedOf(tileKey, qq) {
+    if (!qq.when) return true;
+    var wanted = optionValues(tileKey, qq.when.q, qq.when.opts);
+    var on = ticked('a_' + tileKey + '_' + qq.when.q);
+    for (var w = 0; w < wanted.length; w++) if (on.indexOf(wanted[w]) > -1) return true;
+    return false;
+  }
+  function applyWhen() {
+    var blocks = root.querySelectorAll('[data-when-name]');
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      var of = (b.getAttribute('data-when-of') || '').split('/');
+      var positions = (b.getAttribute('data-when-opts') || '').split(',').map(Number);
+      var wanted = optionValues(of[0], of[1], positions);
+      var on = ticked(b.getAttribute('data-when-name'));
+      var asked = false;
+      for (var w = 0; w < wanted.length; w++) if (on.indexOf(wanted[w]) > -1) asked = true;
+      if (b.hidden === !asked) continue;
+      b.hidden = !asked;
+      if (!asked) {
+        var ins = b.querySelectorAll('input');
+        for (var n = 0; n < ins.length; n++) ins[n].checked = false;
+      }
     }
   }
 
@@ -278,6 +328,7 @@
       var tl = on[i];
       for (var q = 0; q < tl.questions.length; q++) {
         var qq = tl.questions[q];
+        if (!askedOf(tl.key, qq)) continue;
         var vals = ticked('a_' + tl.key + '_' + qq.key);
         if (!vals.length) continue;
         out.push(tl[LANG].label + ': ' + qq[LANG].q + ' = ' + vals.join(' · '));
@@ -299,23 +350,14 @@
     return out;
   }
 
-  /* THE CLOCK TRAVELS WITH THE CHOOSER, and only with it.
-     A6 asks for started_at and sent_at. A clock is different on every send by its
-     nature, and suite F (frozen this round) reads the same page submitting the same
-     bytes twice — a request that never touched a tile has no chooser journey to
-     time, so it carries no clock, and F stays green. Every request a customer
-     actually builds on the chooser carries both. The close names this. */
-  var startedAt = '';
-  function markStarted() {
-    if (startedAt) return;
-    startedAt = new Date().toISOString();
-  }
-  function clockTravels() { return lit().length > 0; }
+  /* SITE-FIX-01.1 · THE CLOCK AND THE LANGUAGE TRAVEL WITH EVERY REQUEST NOW, and they are
+     stamped in ONE place for every page of the site — /assets/umbra-address.js, the file
+     every form page loads. The round before this one carried them only with a request built
+     on the chooser, to keep suite F's frozen record of what the four form pages post;
+     D-CEO-61 re-cut that reading. Nothing about them is set in this file. */
 
   function syncFields() {
     driveWorkerFields();
-    setHidden('lang', LANG);
-    setHidden('started_at', clockTravels() ? startedAt : '');
     setHidden('tiles', ticked('tiles').join(' · '));
     setHidden('answers', answerLines().join('\n'));
     setHidden('while_there', ticked('while_there').join('\n'));
@@ -358,13 +400,16 @@
         try { field.focus(); } catch (e) { }
         return false;
       }
-      /* A2, the rest of it: nothing sends until 'Yes, that's it'. A tap is always
-         on offer — when the map cannot be reached the card still says 'confirm it
-         as you typed it' — so this holds nobody up who has typed a real address.
-         It asks only of a request built on the chooser: the four form pages that
-         light no tile are read elsewhere in this suite against a frozen record of
-         what they post, and a screen they cannot pass would change it. */
-      if (lit().length && !addr.state().confirmed) {
+      /* SITE-FIX-01.1 · A2, the whole of it, ON EVERY PATH. His words: "we need to make
+         sure an address pops up they can click on and confirm its the real address before
+         form is submitted." A tap is always on offer — when the map cannot be reached the
+         card still says "confirm it as you typed it" — so this holds nobody up who has
+         typed a real address. The round before this one asked it only of a request built
+         on the chooser, because suite F read the four form pages against a frozen record
+         of the bytes they post; D-CEO-61 re-cut that reading, and the gate is the same on
+         every path now. The SEND itself is gated too, in /assets/umbra-address.js, so no
+         page can be submitted around this screen. */
+      if (!addr.state().confirmed) {
         need.textContent = addr.notYet;
         need.hidden = false;
         return false;
@@ -498,6 +543,14 @@
   function drawReview() {
     if (!reviewHost) return;
     reviewHost.textContent = '';
+    /* SITE-FIX-01.1 · A6.7 as the ignite cuts it: the reply-by TIME sits BESIDE THE
+       PROMISE, which is the line at the head of this screen. So it goes first, not last. */
+    var by = replyByLine();
+    if (by) {
+      var pBy = el('p', 'ch-replyby', by);
+      pBy.setAttribute('data-reply-by', '1');
+      reviewHost.appendChild(pBy);
+    }
     var on = lit();
 
     var tileLines = [];
@@ -505,6 +558,7 @@
       tileLines.push(on[i][LANG].label);
       for (var q2 = 0; q2 < on[i].questions.length; q2++) {
         var qq = on[i].questions[q2];
+        if (!askedOf(on[i].key, qq)) continue;
         var v = ticked('a_' + on[i].key + '_' + qq.key);
         if (v.length) tileLines.push('   ' + qq[LANG].q + ' ' + v.join(' · '));
       }
@@ -560,13 +614,6 @@
     reviewHost.appendChild(group(W.sAddress, addrLines, 'address'));
     var times = pickedTimes();
     reviewHost.appendChild(group(W.sTimes, times.length ? times : ['—'], 'times'));
-
-    var by = replyByLine();
-    if (by) {
-      var p2 = el('p', 'ch-replyby', by);
-      p2.setAttribute('data-reply-by', '1');
-      reviewHost.appendChild(p2);
-    }
 
     var miss = missingThings();
     var note = el('p', 'v2need ch-missing');
@@ -647,7 +694,7 @@
 
   /* ================================================================== 9 · WIRING */
   form.addEventListener('change', function () {
-    markStarted();
+    applyWhen();
     syncFields();
     drawPhotoAsk();
     tagPhotos();
@@ -655,7 +702,6 @@
     saveDraft();
   });
   form.addEventListener('input', function () {
-    markStarted();
     syncFields();
     drawReview();
     saveDraft();
@@ -681,7 +727,6 @@
     syncFields();
     drawReview();
     keepGot();
-    setHidden('sent_at', clockTravels() ? new Date().toISOString() : '');
     var sb = boxes('service'), anyService = false;
     for (var i = 0; i < sb.length; i++) if (sb[i].checked) anyService = true;
     if (!anyService) {
@@ -690,12 +735,11 @@
     clearDraft();
   });
 
-  var restored = loadDraft();
-  setHidden('lang', LANG);
+  loadDraft();
+  applyWhen();
   syncFields();
   drawPhotoAsk();
   drawReview();
-  if (restored) markStarted();
 
   /* ============================================== "FIX SOMETHING" LANDS ON THE TOP
      His words: "i have to scroll up from the drywall form that it just starts us

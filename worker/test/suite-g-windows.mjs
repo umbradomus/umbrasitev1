@@ -101,6 +101,15 @@ export async function suiteWindows(ctx) {
     for (let i = 0; i < 30; i++) {
       const s = await page.$eval('[data-intake2]', (e) => e.getAttribute('data-screen'));
       if (s === target) return true;
+      /* SITE-FIX-01.1 · the address screen is a gate now, on every path (D-CEO-61, his words:
+         "we need to make sure an address pops up they can click on and confirm its the real
+         address before form is submitted"). This walk taps "Yes, that's it" the way a customer
+         does. It is the helper that changed, not a reading: no assertion below moved. */
+      if (s === 'address') {
+        await page.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+        await page.evaluate(() => { const y = document.querySelector('[data-uaddr-yes]'); if (y) y.click(); });
+        await sleep(60);
+      }
       await page.click('[data-v2next]');
       await sleep(40);
     }
@@ -261,7 +270,16 @@ export async function suiteWindows(ctx) {
     ok(await page.$eval('input[name="sms_consent"]', (e) => e.checked), 'the text box ticks on a click');
     await shoot(page, '4-consent.png');
     const shownWords = await page.$eval('[data-sms-wording]', (e) => e.textContent.replace(/\s+/g, ' ').trim());
-    for (let i = 0; i < 5 && (await screenOf(page)) !== 'times'; i++) { await page.click('[data-v2next]'); await sleep(40); }
+    /* SITE-FIX-01.1 · the address screen now sits between the phone and the time screen,
+       and nothing passes it until the card is tapped. This is the WALK, not a reading. */
+    for (let i = 0; i < 6 && (await screenOf(page)) !== 'times'; i++) {
+      if ((await screenOf(page)) === 'address') {
+        await page.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+        await page.evaluate(() => { const y = document.querySelector('[data-uaddr-yes]'); if (y) y.click(); });
+      }
+      await page.click('[data-v2next]');
+      await sleep(40);
+    }
     await page.waitForSelector('.wday');
     await pick(page, '2026-09-29', '08-11');
     await pick(page, '2026-09-25', '17-20');
@@ -381,6 +399,11 @@ export async function suiteWindows(ctx) {
       const radio = f.querySelector('input[name="service"]');
       if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
     });
+    /* SITE-FIX-01.1 · contact.html carries the address card now, and nothing sends until
+       it is tapped (D-CEO-61 re-cut the no-tile path). The WALK taps it; the reading below
+       is the one it always was. */
+    await page.waitForSelector('form.req [data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+    await page.evaluate(() => { const y = document.querySelector('form.req [data-uaddr-yes]'); if (y) y.click(); });
     const nav = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => null);
     await page.evaluate(() => document.querySelector('form.req button[type="submit"]').click());
     await nav; await sleep(200);
@@ -454,7 +477,16 @@ export async function suiteWindows(ctx) {
     await openAt(es, SITE + '/es/servicios#request', 'phone', who('Spanish Sara'));
     await es.click('.wconsent label.v2opt');
     const esWords = await es.$eval('[data-sms-wording]', (e) => e.textContent.replace(/\s+/g, ' ').trim());
-    for (let i = 0; i < 5 && (await screenOf(es)) !== 'times'; i++) { await es.click('[data-v2next]'); await sleep(40); }
+    /* SITE-FIX-01.1 · the address screen sits between the phone and the times now, and
+       nothing passes it until the card is tapped. The WALK, not a reading. */
+    for (let i = 0; i < 6 && (await screenOf(es)) !== 'times'; i++) {
+      if ((await screenOf(es)) === 'address') {
+        await es.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+        await es.evaluate(() => { const y = document.querySelector('[data-uaddr-yes]'); if (y) y.click(); });
+      }
+      await es.click('[data-v2next]');
+      await sleep(40);
+    }
     await es.waitForSelector('.wday');
     await pick(es, '2026-09-26', '08-11');
     await es.click('.wday[data-date="2026-10-01"]');
@@ -474,8 +506,17 @@ export async function suiteWindows(ctx) {
   /* ============================================================== (9) */
   suite('G · (9) keyboard alone; no target under 44 px at 390');
   {
+    /* SITE-FIX-01.1 · RE-CUT on D-CEO-61. THE OLD ASSERTION: this walk opened on the SENTENCE
+       screen and required the time screen on the very next tap — which is what pinned the one
+       sentence to the end of the ask and kept the round before this one from putting it where
+       the ignite asked. THE NEW ONE: it opens on the screen that now sits just before the time
+       picker (the three one-tap rows) and requires the time screen on the very next tap. THE
+       WORDS THAT REQUIRE IT, his, 09-28: "on the ready to send page we should be showing the
+       customer all of the info they selected" — the ask reads photos, one sentence, name,
+       phone, address, best time, and the sentence is second. Nothing about the KEYBOARD is
+       weakened: every key below, and every 44 px, is read exactly as it was. */
     const page = await newPage();
-    await openAt(page, SITE + '/services#request', 'notes', who('Keyboard Kit'));
+    await openAt(page, SITE + '/services#request', 'details', who('Keyboard Kit'));
     const tabTo = async (pred, max = 60) => {
       for (let i = 0; i < max; i++) {
         await page.keyboard.press('Tab');
@@ -541,7 +582,25 @@ export async function suiteWindows(ctx) {
         .map((e) => { const r = e.getBoundingClientRect(); return { t: (e.className || e.tagName) + ' ' + (e.textContent || e.name || '').replace(/\s+/g, ' ').trim().slice(0, 30), w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10 }; });
     }, scope);
     const phoneT = await measure('[data-fstep="phone"]');
-    for (let i = 0; i < 3 && (await screenOf(p2)) !== 'times'; i++) { await p2.click('[data-v2next]'); await sleep(40); }
+    /* SITE-FIX-01.1 · RE-CUT, honestly, on the taps it counts. It was three taps of Next from
+       the phone screen to the time screen, and it still is (address, the three one-tap rows,
+       times) — but one more tap now stands between them, and it is counted here rather than
+       hidden: "Yes, that's it" on the address card. His words: "we need to make sure an
+       address pops up they can click on and confirm its the real address before form is
+       submitted." A fourth turn of the loop is what that one tap costs. */
+    const tapsFromPhone = [];
+    for (let i = 0; i < 4 && (await screenOf(p2)) !== 'times'; i++) {
+      if ((await screenOf(p2)) === 'address') {
+        await p2.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+        await p2.evaluate(() => { const y = document.querySelector('[data-uaddr-yes]'); if (y) y.click(); });
+        tapsFromPhone.push('Yes, that’s it');
+        await sleep(60);
+      }
+      await p2.click('[data-v2next]');
+      tapsFromPhone.push('Next → ' + (await screenOf(p2)));
+      await sleep(40);
+    }
+    eq(await screenOf(p2), 'times', 'the phone screen reaches the time screen in three taps of Next and one tap on the address card', tapsFromPhone.join(' · '));
     await p2.waitForSelector('.wday');
     await pick(p2, '2026-09-24', '08-11');
     await pick(p2, '2026-09-30', '14-17');
@@ -556,7 +615,7 @@ export async function suiteWindows(ctx) {
     const scrollW = await p2.evaluate(() => document.documentElement.scrollWidth);
     ok(scrollW <= 391, 'and the page does not scroll sideways at 390', String(scrollW));
     await shoot(p2, '2b-day-open-three-picked.png');
-    R['9'] = { keyboard: log, keyboard_record: kid, keyboard_availability: krow && krow.availability, targets_measured: all.length, min_height: minH, min_width: minW, under_44: small, scroll_width: scrollW, targets: all };
+    R['9'] = { keyboard: log, taps_from_phone: tapsFromPhone, keyboard_record: kid, keyboard_availability: krow && krow.availability, targets_measured: all.length, min_height: minH, min_width: minW, under_44: small, scroll_width: scrollW, targets: all };
     await p2.close();
   }
 
@@ -620,7 +679,16 @@ export async function suiteWindows(ctx) {
       await page.click('.wconsent label.v2opt');
       const words = await page.$eval('[data-sms-wording]', (e) => e.textContent.replace(/\s+/g, ' ').trim());
       if (lang === 'es') await sfShot(page, '3-consent.png', '[data-fstep="phone"]');
-      for (let i = 0; i < 5 && (await screenOf(page)) !== 'times'; i++) { await page.click('[data-v2next]'); await sleep(40); }
+      /* SITE-FIX-01.1 · the address screen now sits between the phone and the time screen,
+       and nothing passes it until the card is tapped. This is the WALK, not a reading. */
+    for (let i = 0; i < 6 && (await screenOf(page)) !== 'times'; i++) {
+      if ((await screenOf(page)) === 'address') {
+        await page.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+        await page.evaluate(() => { const y = document.querySelector('[data-uaddr-yes]'); if (y) y.click(); });
+      }
+      await page.click('[data-v2next]');
+      await sleep(40);
+    }
       await page.waitForSelector('.wday');
       await page.click('label.wflex');
       const got = await send(page);
@@ -820,7 +888,16 @@ export async function suiteWindows(ctx) {
 
   suite('G · (15) SPANISH-FIX-01: the size scale — the wizard and the home intake');
   {
-    const SIZES = 'Como un hoyito de clavo · Como una moneda · Como una pelota de golf · Como un puño · Como un balón';
+    /* SITE-FIX-01.1 · RE-CUT on D-CEO-61. THE OLD ASSERTION: the Spanish size scale ended
+       "Como un balón". THE NEW ONE: it mirrors the English scale word for word, and the last
+       step says how big it is in the only measure the first four use — a part of the body.
+       THE WORDS THAT REQUIRE IT, his, 09-28: "the form is asking me how large is the biggest
+       one? basketball? thats talking about hole sizes". The round before this one could only
+       reword the English scale, because this line held the Spanish one to the ball; the two
+       stopped mirroring on that screen, and the close said so. The POSTED VALUES are
+       untouched — Pinhole, Coin, Golf ball, Fist, Basketball still travel, exactly as the
+       Worker and the Flux Capacitor have always read them. */
+    const SIZES = 'Como un clavo · Como una moneda · Como una pelota de golf · Como un puño · Más grande que un puño';
     const page = await newPage();
     await page.goto(SITE + '/es/servicios#request', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-intake2][data-screen]');

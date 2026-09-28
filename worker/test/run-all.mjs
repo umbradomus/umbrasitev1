@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
+import http from 'node:http';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
@@ -61,6 +62,9 @@ const PORT = {
      numbers inside those files; they live here now so that ONE shift moves the whole suite out of
      another round's way, and none of them is left behind on somebody else's port. */
   extraA: P(4776), extraB: P(4777), extraC: P(4778), extraD: P(4779),
+  /* SITE-FIX-01.1 · the stand-in Census geocoder every served copy of the site points at,
+     so no walk in this suite ever reaches across the internet for an address. */
+  extraE: P(4780),
 };
 /* Two of these landing on the same number kills workerd at startup with "std::terminate() called with
    no exception" and nothing else — half an hour to work out, once. Say it here instead. */
@@ -219,6 +223,16 @@ async function fillAndSubmit(page, url, { photos = [], honey = null, waitNav = t
   if (honey !== null) {
     await page.evaluate((v) => { document.querySelector('form.req [name="_honey"]').value = v; }, honey);
   }
+  /* SITE-FIX-01.1 · D-CEO-61, his words: "we need to make sure an address pops up they can
+     click on and confirm its the real address before form is submitted". Nothing sends until
+     "Yes, that's it" on EVERY path now — so this walk taps it, exactly as a customer does.
+     Not a reading: a reading's assertions are below and none of them changed. The card is
+     drawn by /assets/umbra-address.js from the stand-in Census above. */
+  await page.waitForSelector('form.req [data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+  await page.evaluate(() => {
+    const yes = document.querySelector('form.req [data-uaddr-yes]');
+    if (yes) yes.click();
+  });
   if (photos.length) {
     const input = await page.$('form.req [data-photo-input]');
     await input.uploadFile(...photos);
@@ -237,14 +251,17 @@ async function fillAndSubmit(page, url, { photos = [], honey = null, waitNav = t
   return page.url();
 }
 
-/** What a submission looks like, reduced to the things that must not change. */
+/** What a submission looks like, reduced to the things that must not change.
+    SITE-FIX-01.1: a clock reads differently on every send by its nature — started_at and
+    sent_at are compared by NAME here and by value in suite F's own lines, never by hash. */
+const CLOCK_FIELDS = ['started_at', 'sent_at'];
 function shapeOf(parts) {
   return parts.map((p) => ({
     name: p.name,
     isFile: p.isFile,
     filename: p.filename,
     contentType: p.isFile ? p.contentType : null,
-    sha256: p.sha256,
+    sha256: CLOCK_FIELDS.indexOf(p.name) > -1 ? '(a clock, read by value not by hash)' : p.sha256,
   }));
 }
 
@@ -287,6 +304,32 @@ async function main() {
   const servedWorker = fs.readFileSync(path.join(siteWorker, 'assets', 'umbra-endpoint.js'), 'utf8');
   const servedNew = fs.readFileSync(path.join(siteNew, 'assets', 'umbra-endpoint.js'), 'utf8');
   if (servedWorker === servedNew) throw new Error('site-worker and site-new serve byte-identical umbra-endpoint.js — the flip did not flip');
+
+  /* SITE-FIX-01.1 · THE STAND-IN CENSUS. The address module reaches the real US Census
+     geocoder by script tag (it has no CORS). No test may reach across the internet, and a
+     walk that waits eight seconds for silence is a walk nobody will run twice — so every
+     served copy of the site is pointed at this one local answer instead, in site.config.js,
+     the one place the site already reads its address settings from. A page that sets
+     window.UMBRA_CENSUS_BASE itself (suite K does) keeps its own. */
+  const censusHits = [];
+  const censusStub = http.createServer((req, res) => {
+    const u = new URL(req.url, 'http://x');
+    censusHits.push(u.pathname);
+    const cb = u.searchParams.get('callback') || 'cb';
+    res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' });
+    /* It answers "no match" on purpose. That is the path that ships whenever the map cannot
+       place an address: the card still offers the tap, and the address stays EXACTLY as the
+       customer typed it — which is what suite A's "address stored verbatim" reads, and it is
+       not this round's to move. Suite K stands up its own Census, which does match, so the
+       google|census|typed switch is read on a real answer there. */
+    res.end(cb + '(' + JSON.stringify({ result: { addressMatches: [] } }) + ');');
+  });
+  await new Promise((r) => censusStub.listen(PORT.extraE, '127.0.0.1', r));
+  for (const tree of [siteWorker, siteNew, siteOld]) {
+    const cfg = path.join(tree, 'site.config.js');
+    if (!fs.existsSync(cfg)) continue;
+    fs.appendFileSync(cfg, `\nwindow.UMBRA_CENSUS_BASE = window.UMBRA_CENSUS_BASE || 'http://127.0.0.1:${PORT.extraE}';\n`);
+  }
 
   /* --- servers ----------------------------------------------------------- */
   const stub = await captureServer({ port: PORT.stub, tls: false });
@@ -409,6 +452,7 @@ new_sqlite_classes = ["QuoteBook"]
   const cleanup = async () => {
     try { await browser.close(); } catch (e) {}
     wrangler.kill('SIGTERM');
+    await new Promise((r) => censusStub.close(r));
     await Promise.all([close(stub), close(relay), close(sw), close(sn), close(so), close(gate)]);
   };
 
@@ -876,13 +920,32 @@ async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, 
 
       if (!ok(oldCap.length === 1 && newCap.length === 1, `${label}: both copies posted once to formsubmit.co`, `${oldCap.length} vs ${newCap.length}`)) continue;
       ok(oldCap[0].url === newCap[0].url, `${label}: same endpoint path`, `${oldCap[0].url} vs ${newCap[0].url}`);
-      const a = shapeOf(parseMultipart(oldCap[0].body, oldCap[0].headers['content-type']));
-      const b = shapeOf(parseMultipart(newCap[0].body, newCap[0].headers['content-type']));
+      const oldParts = parseMultipart(oldCap[0].body, oldCap[0].headers['content-type']);
+      const newParts = parseMultipart(newCap[0].body, newCap[0].headers['content-type']);
+      const a = shapeOf(oldParts);
+      const b = shapeOf(newParts);
       const same = JSON.stringify(a) === JSON.stringify(b);
       ok(same, `${label}: the multipart is identical field for field, byte for byte`,
         same ? '' : `\n      before: ${JSON.stringify(a)}\n      after:  ${JSON.stringify(b)}`);
       ok(a.some((x) => x.name === 'attachment1') && a.some((x) => x.name === 'attachment2'),
         `${label}: still one field per photo`);
+      /* SITE-FIX-01.1 · RE-CUT on D-CEO-61. These four pages used to be read against a
+         posted shape that carried no confirmation and no clock. His words 09-28 — "we need
+         to make sure an address pops up they can click on and confirm its the real address
+         before form is submitted" — put the tap on EVERY path, the old no-tile path with it,
+         and the ignite puts started_at / sent_at / lang on every request. So the posted bytes
+         these four pages are read against now carry them. The reading is not weakened: the
+         shape above is still compared field for field (the two clocks are two different
+         moments by their nature, and shapeOf hashes them out of the comparison). */
+      const vOld = (n) => fieldValue(oldParts, n);
+      const vNew = (n) => fieldValue(newParts, n);
+      eq(vNew('address_confirmed'), 'typed', `${label}: the address travelled confirmed, and says how it was confirmed`);
+      eq(vOld('address_confirmed'), vNew('address_confirmed'), `${label}: and both copies say the same`);
+      ok(/^(en|es)$/.test(vNew('lang') || ''), `${label}: the language travelled`, vNew('lang'));
+      for (const clock of ['started_at', 'sent_at']) {
+        ok(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(vNew(clock) || ''), `${label}: ${clock} travelled`, vNew(clock));
+      }
+      ok(Date.parse(vNew('sent_at')) >= Date.parse(vNew('started_at')), `${label}: and it was sent no sooner than it was started`);
     }
   }
 
@@ -891,8 +954,16 @@ async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, 
   /* ====================================================================== G */
   /* FORM-WINDOWS-01: the time screen and the text box. Its eleven readings go to .tmp/windows-readings.json. */
   if (want('G')) {
-    const readings = await suiteWindows({ browser, W, stub, relay, ADMIN_KEY, suite, ok, eq, json, sleep, PORT, TMP, WORKER_DIR, flipConstant, copyTree });
-    fs.writeFileSync(path.join(TMP, 'windows-readings.json'), JSON.stringify(readings, null, 2));
+    /* SITE-FIX-01.1 · the same guard suites I, J, S and K already carry: a throw inside G is a
+       named FAIL and the tally still prints, instead of the run dying without a TOTAL and
+       hiding every suite after it. Not a reading — every reading in G is where it was. */
+    try {
+      const readings = await suiteWindows({ browser, W, stub, relay, ADMIN_KEY, suite, ok, eq, json, sleep, PORT, TMP, WORKER_DIR, flipConstant, copyTree });
+      fs.writeFileSync(path.join(TMP, 'windows-readings.json'), JSON.stringify(readings, null, 2));
+    } catch (err) {
+      suite('G · the suite ran to its end');
+      ok(false, 'suite G stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
+    }
   }
 
   /* ====================================================================== H */

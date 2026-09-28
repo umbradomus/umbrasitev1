@@ -15,6 +15,14 @@
      (7) the address            — amend A2: gibberish cannot pass, the card confirms, the key file is empty
      (8) espanol                — every one of the above, in Spanish
      (9) the pictures           — ignite (1): no page names a picture this round removed
+     (10) the forbidden words  — amend A1: nothing a customer reads says them
+   SITE-FIX-01.1 adds six more, on D-CEO-61 and his words of 09-28 and 09-27:
+     (11) the sentence second   — ignite 01.1 (2): photos, one sentence, name, phone, address, time
+     (12) the paint set         — ignite 01.1 (4) squared with AMEND A6.2, exactly
+     (13) every path            — ignite 01.1 (3): nothing sends until Yes, the no-tile pages too
+     (14) the reply-by time     — ignite 01.1 (5): one hours constant, both screens, both languages
+     (15) the thank-you page    — ignite 01.1 (6): one next action, the small line under it
+     (16) the footer            — ignite 01.1 (7): what Umbra is, on every page
 
    HOW IT IS POINTED. The site under test is run-all's `siteNew` copy, whose form
    posts to the FormSubmit relay, so every reading of what TRAVELS is read from the
@@ -254,14 +262,19 @@ function namesAny(text, terms) {
   }
 
   /* ==================================================================== K (5) */
-  suite('K · (5) his job, sent: paint only, five answers, and not one hole field on the record');
+  suite('K · (5) his job, sent: paint only, the amend’s six answers, and not one hole field on the record');
   {
     const before = relayPosts().length;
     const page = await newPage();
     await land(page, '/services#request');
     await tap(page, 'input[name="tiles"][value="paint"]');
     await sleep(120);
-    const want = ['A ceiling', '1 room', 'An average room', 'Match what’s there', 'A repair spot that doesn’t match'];
+    /* SITE-FIX-01.1 · A4b's test job, squared with the paint set of AMEND A6.2 as the
+       ignite cuts it: what gets paint · all of it or a spot · how high · the surface ·
+       the colour · what's wrong. "How many rooms" is not among them — it is asked only
+       when the walls or the whole room get paint, and his job is a ceiling — and
+       "roughly how big" is gone from the set altogether. */
+    const want = ['A ceiling', 'The whole thing', 'Normal', 'Textured', 'Match what’s there', 'A repair spot that doesn’t match'];
     const picked = await page.evaluate((list) => {
       const out = [];
       for (const w of list) {
@@ -555,6 +568,307 @@ function namesAny(text, terms) {
       R['10'] = Object.assign(R['10'] || {}, { [where]: words.length });
       await page.close();
     }
+  }
+
+  /* =================================================================== K (11) */
+  suite('K · (11) the sentence sits second: photos → one sentence → name → phone → address → best time');
+  {
+    for (const [where, url] of [['English', '/services#request'], ['espanol', '/es/servicios#pedir']]) {
+      const page = await newPage();
+      await land(page, url);
+      await tap(page, 'input[name="tiles"][value="paint"]');
+      await sleep(120);
+      const order = [];
+      for (let i = 0; i < 30 && (await screenOf(page)) !== 'send'; i++) {
+        const s = await screenOf(page);
+        order.push(s);
+        await fill(page, WHO);
+        if (s === 'address') {
+          await page.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+          await tap(page, '[data-uaddr-yes]');
+        }
+        if (s === 'times') await tap(page, 'input[name="avail_flexible"]');
+        await sleep(70);
+        await next(page);
+        if ((await screenOf(page)) === s) break;
+      }
+      order.push(await screenOf(page));
+      const ask = order.filter((k) => ['photos', 'notes', 'name', 'phone', 'address', 'times'].indexOf(k) > -1);
+      eq(ask.join(' → '), 'photos → notes → name → phone → address → times',
+        `${where}: the ask reads photos, one sentence, name, phone, the address, best time`, order.join(' → '));
+      eq(order[order.indexOf('photos') + 1], 'notes',
+        `${where}: and the sentence is the very next screen after the photos — second`, order.join(' → '));
+      R['11'] = Object.assign(R['11'] || {}, { [where]: order });
+      await page.close();
+    }
+  }
+
+  /* =================================================================== K (12) */
+  suite('K · (12) the paint set is AMEND A6.2’s, exactly');
+  {
+    const page = await newPage();
+    await land(page, '/services#request');
+    await tap(page, 'input[name="tiles"][value="paint"]');
+    await sleep(120);
+    for (let i = 0; i < 20 && (await screenOf(page)) !== 'tile-paint'; i++) { await next(page); }
+    eq(await screenOf(page), 'tile-paint', 'the paint tile’s own screen is reached');
+    const readSet = () => page.evaluate(() => {
+      const step = document.querySelector('[data-fstep="tile-paint"]');
+      return [...step.querySelectorAll('.ch-qblock')].filter((b) => !b.hidden).map((b) => ({
+        q: (b.querySelector('.v2q') || {}).textContent.trim(),
+        opts: [...b.querySelectorAll('.ch-tap')].map((l) => l.textContent.trim()),
+      }));
+    });
+    const set = await readSet();
+    const WANT = ['What gets paint?', 'All of it, or just a spot?', 'How high?', 'The surface?',
+      'The colour?', 'What’s wrong with it now?'];
+    eq(set.map((x) => x.q).join(' · '), WANT.join(' · '),
+      'the six questions A6.2 names, in its order, and nothing else', JSON.stringify(set.map((x) => x.q)));
+    eq(set.filter((x) => x.opts.indexOf('Not sure') === -1).map((x) => x.q).join(', '), '',
+      '"Not sure" is on every one of them');
+    eq(set.filter((x) => /rough/i.test(x.q)).length, 0, 'and "roughly how big" is nowhere in the set');
+    const whatGets = set[0].opts.join(' · ');
+    eq(whatGets, 'A ceiling · The walls · The whole room, ceiling and walls · Trim and doors · Outside · Not sure',
+      'what gets paint reads in his words', whatGets);
+    /* "how many rooms" ONLY when the walls or the whole room */
+    const tapOpt = (q, opt) => page.evaluate((qq, oo) => {
+      const step = document.querySelector('[data-fstep="tile-paint"]');
+      const block = [...step.querySelectorAll('.ch-qblock')].find((b) => (b.querySelector('.v2q') || {}).textContent.trim() === qq);
+      if (!block) return false;
+      const lab = [...block.querySelectorAll('.ch-tap')].find((l) => l.textContent.trim().indexOf(oo) === 0);
+      if (!lab) return false;
+      const box = lab.querySelector('input');
+      box.checked = !box.checked;
+      box.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }, q, opt);
+    ok(await tapOpt('What gets paint?', 'A ceiling'), 'a ceiling can be tapped');
+    await sleep(120);
+    eq((await readSet()).filter((x) => /rooms/i.test(x.q)).length, 0,
+      'a ceiling is not asked how many rooms');
+    ok(await tapOpt('What gets paint?', 'The walls'), 'the walls can be tapped too');
+    await sleep(150);
+    const withWalls = await readSet();
+    const rooms = withWalls.find((x) => /rooms/i.test(x.q));
+    ok(rooms, 'the walls ARE asked how many rooms', JSON.stringify(withWalls.map((x) => x.q)));
+    ok(rooms && rooms.opts.indexOf('Not sure') > -1, 'with "Not sure" on it as well');
+    /* the review reads the set back in those words */
+    ok(await tapOpt('What gets paint?', 'The walls'), 'the walls are untapped again');
+    await sleep(120);
+    for (const [q, o] of [['All of it, or just a spot?', 'The whole thing'], ['How high?', 'Normal'],
+      ['The surface?', 'Textured'], ['The colour?', 'Match what’s there'],
+      ['What’s wrong with it now?', 'A repair spot that doesn’t match']]) {
+      ok(await tapOpt(q, o), `"${o}" can be tapped under "${q}"`);
+    }
+    for (let i = 0; i < 25 && (await screenOf(page)) !== 'send'; i++) {
+      const s = await screenOf(page);
+      await fill(page, WHO);
+      if (s === 'address') {
+        await page.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+        await tap(page, '[data-uaddr-yes]');
+      }
+      if (s === 'times') await tap(page, 'input[name="avail_flexible"]');
+      await sleep(70);
+      await next(page);
+      if ((await screenOf(page)) === s) break;
+    }
+    const said = await page.evaluate(() => {
+      const g = [...document.querySelectorAll('.ch-rgroup')][0];
+      return g ? [...g.querySelectorAll('.ch-rlist li')].map((li) => li.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : '';
+    });
+    for (const w of ['A ceiling', 'The whole thing', 'Normal', 'Textured', 'Match what’s there', 'A repair spot that doesn’t match']) {
+      ok(said.indexOf(w) > -1, `the review reads "${w}" back in those words`, said.slice(0, 300));
+    }
+    ok(said.indexOf('rooms') === -1, 'and says nothing about how many rooms, because a ceiling is not rooms', said.slice(0, 300));
+    R['12'] = { set: set.map((x) => x.q), review: said };
+    await page.close();
+  }
+
+  /* =================================================================== K (13) */
+  suite('K · (13) nothing sends until "Yes, that’s it" — the old no-tile pages included');
+  {
+    for (const [where, route] of [['contact', '/contact'], ['es/index', '/es']]) {
+      const before = relayPosts().length;
+      const page = await newPage();
+      await page.goto(SITE + route, { waitUntil: 'load' });
+      await page.evaluate(() => {
+        const f = document.querySelector('form.req');
+        const set = (sel, v) => { const e = f.querySelector(sel); if (e) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); } };
+        set('[name="name"]', 'Chooser Cleo');
+        set('[name="phone"]', '956 555 0177');
+        set('[name="address"]', '1200 E Adams St, Brownsville, TX 78520');
+        set('textarea[name="what"]', 'the patch on the ceiling is a different color');
+        set('textarea[name="message"]', 'the patch on the ceiling is a different color');
+      });
+      await page.waitForSelector('form.req [data-uaddr-card]', { timeout: 12000 }).catch(() => null);
+      const card = await page.evaluate(() => ({
+        yes: !!document.querySelector('form.req [data-uaddr-yes]'),
+        confirmed: (document.querySelector('form.req input[name="address_confirmed"]') || {}).value || '',
+      }));
+      ok(card.yes, `${where}: a plausible address gets the same card here too`);
+      eq(card.confirmed, '', `${where}: and nothing is confirmed until the tap`);
+      await page.evaluate(() => { document.querySelector('form.req button[type="submit"]').click(); });
+      await sleep(900);
+      eq(relayPosts().length - before, 0, `${where}: a plausible address nobody confirmed CANNOT be sent`);
+      const said = await page.evaluate(() => {
+        const bits = [];
+        document.querySelectorAll('form.req .uaddr, form.req .uaddr-need, form.req [data-uaddr-need]')
+          .forEach((e) => { if (!e.hidden && e.textContent.trim()) bits.push(e.textContent.replace(/\s+/g, ' ').trim()); });
+        return bits.join(' | ');
+      });
+      ok(said.length > 0, `${where}: and the page says so, in plain words`, said);
+      if (!card.yes) { await page.close(); continue; }
+      const nav = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => null);
+      await page.evaluate(() => {
+        const y = document.querySelector('form.req [data-uaddr-yes]');
+        if (y) y.click();
+        document.querySelector('form.req button[type="submit"]').click();
+      });
+      await nav;
+      for (let i = 0; i < 60 && relayPosts().length === before; i++) await sleep(100);
+      const cap = relayPosts().slice(before);
+      if (!ok(cap.length === 1, `${where}: the tap lets it through, once`, String(cap.length))) { await page.close(); continue; }
+      const parts = parseMultipart(cap[0].body, cap[0].headers['content-type']);
+      const v = (n) => fieldValue(parts, n);
+      eq(v('address_confirmed'), 'census', `${where}: and the record says which map answered`);
+      eq(v('lang'), where === 'contact' ? 'en' : 'es', `${where}: the language travels with it`);
+      for (const clock of ['started_at', 'sent_at']) {
+        ok(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(v(clock) || ''), `${where}: ${clock} travels with it`, v(clock));
+      }
+      R['13'] = Object.assign(R['13'] || {}, { [where]: { confirmed: v('address_confirmed'), lang: v('lang'), started_at: v('started_at'), sent_at: v('sent_at') } });
+      await page.close();
+    }
+  }
+
+  /* =================================================================== K (14) */
+  suite('K · (14) the reply-by time, on the review and on the sent screen, from ONE hours constant');
+  {
+    /* A6.7 as the ignite cuts it: Mon-Sun 7 AM - 9 PM, the review's own line. The hours
+       live in /assets/umbra-sent.js and nowhere else; both screens ask it the same way. */
+    const sent = fs.readFileSync(path.join(REPO_DIR, 'assets', 'umbra-sent.js'), 'utf8');
+    const opens = sent.match(/OPEN_H\s*=\s*(\d+)/), closes = sent.match(/CLOSE_H\s*=\s*(\d+)/);
+    eq(opens && opens[1], '7', 'the one hours constant opens at 7 AM');
+    eq(closes && closes[1], '21', 'and closes at 9 PM, seven days a week');
+    eq((sent.match(/OPEN_H\s*=/g) || []).length, 1, 'and it is written down exactly once');
+    const chooser = fs.readFileSync(path.join(REPO_DIR, 'assets', 'umbra-chooser.js'), 'utf8');
+    eq(/OPEN_H|CLOSE_H|\b21\s*,\s*0\b/.test(chooser), false, 'the chooser keeps no hours of its own — it asks that one');
+
+    for (const [where, url, shape] of [
+      ['English', '/services#request', /^We’ll reply by \d{1,2}:\d{2} (AM|PM)( tomorrow)?$/],
+      ['espanol', '/es/servicios#pedir', /^Le contestamos antes de (la|las) \d{1,2}:\d{2} (a\.m\.|p\.m\.)( de mañana)?$/],
+    ]) {
+      const page = await newPage();
+      await land(page, url);
+      await tap(page, 'input[name="tiles"][value="paint"]');
+      await sleep(120);
+      for (let i = 0; i < 25 && (await screenOf(page)) !== 'send'; i++) {
+        const s = await screenOf(page);
+        await fill(page, WHO);
+        if (s === 'address') {
+          await page.waitForSelector('[data-uaddr-yes]', { timeout: 12000 }).catch(() => null);
+          await tap(page, '[data-uaddr-yes]');
+        }
+        if (s === 'times') await tap(page, 'input[name="avail_flexible"]');
+        await sleep(70);
+        await next(page);
+        if ((await screenOf(page)) === s) break;
+      }
+      const line = await page.evaluate(() => {
+        const e = document.querySelector('[data-reply-by]');
+        return e ? e.textContent.replace(/\s+/g, ' ').trim() : '(no line)';
+      });
+      ok(shape.test(line), `${where}: the review says the reply-by TIME, beside the promise`, line);
+      eq(/\.\./.test(line), false, `${where}: and says it without a doubled full stop`, line);
+      const fromConstant = await page.evaluate(() => {
+        const d = window.UmbraSent.due(Date.now());
+        return d.at;
+      });
+      ok(line.indexOf(fromConstant) > -1, `${where}: and the time on it is the one the hours constant gives`,
+        `${line}  /  ${fromConstant}`);
+      R['14'] = Object.assign(R['14'] || {}, { [where]: { review: line, due: fromConstant } });
+      await page.close();
+    }
+    /* the SENT screen names the same time, from the same constant, in both languages */
+    for (const [where, route] of [['English', '/request-received'], ['espanol', '/es/recibido']]) {
+      const page = await newPage();
+      await page.goto(SITE + route, { waitUntil: 'load' });
+      const r = await page.evaluate(() => ({
+        by: (document.getElementById('byline') || {}).textContent.replace(/\s+/g, ' ').trim(),
+        due: window.UmbraSent ? window.UmbraSent.due(Date.now()).at : null,
+      }));
+      ok(r.due && r.by.indexOf(r.due) > -1, `${where}: the sent screen names the reply-by time from the same constant`,
+        `${r.by}  /  ${r.due}`);
+      R['14'] = Object.assign(R['14'] || {}, { ['sent-' + where]: r });
+      await page.close();
+    }
+  }
+
+  /* =================================================================== K (15) */
+  suite('K · (15) the thank-you page: ONE next action, and the no-email line small under it');
+  {
+    for (const [where, route] of [['English', '/request-received'], ['espanol', '/es/recibido']]) {
+      const page = await newPage();
+      await page.goto(SITE + route, { waitUntil: 'load' });
+      const r = await page.evaluate(() => {
+        const main = document.querySelector('main');
+        const copy = document.getElementById('sent-copy');
+        const note = document.getElementById('jobnote');
+        return {
+          buttons: [...main.querySelectorAll('a.btn, button.btn')].map((b) => (b.id || '') + ':' + b.textContent.trim()),
+          copyExists: !!copy,
+          copyInBox: !!(copy && copy.closest('.note, .sent, .card')),
+          copyAfterAction: !!(copy && note && (note.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING)),
+          copySmall: !!(copy && copy.classList.contains('fine')),
+        };
+      });
+      eq(r.buttons.length, 1, `${where}: exactly one next action on the page`, JSON.stringify(r.buttons));
+      ok(/joblink/.test(r.buttons[0] || ''), `${where}: and it is "Save my status link"`, r.buttons[0]);
+      ok(r.copyExists, `${where}: the no-email line is still on the page`);
+      eq(r.copyInBox, false, `${where}: it is not in a box any more`);
+      ok(r.copyAfterAction, `${where}: it sits UNDER the one next action`);
+      ok(r.copySmall, `${where}: and it is small`);
+      R['15'] = Object.assign(R['15'] || {}, { [where]: r });
+      await page.close();
+    }
+  }
+
+  /* =================================================================== K (16) */
+  suite('K · (16) the footer says what Umbra is, on every page, in both languages');
+  {
+    /* His words 09-27: "so umbra is a real estate company were just starting out doing
+       services right now." It goes live only when he has seen it; this is a branch. */
+    const EN = 'Umbra Domus LLC — real estate development, acquisition and home repair.';
+    const ES = 'Umbra Domus LLC — desarrollo inmobiliario, adquisiciones y reparación del hogar.';
+    const pages = [];
+    const walk = (dir) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name.charAt(0) === '.' || e.name === 'node_modules' || e.name === 'worker' || e.name === 'tools') continue;
+        const f = path.join(dir, e.name);
+        if (e.isDirectory()) walk(f); else if (e.name.endsWith('.html')) pages.push(f);
+      }
+    };
+    walk(REPO_DIR);
+    const missing = [];
+    for (const f of pages) {
+      const rel = path.relative(REPO_DIR, f).replace(/\\/g, '/');
+      const src = fs.readFileSync(f, 'utf8');
+      if (!/<footer/.test(src)) continue;
+      const want = /^es\//.test(rel) ? ES : EN;
+      if (src.indexOf(want) === -1) missing.push(rel);
+    }
+    eq(missing.join(' | '), '', 'every page with a footer says it, in its own language', missing.join(' | '));
+    /* and a customer can actually read it on the page */
+    for (const [where, route, want] of [['English', '/services', EN], ['espanol', '/es/servicios', ES]]) {
+      const page = await newPage();
+      await page.goto(SITE + route, { waitUntil: 'load' });
+      const seen = await page.evaluate(() => {
+        const f = document.querySelector('footer');
+        return f ? f.innerText.replace(/\s+/g, ' ').trim() : '';
+      });
+      ok(seen.indexOf(want) > -1, `${where}: and it is on the screen, not only in the source`, seen.slice(0, 220));
+      await page.close();
+    }
+    R['16'] = { pages: pages.length, missing };
   }
 
   await new Promise((r) => census.close(r));

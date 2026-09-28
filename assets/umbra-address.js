@@ -31,11 +31,24 @@
      lat, lng            when a provider knew them (ADDED)
    Added, never renamed.
 
-   WHAT THIS CANNOT DO, AND SAYS SO. The tap on "Yes, that's it" is asked for and
-   flagged, but it is NOT a hard block on Send: the Worker's own test suite drives
-   this form and submits it without ever tapping the card, and this round must not
-   touch the Worker's tests. What IS a hard block is the plausibility gate below —
-   "afdsjohgaeojuhfhioasd" cannot get past the address screen. See the round's close.
+   SITE-FIX-01.1 · NOTHING SENDS UNTIL "YES, THAT'S IT", ON EVERY PATH.
+   THE OLD ASSERTION (SITE-FIX-01, and the header that stood here): the tap was
+   asked for and flagged, but it was NOT a hard block on Send, because suite F read
+   the four plain form pages against a frozen record of the bytes they post and a
+   screen they could not pass would have changed it.
+   THE NEW ONE: the tap is a hard block on the SEND itself, on every page that
+   carries a request form — the wizard and the two plain pages alike. A plausible
+   but unconfirmed address cannot leave any page.
+   THE WORDS THAT REQUIRE IT (Drew, 09-28): "we need to make sure an address pops up
+   they can click on and confirm its the real address BEFORE FORM IS SUBMITTED."
+   D-CEO-61 re-cut suite F on those words; its four pages now post the confirmed
+   address. The gate is a CAPTURE-phase listener on the document so that it runs
+   before a page's own submit handler can take the request away.
+
+   THE JOURNEY TRAVELS WITH EVERY REQUEST TOO — `lang` at load, `started_at` the
+   first time the customer touches the form, `sent_at` at the moment it leaves. One
+   place, this file, for every form on the site; the chooser used to stamp them for
+   itself and no longer does.
    ========================================================================== */
 (function () {
   'use strict';
@@ -184,6 +197,10 @@
   }
 
   /* ------------------------------------------------------------------ the module the page uses */
+  /* every card this page put up, so the send gate below can ask it whether the
+     customer has tapped "Yes, that's it" yet */
+  var ATTACHED = [];
+
   function attach(opts) {
     var input = opts.input, host = opts.host, onChange = opts.onChange || function () { };
     if (!input || !host) return null;
@@ -364,7 +381,7 @@
       setTimeout(look, 120);
     });
 
-    return {
+    var api = {
       state: function () { return state; },
       plausible: function () { return plausible(input.value); },
       needMore: T.needMore,
@@ -372,7 +389,116 @@
       localZip: function () { var b = parse(input.value); return !!(b && isLocalZip(b.zip)); },
       check: look
     };
+    ATTACHED.push({ form: input.form, api: api, box: box, input: input, host: host });
+    return api;
   }
+
+  /* ------------------------------------------------------------------ the added fields
+     A hidden input the customer never sees, made once and written every time. */
+  function setHidden(form, name, value) {
+    if (!form) return;
+    var f = form.querySelector('input[type="hidden"][name="' + name + '"]');
+    if (!f) {
+      f = document.createElement('input');
+      f.type = 'hidden';
+      f.name = name;
+      form.appendChild(f);
+    }
+    f.value = value;
+  }
+
+  /* ------------------------------------------------------------------ THE JOURNEY
+     `lang` the moment the page loads, `started_at` the first time a finger lands on
+     the form, `sent_at` at the send. Every request form on the site, one place. */
+  function journey(form) {
+    if (!form || form.getAttribute('data-uaddr-journey')) return;
+    form.setAttribute('data-uaddr-journey', '1');
+    setHidden(form, 'lang', ES ? 'es' : 'en');
+    setHidden(form, 'started_at', '');
+    setHidden(form, 'sent_at', '');
+    var started = '';
+    function touch() {
+      if (started) return;
+      started = new Date().toISOString();
+      setHidden(form, 'started_at', started);
+    }
+    form.addEventListener('input', touch);
+    form.addEventListener('change', touch);
+    form.addEventListener('click', touch);
+  }
+  function stampSend(form) {
+    if (!form) return;
+    var started = form.querySelector('input[name="started_at"]');
+    var now = new Date().toISOString();
+    if (started && !started.value) started.value = now;
+    setHidden(form, 'sent_at', now);
+  }
+
+  /* ------------------------------------------------------------------ THE SEND GATE
+     CAPTURE phase, on the document, so it runs BEFORE the page's own submit handler —
+     a page that calls preventDefault() and posts by hand must not get the chance. */
+  function gate(e) {
+    var form = e.target;
+    if (!form || form.nodeName !== 'FORM' || !/(^|\s)req(\s|$)/.test(form.className || '')) return;
+    var rec = null;
+    for (var i = 0; i < ATTACHED.length; i++) if (ATTACHED[i].form === form) rec = ATTACHED[i];
+    if (!rec) { stampSend(form); return; }
+    if (rec.api.state().confirmed) { stampSend(form); return; }
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    var need = rec.host.querySelector('[data-uaddr-need]');
+    if (!need) {
+      need = document.createElement('p');
+      need.className = 'v2need';
+      need.setAttribute('role', 'alert');
+      need.setAttribute('data-uaddr-need', '1');
+      rec.host.appendChild(need);
+    }
+    need.hidden = false;
+    need.textContent = plausible(rec.input.value) ? T.notYet : T.needMore;
+    rec.api.check();
+    try { rec.input.focus(); } catch (err) { }
+  }
+  document.addEventListener('submit', gate, true);
+
+  /* ------------------------------------------------------------------ THE PLAIN PAGES
+     A page with no wizard — contact.html, es/index.html — gets the same card, put up
+     right under the address field, by this file and nobody else. A page that HAS the
+     wizard is left alone: its chooser attaches the card on the address screen. */
+  function bootstrap() {
+    var forms = document.querySelectorAll('form.req');
+    for (var i = 0; i < forms.length; i++) {
+      var form = forms[i];
+      journey(form);
+      if (form.querySelector('[data-fstep="address"]')) continue;
+      var field = form.querySelector('[name="address"]');
+      if (!field || field.getAttribute('data-uaddr-on')) continue;
+      field.setAttribute('data-uaddr-on', '1');
+      var host = document.createElement('div');
+      host.className = 'ch-addr-host';
+      host.setAttribute('data-address-host', '1');
+      var where = field.closest('label') || field.parentNode;
+      if (where && where.parentNode) where.parentNode.insertBefore(host, where.nextSibling);
+      else form.appendChild(host);
+      (function (f, frm) {
+        attach({
+          input: f, host: host,
+          onChange: function (s) {
+            setHidden(frm, 'address_confirmed', s.confirmed ? s.how : '');
+            setHidden(frm, 'address_place_id', s.place_id || '');
+            setHidden(frm, 'lat', s.lat == null ? '' : String(s.lat));
+            setHidden(frm, 'lng', s.lng == null ? '' : String(s.lng));
+            var n = host.querySelector('[data-uaddr-need]');
+            if (n && s.confirmed) n.hidden = true;
+          }
+        });
+        setHidden(frm, 'address_confirmed', '');
+      })(field, form);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap);
+  else bootstrap();
 
   window.UmbraAddress = {
     attach: attach,

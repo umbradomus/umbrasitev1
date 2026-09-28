@@ -96,19 +96,19 @@
     if (walls) block('walls');
     if (C && chosen.length) keys = keys.concat(C.tileStepKeys().post);
     if (!C || C.wantsPaintStep()) keys.push('paint');
-    /* The ask, PHOTOS FIRST: a photo says more than a paragraph and it is the one
-       thing he cannot get back later. Then who and where, then the three one-tap
-       rows, then the one sentence.
-       THE SENTENCE SITS LAST ON PURPOSE. The ignite asks for it second. The time
-       picker's own reading (suite G (9), frozen this round) walks Next from the
-       sentence screen and requires the time screen on the very next tap; moving
-       the sentence up turns that reading RED. It stays, and the close names it.
-       The three one-tap rows ('details') sit BEFORE the photos for the same reason:
-       the same reading walks from the phone screen to the time screen in three taps
-       and no more, so only the sentence may stand between the address and the time. */
-    keys.push('details', 'photos', 'name', 'phone', 'address');
+    /* SITE-FIX-01.1 · THE ASK, IN HIS ORDER. Photos first: a photo says more than a
+       paragraph and it is the one thing he cannot get back later. Then THE ONE
+       SENTENCE, SECOND — while the problem is still the thing they are thinking
+       about — then who they are, how to reach them, where the house is, and last
+       when we could come. The three one-tap rows ('details', all optional) sit
+       between the address and the time.
+       The round before this one had to put the sentence LAST, because suite G (9)
+       walked Next from the sentence screen and required the time screen on the very
+       next tap. D-CEO-61 re-cut that reading on his words, and the sentence sits
+       where the ignite put it. */
+    keys.push('photos', 'notes', 'name', 'phone', 'address', 'details');
     /* FORM-WINDOWS-01: 'times' (When could we come?) sits just before Send. */
-    keys.push('notes', 'times', 'send');
+    keys.push('times', 'send');
     var live = [];
     for (var i = 0; i < keys.length; i++) { var s = stepOf(keys[i]); if (s) live.push(s); }
     return live;

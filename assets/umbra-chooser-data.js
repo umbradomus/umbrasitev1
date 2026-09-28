@@ -40,6 +40,9 @@
        photo     the per-tile photo ask
        questions each { key, multi, en:{q, opts[]}, es:{q, opts[]} } — ONE screen, one Continue,
                  nothing preselected, no auto-jump. Every list ends with "Not sure".
+                 A question may carry when:{ q, opts[] } — it is asked only while one of
+                 that question's options, BY POSITION (so the rule needs no translating),
+                 is ticked. A question that stops being asked forgets its answer.
   */
   var NOT_SURE_EN = 'Not sure', NOT_SURE_ES = 'No estoy seguro';
 
@@ -73,12 +76,13 @@
         { key: 'all_or_spot', multi: false,
           en: { q: 'All of it, or just a spot?', opts: ['The whole thing', 'Just a patch or spot', NOT_SURE_EN] },
           es: { q: '¿Todo, o sólo una parte?', opts: ['Todo', 'Sólo un parche o una parte', NOT_SURE_ES] } },
-        { key: 'rooms', multi: false,
+        /* SITE-FIX-01.1 · AMEND A6.2, as the ignite cuts it: "how many rooms" is asked ONLY
+           when the walls or the whole room get paint. A ceiling is not rooms, and his own job
+           is a ceiling. `when` names the question it depends on and the OPTIONS BY POSITION,
+           so the one rule holds in both languages without a word of it being written twice. */
+        { key: 'rooms', multi: false, when: { q: 'what_gets_paint', opts: [1, 2] },
           en: { q: 'How many rooms?', opts: ['1 room', '2–3 rooms', 'More than 3', NOT_SURE_EN] },
           es: { q: '¿Cuántos cuartos?', opts: ['1 cuarto', '2–3 cuartos', 'Más de 3', NOT_SURE_ES] } },
-        { key: 'room_scale', multi: false,
-          en: { q: 'Roughly how big?', opts: ['A small bedroom', 'An average room', 'A big open room', NOT_SURE_EN] },
-          es: { q: '¿Más o menos de qué tamaño?', opts: ['Una recámara chica', 'Un cuarto normal', 'Un cuarto grande y abierto', NOT_SURE_ES] } },
         { key: 'height', multi: false,
           en: { q: 'How high?', opts: ['Normal', 'Tall, 9–10 ft', 'Two-story or vaulted', NOT_SURE_EN] },
           es: { q: '¿Qué tan alto?', opts: ['Normal', 'Alto, 9–10 pies', 'Dos pisos o techo abovedado', NOT_SURE_ES] } },
@@ -248,7 +252,9 @@
       reviewHeading: 'Listo para enviar — revise todo',
       reviewEdit: 'Editar',
       reviewSend: 'Enviar — le contestamos en menos de 2 horas.',
-      replyBy: 'Le contestamos antes de las ',
+      /* SITE-FIX-01.1 · no 'las' here: UmbraSent.due() says 'la 1:05 p.m.' or 'las 3:05 p.m.'
+         itself, and this line used to double it — 'antes de las las 3:05 p.m.' */
+      replyBy: 'Le contestamos antes de ',
       tomorrow: ' de mañana',
       missing: 'Todavía nos falta ',
       nothingYet: 'Todavía no ha escogido nada.',
