@@ -24,6 +24,8 @@ import { suiteBook } from './suite-h-book.mjs';
 import { suitePage } from './suite-i-page.mjs';
 import { suiteReminders } from './suite-j-reminders.mjs';
 import { suiteSeat } from './suite-s-seat.mjs';
+/* SITE-FIX-01: the chooser "Fix something" lands on. Site-only; it reads no Worker. */
+import { suiteChooser } from './suite-k-chooser.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -939,6 +941,19 @@ async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, 
     } catch (err) {
       suite('S · the suite ran to its end');
       ok(false, 'suite S stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
+    }
+  }
+
+  /* ====================================================================== K */
+  /* SITE-FIX-01: the chooser, the tile that owns its questions, the address card and
+     the review. Its readings go to .tmp/chooser-readings.json. */
+  if (want('K')) {
+    try {
+      const readings = await suiteChooser({ browser, relay, suite, ok, eq, sleep, PORT, REPO_DIR });
+      fs.writeFileSync(path.join(TMP, 'chooser-readings.json'), JSON.stringify(readings, null, 2));
+    } catch (err) {
+      suite('K · the suite ran to its end');
+      ok(false, 'suite K stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
     }
   }
 
