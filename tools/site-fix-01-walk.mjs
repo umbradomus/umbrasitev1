@@ -71,13 +71,17 @@ async function open(width, url) {
   say.push('  anything focused:  ' + await page.evaluate(() => document.activeElement === document.body ? 'no (body)' : document.activeElement.tagName + '.' + document.activeElement.className));
   say.push('  a category preselected: ' + await page.evaluate(() => [...document.querySelectorAll('input[name="service"]')].filter((x) => x.checked).map((x) => x.value).join(',') || 'none'));
   const geo = await page.evaluate(() => {
-    const h = document.querySelector('[data-fstep="chooser"] .ch-heading');
+    /* the heading the round is judged on is the band's own, marked when the chooser
+       reuses it; '.ch-heading' alone also matches the checklist's heading below. */
+    const h = document.querySelector('[data-chooser-heading]');
     const tiles = [...document.querySelectorAll('[data-chooser-tiles] .ch-tap')];
     const r = (e) => { const b = e.getBoundingClientRect(); return { top: Math.round(b.top), bottom: Math.round(b.bottom), h: Math.round(b.height), w: Math.round(b.width) }; };
     return {
       scrollY: Math.round(window.scrollY),
       heading: h ? r(h) : null,
       sectionTop: Math.round(document.querySelector('[data-fstep="chooser"]').getBoundingClientRect().top),
+      bandTop: Math.round((document.querySelector('[data-chooser-tiles]').closest('.band') || document.body).getBoundingClientRect().top),
+      lid: Math.round((document.querySelector('.top') || { getBoundingClientRect: () => ({ height: 0 }) }).getBoundingClientRect().height),
       headingText: h ? h.textContent : null,
       tiles: tiles.map((t) => ({ t: t.textContent.replace(/\s+/g, ' ').trim().slice(0, 40), ...r(t) })),
       lastTileBottom: tiles.length ? Math.round(tiles[tiles.length - 1].getBoundingClientRect().bottom) : null,
@@ -85,7 +89,8 @@ async function open(width, url) {
     };
   });
   say.push('  scrollY on landing: ' + geo.scrollY + '   page scrollWidth: ' + geo.scrollW);
-  say.push('  the chooser section top, on screen: ' + geo.sectionTop + ' px from the top of the viewport');
+  say.push('  the band top, on screen: ' + geo.bandTop + ' px (the sticky header is ' + geo.lid + ' px tall)');
+  say.push('  the first tap screen starts at: ' + geo.sectionTop + ' px');
   say.push('  heading: "' + geo.headingText + '" top=' + (geo.heading && geo.heading.top));
   say.push('  tiles: ' + geo.tiles.length + ', last tile bottom = ' + geo.lastTileBottom + ' (viewport 844)');
   for (const t of geo.tiles) say.push('    ' + String(t.h).padStart(4) + 'x' + String(t.w).padStart(4) + '  ' + t.t);

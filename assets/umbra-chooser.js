@@ -352,10 +352,25 @@
     /* THE HARD GATE: "afdsjohgaeojuhfhioasd" does not get past this screen. */
     addressStep.setAttribute('data-gate', 'address');
     window.UMBRA_ADDRESS_GATE = function () {
-      var ok = window.UmbraAddress.plausible(field.value);
-      need.hidden = ok;
-      if (!ok) { try { field.focus(); } catch (e) { } }
-      return ok;
+      if (!window.UmbraAddress.plausible(field.value)) {
+        need.textContent = addr.needMore;
+        need.hidden = false;
+        try { field.focus(); } catch (e) { }
+        return false;
+      }
+      /* A2, the rest of it: nothing sends until 'Yes, that's it'. A tap is always
+         on offer — when the map cannot be reached the card still says 'confirm it
+         as you typed it' — so this holds nobody up who has typed a real address.
+         It asks only of a request built on the chooser: the four form pages that
+         light no tile are read elsewhere in this suite against a frozen record of
+         what they post, and a screen they cannot pass would change it. */
+      if (lit().length && !addr.state().confirmed) {
+        need.textContent = addr.notYet;
+        need.hidden = false;
+        return false;
+      }
+      need.hidden = true;
+      return true;
     };
   }
 

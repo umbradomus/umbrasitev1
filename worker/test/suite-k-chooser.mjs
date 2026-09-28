@@ -427,6 +427,39 @@ function namesAny(text, terms) {
     const after = await page.$eval('input[name="address_confirmed"]', (e) => e.value).catch(() => '');
     eq(after, 'census', 'the tap confirms it, and the record says which map answered');
     ok(censusAsked.length > 0, 'the stand-in Census was reached by script tag, across origins', JSON.stringify(censusAsked.slice(0, 2)));
+
+    /* A2, the whole of it: nothing SENDS until the tap. A plausible address is not
+       a confirmed one, and on a request built on the chooser the screen holds. */
+    const held = await newPage();
+    await land(held, '/services#request');
+    await tap(held, 'input[name="tiles"][value="paint"]');
+    await sleep(120);
+    for (let i = 0; i < 25 && (await screenOf(held)) !== 'address'; i++) {
+      const s2 = await screenOf(held);
+      await fill(held, { name: WHO.name, phone: WHO.phone, address: '', what: WHO.what });
+      await sleep(60);
+      await next(held);
+      if ((await screenOf(held)) === s2) break;
+    }
+    await held.evaluate((a) => {
+      const e = document.querySelector('[name="address"]');
+      e.value = a; e.dispatchEvent(new Event('input', { bubbles: true }));
+    }, WHO.address);
+    await held.waitForSelector('[data-uaddr-yes]', { visible: true, timeout: 12000 }).catch(() => null);
+    await next(held);
+    eq(await screenOf(held), 'address', 'a plausible address nobody confirmed does not get past the screen either');
+    const stillWants = await held.evaluate(() => {
+      const bits = [];
+      document.querySelectorAll('[data-fstep="address"] [role="alert"]')
+        .forEach((e) => { if (!e.hidden && e.textContent.trim()) bits.push(e.textContent.trim()); });
+      return bits.join(' | ');
+    });
+    ok(/confirm/i.test(stillWants), 'and it asks, in plain words, for the tap', stillWants);
+    await tap(held, '[data-uaddr-yes]');
+    await sleep(200);
+    await next(held);
+    ok((await screenOf(held)) !== 'address', 'the tap lets it through', await screenOf(held));
+    await held.close();
     R['7'] = Object.assign(card, { after, censusAsked: censusAsked.length });
     await page.close();
   }
@@ -497,6 +530,31 @@ function namesAny(text, terms) {
       'and the words say deck boards and rails, fence repairs');
     ok(/pressure.?wash/i.test(captions), 'pressure washing stays a service line, without a picture');
     R['9'] = { pages: pages.length, hits };
+  }
+
+  /* =================================================================== K (10) */
+  suite('K · (10) the words the amend forbids are on no screen a customer can reach');
+  {
+    /* A1: "sections" and "basketball" appear nowhere a customer can read. Every
+       question on the form is read here, shown or hidden, because a hidden step is
+       one tap from being shown. What the answer POSTS is not read: that is Drew's
+       record and the Worker's field, and renaming it is forbidden this round. */
+    for (const [where, url] of [['English', '/services#request'], ['espanol', '/es/servicios#pedir']]) {
+      const page = await newPage();
+      await land(page, url);
+      const words = await page.evaluate(() => {
+        const bits = [];
+        document.querySelectorAll('form.req [data-fstep] .v2q, form.req [data-fstep] label span, form.req [data-fstep] p')
+          .forEach((e) => { const t = e.textContent.trim(); if (t) bits.push(t); });
+        return bits.join(' | ');
+      });
+      eq(namesAny(words.toLowerCase(), NEVER_READ).join(', '), '',
+        `${where}: no question on the form says a word the amend forbids`);
+      eq(namesAny(words.toLowerCase(), LICENSED).join(', '), '',
+        `${where}: and no licensed trade is named on one either`);
+      R['10'] = Object.assign(R['10'] || {}, { [where]: words.length });
+      await page.close();
+    }
   }
 
   await new Promise((r) => census.close(r));
