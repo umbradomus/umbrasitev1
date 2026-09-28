@@ -189,20 +189,19 @@ export async function suiteBook({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json,
     eq(rec.scheduled_for, '2026-09-29T13:00:00.000Z', 'scheduled_for 13:00Z = 8:00 AM CDT on 9/29');
     eq(rec.scheduled_at, T10, 'scheduled_at = the moment it was booked');
     eq(rec.accepted_at, T10, 'accepted_at stamped');
-    eq(JSON.stringify(rec.accept), JSON.stringify({ at: T10, by: 'page', version: 1, window: win('2026-09-29', '08:00', '10:00'), price: 395 }), 'the accept block: at, by page, version 1, the window, the price');
+    eq(JSON.stringify(rec.accept), JSON.stringify({ at: T10, by: 'page', version: 1, window: win('2026-09-29', '08:00', '10:00'), windows: [win('2026-09-29', '08:00', '10:00')], price: 395 }), 'the accept block: at, by page, version 1, the window, every window (road W: C4), the price');
     const full = (await json(`${W}/api/export/${J1}.md?k=${ADMIN_KEY}`)).status;
     const ev = (await md(J1)).includes('`accepted`');
     ok(ev, 'the "accepted" event is in the audit list');
     await sleep(300);
     const po = pushes(PO().slice(bP), J1), tg = pushes(TG().slice(bT), J1);
     eq(po.length, 1, '(12) exactly 1 Pushover push');
-    eq(tg.length, 1, '(12) exactly 1 Telegram message');
+    eq(tg.length, 0, '(12) road FW · one app: no Telegram message (Pushover took it)');
     eq(po[0] && po[0].p.get('title'), `ACCEPTED · ${J1} · Tue 9/29 8–10 AM`, '(12) the title as written');
-    eq(po[0] && po[0].p.get('message'), '$395 · v1', '(12) the message as written');
+    eq(po[0] && po[0].p.get('message'), '$395', '(12) the message as written (road W: C4, the price only)');
     eq(po[0] && po[0].p.get('priority'), '1', '(12) priority 1');
     eq(po[0] && po[0].p.get('url'), null, '(12) no url parameter');
     ok(po[0] && leaks(po[0], J1).length === 0, '(12) no link, key, secret, name, phone, address or email in the push', po[0] && leaks(po[0], J1).join(','));
-    ok(tg[0] && leaks(tg[0], J1).length === 0, '(12) none in the Telegram message either', tg[0] && leaks(tg[0], J1).join(','));
     const v1 = await view(code1, T10);
     eq(v1.state, 'booked', 'viewByCode after booking: booked');
     R['16'].push({ case: '(4) J1 after booking', state: v1.state });
@@ -518,10 +517,10 @@ export async function suiteBook({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json,
     eq((await bookRows(N))[0].pushed_at, null, 'pushed_at stays null overnight');
     const o7 = await reconcileAt(CT(2026, 9, 24, 7, 0));
     eq(pushes(PO().slice(bP), N).length, 1, 'the 7:00 AM run sends exactly 1 Pushover push');
-    eq(pushes(TG().slice(bT), N).length, 1, 'and 1 Telegram message');
+    eq(pushes(TG().slice(bT), N).length, 0, 'road FW · one app: and no Telegram message');
     await reconcileAt(CT(2026, 9, 24, 7, 5));
-    eq(pushes(PO().slice(bP), N).length + pushes(TG().slice(bT), N).length, 2, 'the 7:05 run adds nothing');
-    R['12'].night = { job: N, booked_at: central(CT(...WED, 23, 0)), pushes_before_7: 0, at_7: { pushover: 1, telegram: 1, run: o7.pushed }, after_7_05: 0, pushed_at: (await bookRows(N))[0].pushed_at };
+    eq(pushes(PO().slice(bP), N).length + pushes(TG().slice(bT), N).length, 1, 'the 7:05 run adds nothing');
+    R['12'].night = { job: N, booked_at: central(CT(...WED, 23, 0)), pushes_before_7: 0, at_7: { pushover: 1, telegram: 0, run: o7.pushed }, after_7_05: 0, pushed_at: (await bookRows(N))[0].pushed_at };
 
     /* a 500 from the fake Pushover */
     const P = await submitAt(CT(2026, 9, 24, 8, 0), 'Paco Linde');
@@ -535,6 +534,9 @@ export async function suiteBook({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json,
     eq(first.length, 1, 'Pushover tried once, answered 500');
     eq(first[0] && first[0].answered, 500, '(it answered 500)');
     eq(pushes(TG().slice(t2), P).length, 1, 'Telegram delivered');
+    /* road FW: moved here from (12) — Telegram carries a push only when Pushover did not */
+    const tgP = pushes(TG().slice(t2), P);
+    ok(tgP[0] && leaks(tgP[0], P).length === 0, '(12) road FW · no link, key, secret, name, phone, address or email in the Telegram fallback', tgP[0] && leaks(tgP[0], P).join(','));
     const rowP = (await bookRows(P))[0];
     ok(rowP.pushed_at, 'pushed_at is set as soon as any channel delivers (D5)', rowP.pushed_at);
     ok(rowP.push_retry_json && JSON.parse(rowP.push_retry_json).channels.join() === 'pushover', 'only Pushover is owed a retry', rowP.push_retry_json);
@@ -558,14 +560,14 @@ export async function suiteBook({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json,
     await sleep(300);
     const np = pushes(PO().slice(b5), M), nt = pushes(TG().slice(t5), M);
     eq(np.length, 1, 'one Pushover push');
-    eq(nt.length, 1, 'one Telegram message');
+    eq(nt.length, 0, 'road FW · one app: no Telegram message');
     eq(np[0] && np[0].p.get('title'), `${M} · none of the times work`, 'the title as written');
     eq(np[0] && np[0].p.get('message'), 'text them other times', 'the message as written');
     ok(np[0] && leaks(np[0], M).length === 0, 'no link or contact details', np[0] && leaks(np[0], M).join(','));
     const n2 = await noneBy(cm, 1, CT(2026, 9, 24, 11, 5));
     await sleep(300);
     eq(n2.first, false, 'a second markNone is not the first');
-    eq(pushes(PO().slice(b5), M).length + pushes(TG().slice(t5), M).length, 2, 'and pushes nothing more');
+    eq(pushes(PO().slice(b5), M).length + pushes(TG().slice(t5), M).length, 1, 'and pushes nothing more');
     const vm = await view(cm, CT(2026, 9, 24, 11, 5));
     eq(vm.state, 'received', 'viewByCode after none: received');
     ok((await md(M)).includes('`none_of_these_times`'), 'the record carries the event');

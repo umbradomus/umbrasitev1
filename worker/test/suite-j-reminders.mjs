@@ -162,7 +162,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     await sleep(1800);                         /* the arrival push goes on the customer's way out */
     const arrival = mine(a.id);
     eq(arrival.length, 1, '(1) minute 0: the arrival push, as before');
-    eq(titleOf(arrival[0]), `NEW REQUEST ${a.id} · quote due 11:00 AM`, '(1) and it names the due time');
+    eq(titleOf(arrival[0]), `NEW JOB · ${a.id} · reply by 11:00 AM`, '(1) and it names the due time (road W: C4)');
     const m = mark();
     await walk(CT(...DAY_A, 9, 5), CT(...DAY_A, 10, 55));
     const pushes = mine(a.id).slice(1).map(shot);
@@ -174,7 +174,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     ok(pushes.every((p) => p.priority !== 2 || (p.expire > 0 && p.expire <= 1800)), '(1) every priority-2 push carries an expire of at most 1800');
     eq(JSON.stringify([...new Set(mine(a.id).map(leaks).flat())]), '[]', '(1) no link, no key, no number, no address, no text words in any of them');
     eq(gatePosts(m.gate).length, 0, '(1) and the gateway is never called before minute 120');
-    eq(theirs(a.id).length, 13, '(1) Telegram carried all thirteen');
+    eq(theirs(a.id).length, 0, '(1) road FW · one app: Pushover took all thirteen, so none went to Telegram');
     R['1'] = { id: a.id, landed: at(t0), arrival: titleOf(arrival[0]), pushes, telegram: theirs(a.id).length, gateway_calls_before_120: 0 };
     await noText(a.id);
   } }

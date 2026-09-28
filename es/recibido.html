@@ -10,9 +10,11 @@
 <link rel="alternate" hreflang="en" href="https://www.umbradomus.com/request-received">
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/request-received">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=6">
+<link rel="stylesheet" href="/assets/site.css?v=7">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
+<!-- road W: what they gave on the form, read back from this tab's own memory (never the address, never the Worker) -->
+<script src="/assets/umbra-sent.js?v=1"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
@@ -45,20 +47,30 @@
   <section>
     <div class="wrap narrow">
       <p class="kicker">Recibido</p>
-      <h1>Ya lo tenemos.</h1>
-      <p class="lead">Ya lo tenemos — esta página se abrió <strong><time id="when">hace un momento</time></strong> en su teléfono. El correo que le llegó a Drew lleva la hora real.</p>
-      <div class="note">
-        <p><strong>Qué sigue:</strong> Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
-        <p id="by" hidden style="margin:0"><strong>Le contestamos <time id="bywhen"></time></strong></p>
+      <h1 id="head">Ya lo tenemos.</h1>
+      <!-- road W: primero la línea que importa — quién les escribe, a qué número y antes de qué hora — y luego lo que
+           mandaron. El número y los horarios salen de la memoria de esta pestaña; sin ella, la línea no lleva número. -->
+      <div class="note" id="next">
+        <p class="sent-line" id="byline"><strong>Drew le enviará un mensaje de texto en menos de 2 horas, de 7 a.m. a 9 p.m.</strong></p>
+        <!-- road XW: el número DESDE el que llegan sus mensajes, para que el primero no se ignore como de un desconocido -->
+        <p class="sent-from" id="fromline">Los mensajes llegan del <span class="nw">(956) 556-6438</span>.</p>
+        <div class="sent" id="sent" hidden>
+          <p class="sent-h">Lo que nos envió</p>
+          <ul id="sent-times" aria-label="Sus horarios" hidden></ul>
+          <p id="sent-flex" hidden>Cualquier horario le funciona.</p>
+          <p id="sent-photos" hidden></p>
+          <p class="sent-copy" id="sent-copy"></p>
+        </div>
       </div>
 
       <!-- Solo aparece cuando el Worker mandó al navegador aqui con ?id= y ?t=. Sin eso, la pagina queda igual que antes. -->
-      <div class="note" id="jobnote" hidden>
-        <p style="margin:0 0 .4rem"><strong>Su número de solicitud es <span id="jobid"></span>.</strong></p>
-        <p style="margin:0">Guarde este enlace. Le muestra en cuál de los cuatro pasos va su solicitud, cuando quiera, sin crear cuenta: <a id="joblink" href="/status">ver mi solicitud</a>.</p>
+      <!-- road XW: un botón claro para el enlace de estado (compartirlo consigo mismo, o copiarlo) -->
+      <div id="jobnote" hidden style="margin-top:1.2rem">
+        <p style="margin:0"><a class="btn wide" id="joblink" href="/status">Guardar mi enlace de estado</a></p>
+        <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">Le muestra en qué paso va su solicitud, cuando quiera. Su número de solicitud es <span id="jobid"></span>.</p>
       </div>
       <ol class="track" style="margin-top:2rem" aria-label="Estado">
-        <li class="done"><div><strong>Recibido</strong></div></li>
+        <li class="done"><div><strong>Recibido</strong><small>Tenemos su solicitud.</small></div></li>
         <li><div><strong>Cotizado</strong><small>Precio y plan, por escrito.</small></div></li>
         <li><div><strong>Programado</strong><small>Día y horario de llegada de 2 horas, acordados con usted.</small></div></li>
         <li><div><strong>Terminado</strong><small>Trabajo hecho, con fotos.</small></div></li>
@@ -92,41 +104,75 @@
   <div class="wrap"><p class="fine">Umbra Domus no es contratista de electricidad, plomería, aire acondicionado ni seguridad. No hacemos ese trabajo y no lo cotizamos.</p></div>
 </footer>
 <script>
-// WINDOW_MINUTES = the 2-hour promise. The promise runs 7:00 AM–9:00 PM (OPEN_HOUR–CLOSE_HOUR): if the window
-// would end after 9:00 PM, or the request arrived before 7:00 AM, the answer-by time is clamped to 7:00 AM + the
-// window (9:00 a.m.), with "mañana" in front when the date rolls ("mañana antes de las 9:00 a.m."). Same clamp as
-// request-received.html.
-// The time is built here, never with toLocaleTimeString: phones with older locale data put a space inside the
-// abbreviation, and the page prints one style on every phone — "la 1:05 p.m.", "las 12:40 p.m.", "las 11:05 a.m.".
+// road W · la página de gracias dice lo que dieron. "Drew le enviará un mensaje de texto al (956) 555-0147 antes de las
+// 9:00 a.m.": el número tal como lo escribieron, de la memoria de esta pestaña (/assets/umbra-sent.js) — nunca de la
+// dirección ni del Worker. Sin memoria: "Drew le enviará un mensaje de texto antes de las 9:00 a.m.".
+// La hora es el mismo reloj de dos horas del Worker: minutos hábiles, de 7 a.m. a 9 p.m., hora de Chicago.
 (function () {
-  var WINDOW_MINUTES = 120;
-  var OPEN_HOUR = 7, CLOSE_HOUR = 21;
-  var now = new Date();
-  var at = function (d) {
-    var h = d.getHours(), h12 = ((h + 11) % 12) + 1, m = d.getMinutes();
-    return (h12 === 1 ? 'la ' : 'las ') + h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'a.m.' : 'p.m.');
-  };
-  document.getElementById('when').textContent = 'a ' + at(now);
-  if (WINDOW_MINUTES) {
-    var by = new Date(now.getTime() + WINDOW_MINUTES * 60000);
-    var close = new Date(now.getFullYear(), now.getMonth(), now.getDate(), CLOSE_HOUR, 0, 0, 0);
-    var early = now.getHours() < OPEN_HOUR;
-    var tomorrow = false;
-    if (early || by > close) {
-      by = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (early ? 0 : 1), OPEN_HOUR, WINDOW_MINUTES, 0, 0);
-      tomorrow = by.getDate() !== now.getDate();
-    }
-    document.getElementById('bywhen').textContent = (tomorrow ? 'mañana ' : '') + 'antes de ' + at(by);
-    document.getElementById('by').hidden = false;
-  }
-  // El Worker manda el id del registro y su token privado. Sin ellos no pasa nada.
-  // (La pagina de estado solo existe en ingles por ahora; el enlace va a /status.)
+  var $ = function (id) { return document.getElementById(id); };
   var q = new URLSearchParams(location.search);
   var jobId = q.get('id'), jobTok = q.get('t');
-  if (jobId && jobTok && /^U-\d{4,6}$/.test(jobId)) {
-    document.getElementById('jobid').textContent = jobId;
-    document.getElementById('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
-    document.getElementById('jobnote').hidden = false;
+  var okId = Boolean(jobId && /^U-\d{4,6}$/.test(jobId));
+  var S = window.UmbraSent || null;
+  var mem = S ? S.read(okId ? jobId : null) : null;
+
+  function say(el, text) { el.textContent = text; }
+  /* una línea en negrita; el número y la hora nunca se parten en dos renglones */
+  function bold(parts) {
+    var strong = document.createElement('strong');
+    parts.forEach(function (x) {
+      if (typeof x === 'string') { strong.appendChild(document.createTextNode(x)); return; }
+      var s = document.createElement('span'); s.className = 'nw'; s.textContent = x.nw; strong.appendChild(s);
+    });
+    $('byline').innerHTML = '';
+    $('byline').appendChild(strong);
+  }
+  if (S) {
+    var due = S.due(Date.now());
+    /* "a.m." ends the sentence itself: never "a.m.." */
+    var tail = [(due.tomorrow ? 'mañana ' : '') + 'antes de ', { nw: due.at }, /\.$/.test(due.at) ? '' : '.'];
+    bold(mem && mem.phone
+      ? [mem.consent === false ? 'Drew le llamará al ' : 'Drew le enviará un mensaje de texto al ', { nw: mem.phone }, ' '].concat(tail)
+      : ['Drew le enviará un mensaje de texto '].concat(tail));
+    if (mem && mem.phone && mem.consent === false) say($('fromline'), 'Sus llamadas llegan del (956) 556-6438.');
+  }
+  if (mem) {
+    if (mem.first) say($('head'), 'Ya lo tenemos, ' + mem.first + '.');
+    var ul = $('sent-times');
+    (mem.times || []).forEach(function (t, i) {
+      var li = document.createElement('li');
+      var n = document.createElement('span'); n.textContent = String(i + 1);
+      li.appendChild(n); li.appendChild(document.createTextNode(t.charAt(0).toUpperCase() + t.slice(1)));
+      ul.appendChild(li);
+    });
+    ul.hidden = !(mem.times && mem.times.length);
+    if (mem.flexible) { say($('sent-flex'), mem.times && mem.times.length ? 'O cualquier horario le funciona.' : 'Cualquier horario le funciona.'); $('sent-flex').hidden = false; }
+    if (mem.photos) { say($('sent-photos'), mem.photos + (mem.photos === 1 ? ' foto' : ' fotos')); $('sent-photos').hidden = false; }
+    say($('sent-copy'), mem.email
+      ? (mem.copy === 'yes' ? 'Le enviamos una copia a ' + mem.email + '.' : 'Su copia debe llegar pronto a ' + mem.email + '. Si no le llega, tome una captura de esta página.')
+      : 'No dio correo electrónico, así que no se envió copia. Tome una captura de esta página para guardarla.');
+    $('sent').hidden = false;
+  }
+
+  // El Worker manda el id del registro y su token privado. Sin ellos no pasa nada.
+  // (La pagina de estado solo existe en ingles por ahora; el enlace va a /status.)
+  if (okId && jobTok) {
+    $('jobid').textContent = jobId;
+    $('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
+    $('jobnote').hidden = false;
+    /* road XW · "Guardar mi enlace de estado": el menú de compartir del teléfono; si no, se copia; si no, se abre */
+    $('joblink').addEventListener('click', function (e) {
+      var url = new URL($('joblink').getAttribute('href'), location.href).href;
+      if (navigator.share) {
+        e.preventDefault();
+        navigator.share({ title: 'Mi solicitud con Umbra Domus', url: url }).catch(function () {});
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        e.preventDefault();
+        navigator.clipboard.writeText(url).then(function () {
+          $('jobsaid').textContent = 'Copiado. Péguelo en sus notas o en un mensaje para usted.';
+        }, function () { location.href = url; });
+      }
+    });
   }
 })();
 </script>

@@ -352,6 +352,9 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .intake2 { margin: 0; }
 .intake2 [hidden] { display: none !important; }
 .intake2 .fstep { display: grid; gap: 0.6rem; }
+/* road MW: the walls' texture screen — "Same texture as the ceiling?" and the tiles, each its own block of the screen */
+.intake2 .v2same, .intake2 .v2tiles { display: grid; gap: 0.6rem; }
+.intake2 .v2same[hidden], .intake2 .v2tiles[hidden] { display: none; }
 /* the thin progress line */
 .v2bar { height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 0 0 1.1rem; }
 .v2bar i { display: block; height: 100%; width: 0; background: var(--prussian); transition: width 0.18s ease-out; }
@@ -364,6 +367,9 @@ textarea.field { min-height: 8rem; resize: vertical; }
 /* the question, and the one short hint under it */
 .intake2 .v2q { font-weight: 600; font-size: 1.25rem; line-height: 1.25; margin: 0; }
 .intake2 .v2hint { font-size: 0.95rem; color: var(--muted); margin: -0.35rem 0 0.2rem; }
+/* road XW: the one line a patch job gets on the time picker */
+.intake2 .v2pair { margin: 0.1rem 0 0.4rem; padding: 0.55rem 0.8rem; border-left: 4px solid var(--prussian); background: rgba(0,49,83,0.06); border-radius: 0 10px 10px 0; font-size: 0.95rem; font-weight: 500; }
+.intake2 .v2pair[hidden] { display: none; }
 .intake2 .v2need { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--vermillion-ink); }
 /* full-width option rows, one tap target per answer, the mark on the left */
 .v2opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
@@ -445,6 +451,17 @@ textarea.field { min-height: 8rem; resize: vertical; }
   border-radius: 50%; background: var(--prussian); color: var(--white); font-size: 0.9rem; }
 .req .wpick .wpx { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
   border-radius: 50%; border: 1.5px solid var(--muted); font-size: 0.85rem; }
+/* road MW (2026-09-26) · THE WHOLE CHIP REMOVES A PICK. Each pick is one full-width row, 48 px tall, the whole row the
+   button (it always was one); its right end says so in a word — "Remove ✕" — instead of a small ✕ a thumb misses. */
+.wpicks { flex-direction: column; flex-wrap: nowrap; }
+.req .wpick { display: flex; width: 100%; min-height: 48px; box-sizing: border-box; gap: 0.5rem; padding: 0.4rem 0.4rem 0.4rem 0.4rem;
+  border-radius: 14px; text-align: left; }
+.req .wpick .wpn { width: 26px; height: 26px; flex: none; }
+.req .wpick .wpt { flex: 1 1 auto; min-width: 0; font-size: 0.98rem; }
+.req .wpick .wpd { white-space: nowrap; }
+.req .wpick .wpx { width: auto; height: 32px; padding: 0 0.55rem; border-radius: 999px; font-size: 0.82rem;
+  font-weight: 600; white-space: nowrap; flex: none; }
+.req .wpick:hover .wpx, .req .wpick:active .wpx { background: var(--paper); border-color: var(--ink); }
 .intake2 .wnq { font-size: 1.05rem; }
 .wconsent { display: grid; gap: 0.25rem; margin-top: 0.6rem; }
 .req .wconsent .v2opt { align-items: flex-start; font-weight: 400; font-size: 0.92rem; line-height: 1.4; }
@@ -452,3 +469,43 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .req .wconsent .v2opt strong { font-weight: 700; }
 .req .wprivacy { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 0.25rem;
   justify-self: start; font-size: 0.95rem; }
+
+/* ==========================================================================
+   road W (2026-09-26) · the contact step, the last screen's "what you gave",
+   the thank-you page's "what you sent", and the status page's visits and
+   receipt. Nothing above is changed.
+   ========================================================================== */
+.intake2 .v2contact { gap: 0.25rem; }
+.intake2 .v2contact .v2lab { font-weight: 600; font-size: 1.05rem; }
+.intake2 .v2contact .v2sub { font-weight: 400; font-size: 0.95rem; color: var(--muted); margin: -0.1rem 0 0.15rem; }
+.intake2 .v2contact .v2optional { font-weight: 400; font-size: 0.9rem; color: var(--muted); margin-left: 0.3rem; }
+.intake2 .v2contact + .v2contact { margin-top: 0.35rem; }
+/* no opacity here: it would lift the text above the (invisible) checkbox and take its taps */
+.req .wconsent .wlegal { display: block; margin-top: 0.3rem; font-size: 0.8rem; line-height: 1.4; font-weight: 400; color: inherit; }
+.wsum { margin: 0.4rem 0 0; display: grid; gap: 0.5rem; }
+.wsum:empty { display: none; }
+.wsum div { padding: 0.65rem 0.85rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--paper); }
+.wsum dt { font-size: 0.9rem; color: var(--muted); }
+.wsum dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+/* the thank-you page */
+.sent-line { font-size: 1.15rem; margin: 0; }
+.nw { white-space: nowrap; }
+.sent { display: grid; gap: 0.55rem; margin-top: 1rem; }
+.sent .sent-h { margin: 0; text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.78rem; font-weight: 600; color: var(--prussian); }
+.sent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.sent li { display: flex; gap: 0.55rem; align-items: baseline; font-weight: 600; }
+.sent li span { color: var(--muted); font-weight: 500; min-width: 1.2rem; }
+.sent p { margin: 0; }
+.sent .sent-copy { overflow-wrap: anywhere; }
+/* the status page: the visits, and a finished, paid job */
+.live-visits { margin: 1.2rem 0; }
+.live-visits p { margin: 0; }
+.live-visits p + p { margin-top: 0.3rem; }
+.live-paid { margin: 1.2rem 0; display: grid; gap: 0.8rem; }
+/* road FW: the quoted status — the price and one big button to their quote page */
+.live-quote { margin: 1.2rem 0; display: grid; gap: 0.8rem; }
+.live-quote p { margin: 0; }
+.live-quote[hidden] { display: none !important; }
+.live-paid p { margin: 0; }
+/* an element these rules lay out is still hidden while it carries `hidden` */
+.sent[hidden], .sent [hidden], .live-paid[hidden], .live-paid [hidden], .live-visits[hidden], .wsum[hidden] { display: none !important; }

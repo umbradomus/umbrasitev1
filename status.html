@@ -7,7 +7,7 @@
 <meta name="description" content="How an Umbra Domus request moves from received to quoted to scheduled to done, and how to find out where yours stands.">
 <link rel="canonical" href="https://www.umbradomus.com/status">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=6">
+<link rel="stylesheet" href="/assets/site.css?v=7">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
@@ -15,6 +15,16 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png?v=5">
 <meta name="theme-color" content="#0F0B1A">
+<!-- road XW: on a phone the menu wraps onto its rows (nothing runs off the edge) and the header scrolls away with
+     the page — this page is read, not filled in. This page only; every other page's header is untouched. -->
+<style>
+@media (max-width: 759px) {
+  .top { position: static; }
+  .top .menu { flex-wrap: wrap; justify-content: center; overflow: visible; margin: 0; padding: 0 0 .35rem; gap: .1rem .15rem; }
+  .top .menu a { padding: .35rem .55rem; font-size: .95rem; }
+}
+.live-money .chain { display: block; font-weight: 400; margin-top: .15rem; }
+</style>
 </head>
 <body>
 <!-- the wordmark, inlined: an external <use href="file.svg#id"> does not render in Safari -->
@@ -39,10 +49,11 @@
     </nav>
   </div>
 </header>
-<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
+<p class="promise" id="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Our response promise:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
 
 <main>
-  <!-- THE REAL THING. Hidden unless the confirmation link carried ?id= and ?t= AND a Worker
+  <!-- THE REAL THING. Hidden unless the link carried ?id= and a key (?t= from the confirmation page, or road W's
+       private ?v= from a text) AND a Worker
        is configured in /assets/umbra-endpoint.js. Otherwise #generic below is the page,
        unchanged, and it still says honestly that the link is being built. -->
   <section id="live" hidden>
@@ -50,13 +61,26 @@
       <p class="kicker" id="live-kicker">Your request</p>
       <h1 id="live-head">Your request</h1>
       <p class="lead" id="live-lead"></p>
+      <!-- road FW: quoted — their price and one big button to their own quote page, where they pick their days -->
+      <div class="note live-quote" id="live-quote" hidden>
+        <p id="live-quote-price"></p>
+        <p><a class="btn wide" id="live-quote-go" href="/status">See your quote &amp; pick your days</a></p>
+      </div>
+      <!-- road W: a finished, paid job — the payment and its receipt; and every day a booking holds -->
+      <div class="note live-paid" id="live-paid" hidden>
+        <p id="live-paid-line"></p>
+        <p><a class="btn" id="live-receipt" href="/status">Your receipt</a></p>
+      </div>
+      <div class="note live-visits" id="live-visits" hidden></div>
+      <!-- road CO: a change order — waiting for their OK (one button to it), OK'd, or said no to; and the new total -->
+      <div class="note live-changes" id="live-changes" hidden></div>
       <ol class="track" id="live-track" aria-label="Where your request is"></ol>
       <div class="note" id="live-scope" hidden style="margin-top:1.2rem"></div>
       <div id="live-photos-wrap" hidden style="margin-top:1.2rem">
         <p style="font-weight:600;margin-bottom:.4rem">The photos you sent</p>
         <ul class="pix" id="live-photos"></ul>
       </div>
-      <p style="margin-top:2rem">Something not right, or something to add? <a href="sms:+19565566438">Text (956) 556-6438</a> and give us your request number.</p>
+      <p style="margin-top:2rem">Questions? <a href="sms:+19565566438">Text (956) 556-6438</a>.</p>
       <p><a href="/">Back to the homepage</a></p>
     </div>
   </section>
@@ -118,38 +142,173 @@
   <div class="wrap"><p class="fine">Umbra Domus is not an electrical, plumbing, air conditioning or security company. We don't do that work and we don't quote it.</p></div>
 </footer>
 <script>
-// Reads the confirmation link. With no ?id= and ?t=, or with no Worker configured in
-// /assets/umbra-endpoint.js, this does nothing at all and the page is exactly as it was.
+// Reads the confirmation link. With no ?id= and a key, or with no Worker configured in /assets/umbra-endpoint.js,
+// this does nothing at all and the page is exactly as it was. road W: the key is ?t= (the confirmation page's link)
+// or ?v= (the private link the Flux texts); the photos and the receipt open with the same key.
 (function () {
   var q = new URLSearchParams(location.search);
-  var id = q.get('id'), t = q.get('t');
+  var id = q.get('id'), t = q.get('t'), v = q.get('v');
+  var key = t ? 't' : (v ? 'v' : '');
+  var val = t || v || '';
   var base = String(window.UMBRA_API_BASE || '');
-  if (!id || !t || !/^U-\d{4,6}$/.test(id) || !base) return;
+  if (!id || !key || !/^U-\d{4,6}$/.test(id) || !base) return;
+  base = base.replace(/\/+$/, '');
 
+  /* road FW: the Done step says only what happened: the work finished, was inspected and stamped. It never claims
+     the customer said anything — no screen asks them. */
   var LABEL = {
-    received: 'We have it, and the clock has started.',
+    received: 'We have your request.',
     quoted: 'You have a price and a plan, in writing.',
     scheduled: 'A day and a window, agreed with you.',
-    done: 'Finished, photographed, and you have said it is right.'
+    done: 'Finished, inspected and stamped.'
   };
+  var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var PAY = { cash: 'cash', zelle: 'Zelle', check: 'check', card: 'card' };
 
+  /* road FW: every time on this page as his texts write it, on Brownsville's clock: "Tue 9/29, 4:20 PM" */
   function fmt(iso) {
     if (!iso) return '';
     var d = new Date(iso);
     if (isNaN(d)) return '';
-    return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    try {
+      var p = {};
+      new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+        .formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+      return p.weekday + ' ' + p.month + '/' + p.day + ', ' + p.hour + ':' + p.minute + ' ' + String(p.dayPeriod || '').toUpperCase();
+    } catch (e) {
+      return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+  }
+  /* a visit as his texts write it: "Mon 9/28, arriving 8–10 AM" (the date is a calendar day, so no time zone enters) */
+  function visitWords(w) {
+    var p = String(w.date).split('-').map(Number);
+    var day = DOW[new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay()] + ' ' + p[1] + '/' + p[2];
+    function c(hhmm) {
+      var x = String(hhmm).split(':').map(Number), h = x[0], m = x[1];
+      return { t: (((h + 11) % 12) + 1) + (m ? ':' + (m < 10 ? '0' : '') + m : ''), ap: h < 12 ? 'AM' : 'PM' };
+    }
+    var a = c(w.start), b = c(w.end);
+    return day + ', arriving ' + (a.ap === b.ap ? a.t + '\u2013' + b.t + ' ' + b.ap : a.t + ' ' + a.ap + '\u2013' + b.t + ' ' + b.ap);
+  }
+  function money(n) {
+    var x = Number(n);
+    return '$' + (x % 1 ? x.toFixed(2) : String(x));
   }
 
-  fetch(base.replace(/\/+$/, '') + '/api/job/' + encodeURIComponent(id) + '?t=' + encodeURIComponent(t))
+  fetch(base + '/api/job/' + encodeURIComponent(id) + '?' + key + '=' + encodeURIComponent(val))
     .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function (j) {
-      document.getElementById('live-kicker').textContent = 'Request ' + j.id;
+      /* road FW: their job in their words, never a code: "Your repair · drywall & paint" */
+      document.getElementById('live-kicker').textContent = j.service ? 'Your repair \u00b7 ' + String(j.service).toLowerCase() : 'Your repair';
       var steps = j.ladder || [];
+      var visitsAll = j.visits || [];
+      if (visitsAll.length > 1) LABEL.scheduled = 'Two visits, agreed with you.';
+      /* the Done step's time is when the work finished (the Flux's word with the receipt); without it, no time at all */
+      var doneLine = j.finished_at && fmt(j.finished_at) ? fmt(j.finished_at) + ' \u2014 finished, inspected and stamped.' : 'finished, inspected and stamped.';
       var at = null;
       for (var i = 0; i < steps.length; i++) if (steps[i].at) at = steps[i];
-      document.getElementById('live-head').textContent = at ? at.label + '.' : 'Received.';
-      document.getElementById('live-lead').textContent =
-        'Received ' + (j.received_at_chicago || fmt(j.received_at)) + '. This page is live — reopen it any time.';
+      var paid = j.paid && j.paid.amount != null ? j.paid : null;
+      document.getElementById('live-head').textContent = paid && at && at.step === 'done' ? 'Done and paid.' : (at ? at.label + '.' : 'Received.');
+      document.getElementById('live-lead').textContent = paid && at && at.step === 'done'
+        ? 'Done \u00b7 ' + doneLine
+        : 'Received ' + (fmt(j.received_at) || j.received_at_chicago) + '. This page is live — reopen it any time.';
+
+      /* road FW: quoted — the price and one big button to their quote page (the link the Worker makes for them) */
+      var quoteGo = null;
+      if (j.status === 'quoted' && j.quote_link && /^https?:\/\//.test(j.quote_link) && !paid) {
+        quoteGo = j.quote_link;
+        document.getElementById('live-quote-price').innerHTML = j.quote_amount != null
+          ? '<strong>Your price: $' + String(j.quote_amount).replace(/[^0-9.,]/g, '') + '</strong>' : '<strong>Your quote is ready.</strong>';
+        document.getElementById('live-quote-go').href = quoteGo;
+        document.getElementById('live-quote').hidden = false;
+      }
+
+      /* road W: paid — the payment in one line, and the receipt one tap away, opened with this page's own key */
+      if (paid) {
+        var pd = new Date(paid.at);
+        var when = isNaN(pd) ? '' : ' on ' + pd.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        document.getElementById('live-paid-line').textContent = 'Paid ' + money(paid.amount) + (PAY[paid.method] ? ' by ' + PAY[paid.method] : '') + when + '.';
+        var a = document.getElementById('live-receipt');
+        if (j.receipt) a.href = '/receipt/' + encodeURIComponent(j.id) + '?' + key + '=' + encodeURIComponent(val);
+        else a.parentNode.hidden = true;
+        document.getElementById('live-paid').hidden = false;
+      }
+
+      /* road W: every day the booking holds, while it is still ahead */
+      var visits = j.visits || [];
+      if (visits.length && !paid && j.status !== 'done') {
+        var box = document.getElementById('live-visits');
+        box.innerHTML = '';
+        var h = document.createElement('p');
+        var hs = document.createElement('strong');
+        hs.textContent = visits.length > 1 ? 'Your visits' : 'Your visit';
+        h.appendChild(hs);
+        box.appendChild(h);
+        visits.forEach(function (w) { var p = document.createElement('p'); p.textContent = visitWords(w); box.appendChild(p); });
+        box.hidden = false;
+      }
+
+      /* road CO: the change orders they were sent. Waiting: one button to it. OK'd: when, and the new total. */
+      var changes = j.changes || [];
+      var okTotal = null;
+      if (changes.length) {
+        var cb = document.getElementById('live-changes');
+        cb.innerHTML = '';
+        changes.forEach(function (c) {
+          var p = document.createElement('p');
+          var b = document.createElement('strong');
+          b.textContent = 'Change ' + c.n + ' \u00b7 ' + c.what;
+          p.appendChild(b);
+          var line = document.createElement('span');
+          line.style.display = 'block';
+          if (c.state === 'accepted') {
+            okTotal = c.total;
+            line.textContent = money(c.price) + ' \u00b7 you OK\'d it' + (c.answered_at && fmt(c.answered_at) ? ' ' + fmt(c.answered_at) : '') + '.';
+          } else if (c.state === 'declined') {
+            line.textContent = 'You said no thanks \u2014 the job is finished as quoted.';
+          } else {
+            line.textContent = money(c.price) + ' more \u00b7 waiting for your OK. Nothing extra is bought until you do.';
+          }
+          p.appendChild(line);
+          cb.appendChild(p);
+          if (c.state === 'open' && c.link && /^https?:\/\//.test(c.link)) {
+            var pa = document.createElement('p');
+            var a2 = document.createElement('a');
+            a2.className = 'btn wide';
+            a2.href = c.link;
+            a2.textContent = 'See the change & OK it';
+            pa.appendChild(a2);
+            cb.appendChild(pa);
+          }
+        });
+        /* road XW · ONE price once a change is OK'd: "Your price: $300 · $225 quoted + Change 1 $75" — never the
+           quote's "$225 as quoted" beside a "New total $300" */
+        if (okTotal != null) {
+          var pt = document.createElement('p');
+          pt.className = 'live-money';
+          var pb = document.createElement('strong');
+          pb.textContent = 'Your price: ' + money(okTotal);
+          pt.appendChild(pb);
+          var chain = [];
+          var quoted = j.quote_amount != null && isFinite(Number(j.quote_amount)) ? Number(j.quote_amount) : null;
+          var sum = quoted;
+          if (quoted != null) chain.push(money(quoted) + ' quoted');
+          changes.forEach(function (c) {
+            if (c.state !== 'accepted') return;
+            chain.push('Change ' + c.n + ' ' + money(c.price));
+            if (sum != null) sum = Math.round((sum + Number(c.price)) * 100) / 100;
+          });
+          /* the chain is shown only when it adds up to the total; otherwise the one total stands alone */
+          if (quoted != null && sum === Number(okTotal)) {
+            var sp = document.createElement('span');
+            sp.className = 'chain';
+            sp.textContent = chain.join(' + ');
+            pt.appendChild(sp);
+          }
+          cb.appendChild(pt);
+        }
+        cb.hidden = false;
+      }
 
       var ol = document.getElementById('live-track');
       ol.innerHTML = '';
@@ -157,18 +316,21 @@
       steps.forEach(function (s, i) { if (s.at) lastDone = i; });
       steps.forEach(function (s, i) {
         var li = document.createElement('li');
-        if (s.at) li.className = (i === lastDone) ? 'now' : 'done';
+        if (s.at) li.className = (i === lastDone && !(paid && s.step === 'done')) ? 'now' : 'done';
         var d = document.createElement('div');
         var st = document.createElement('strong');
         st.textContent = s.label;
         var sm = document.createElement('small');
-        sm.textContent = s.at ? (fmt(s.at) + ' — ' + (LABEL[s.step] || '')) : (LABEL[s.step] || '');
+        if (s.step === 'done' && s.at) sm.textContent = doneLine.charAt(0).toUpperCase() + doneLine.slice(1);
+        else sm.textContent = s.at ? (fmt(s.at) + ' — ' + (LABEL[s.step] || '')) : (LABEL[s.step] || '');
         d.appendChild(st); d.appendChild(sm);
         li.appendChild(d);
         ol.appendChild(li);
       });
 
-      if (j.scope || j.quote_amount != null) {
+      /* road XW: once a change is OK'd its block carries the one price; the quote's own price line is not shown again */
+      var quoteLine = j.quote_amount != null && !paid && !quoteGo && okTotal == null;
+      if (j.scope || quoteLine) {
         var note = document.getElementById('live-scope');
         note.innerHTML = '';
         if (j.scope) {
@@ -177,7 +339,7 @@
           ps.textContent = j.scope;
           note.appendChild(ps);
         }
-        if (j.quote_amount != null) {
+        if (quoteLine) {
           var pq = document.createElement('p');
           pq.style.margin = j.scope ? '.5rem 0 0' : '0';
           pq.innerHTML = '<strong>Your price: $' + String(j.quote_amount).replace(/[^0-9.,]/g, '') + '</strong>';
@@ -193,7 +355,7 @@
         pix.forEach(function (p, i) {
           var li = document.createElement('li');
           var a = document.createElement('a');
-          a.href = base.replace(/\/+$/, '') + p.url;
+          a.href = base + p.url;
           a.target = '_blank'; a.rel = 'noopener';
           var img = document.createElement('img');
           img.src = a.href; img.alt = 'Photo ' + (i + 1) + ' you sent';
@@ -206,6 +368,10 @@
         });
         document.getElementById('live-photos-wrap').hidden = false;
       }
+
+      /* road XW: the response promise is about a reply still owed — gone once the job is past "received" */
+      var promise = document.getElementById('promise');
+      if (promise && j.status && j.status !== 'received') promise.hidden = true;
 
       document.getElementById('generic').hidden = true;
       document.getElementById('live').hidden = false;

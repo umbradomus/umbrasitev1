@@ -95,20 +95,18 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
   {
     eq(alice.status, 303, 'the customer is redirected as always');
     const tStart = Date.now();
-    const ms = await waitFor(() => about(PO(), alice.id).length >= 1 && about(TG(), alice.id).length >= 1);
-    ok(ms !== null && ms <= 5000, 'the Pushover and Telegram calls arrived within 5 s', ms === null ? 'never' : ms + ' ms');
+    const ms = await waitFor(() => about(PO(), alice.id).length >= 1);
+    ok(ms !== null && ms <= 5000, 'the Pushover call arrived within 5 s (road FW: one app, Telegram only as the fallback)', ms === null ? 'never' : ms + ' ms');
     await sleep(1500);
     const po = about(PO(), alice.id), tg = about(TG(), alice.id);
     eq(po.length, 1, 'exactly 1 Pushover call');
-    eq(tg.length, 1, 'exactly 1 Telegram call');
+    eq(tg.length, 0, 'road FW · one app: Pushover took it, so no Telegram call at all');
     const p = po[0] && po[0].p;
     eq(p && p.get('priority'), '1', 'priority 1 (normal)');
-    eq(p && p.get('title'), `NEW REQUEST ${alice.id} · quote due 9:28 AM`, 'the title as written');
+    eq(p && p.get('title'), `NEW JOB · ${alice.id} · reply by 9:28 AM`, 'the title as written (road W: C4)');
     eq(p && p.get('url'), null, 'no url parameter');
     ok(po[0] && leaks(po[0]).length === 0, 'no link, no admin key, no secret, no phone, address or email in the push', po[0] && leaks(po[0]).join(','));
-    ok(tg[0] && leaks(tg[0]).length === 0, 'none of those in the Telegram message either', tg[0] && leaks(tg[0]).join(','));
-    eq(tg[0] && tg[0].j.parse_mode, undefined, 'Telegram carries no parse_mode');
-    eq(tg[0] && tg[0].j.reply_markup, undefined, 'and no buttons');
+    /* road FW: what a Telegram message may carry is read in (9), where Telegram carries the push */
     const r = await row(alice.id);
     eq(r.alerts && r.alerts.count, 1, 'the record says alerts.count = 1');
     R['2'] = {
@@ -305,6 +303,10 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     eq(po0.length, 1, 'Pushover was tried once at intake');
     eq(po0[0] && po0[0].answered, 500, 'and answered 500');
     eq(tg0.length, 1, 'Telegram was still sent');
+    /* road FW: moved here from (2) — Telegram now goes only when Pushover did not take the push */
+    ok(tg0[0] && leaks(tg0[0]).length === 0, 'road FW · no link, no admin key, no secret, no phone, address or email in the Telegram fallback', tg0[0] && leaks(tg0[0]).join(','));
+    eq(tg0[0] && tg0[0].j.parse_mode, undefined, 'road FW · the Telegram fallback carries no parse_mode');
+    eq(tg0[0] && tg0[0].j.reply_markup, undefined, 'road FW · and no buttons');
     stub.state.pushover = 'ok';
     let b = PO().length, bt = TG().length;
     await runAt(plus(t, 5));
@@ -358,7 +360,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     eq(twoStamped.id, one.id, 'EMAIL-SUBJECT-01: a resend whose only difference is the stamped subject is the same request');
     eq(n1 - n0, 1, 'one record');
     eq(about(PO(), one.id).length, 1, 'one push');
-    eq(about(TG(), one.id).length, 1, 'one Telegram message');
+    eq(about(TG(), one.id).length, 0, 'road FW · one app: no Telegram message (Pushover took it)');
     eq(stub.captured.filter((c) => c.url.startsWith('/formsubmit')).length - f0, 1, 'one email fallback');
     const three = await submitAt(plus(t, 11), 'Double Dan');
     ok(three.id && three.id !== one.id, 'the same words 11 minutes later are a new request', three.id);
@@ -438,7 +440,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     ok(s[0] && s[0].p.get('title').startsWith('MORNING SUMMARY'), 'the summary', s[0] && s[0].p.get('title'));
     eq(s[0] && s[0].p.get('priority'), '1', 'normal priority (no visit on the calendar)');
     eq(PO().slice(b).length, 1, 'and it is the only push at 7:00');
-    eq(about(TG().slice(bt), nate.id).length, 1, 'Telegram carries the same summary');
+    eq(about(TG().slice(bt), nate.id).length, 0, 'road FW · one app: the summary does not also go to Telegram');
     const b5 = PO().length;
     await runAt(CT(...DAY_B, 7, 5));
     eq(about(PO().slice(b5), nate.id).length, 0, 'the 7:05 run adds nothing');

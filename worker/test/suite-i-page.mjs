@@ -15,7 +15,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn, execFile } from 'node:child_process';
 import { chicagoWall } from '../src/biztime.js';
-import { WORDS, LIGHTING_ES } from '../src/page-words.js';
+import { WORDS, LIGHTING_ES, LIGHT_SHORT } from '../src/page-words.js';
 import { LIGHTING_EN, NOTICE_53255, LIGHTING_SHA256, NOTICE_53255_SHA256 } from '../src/notices.js';
 import { staticServer, close } from './lib/servers.mjs';
 
@@ -230,13 +230,15 @@ export async function suitePage(ctx) {
       customer_last_name: /Ferro/.test(t),
     };
     eq(JSON.stringify(contact), JSON.stringify({ phone: false, email: false, address: false, customer_last_name: false }), 'no phone number, email or address in the page text (grep)', JSON.stringify(contact));
-    ok(t.includes('Hi Rosalind,'), '"Hi <first name>," — the first name only');
-    ok(t.includes("We're holding this time for you until Fri, Sep 25 at 10:00 AM."), 'the hold line reads the quote\'s hold_until in words');
-    ok(t.includes('Mon, Oct 12 Arrival between 8 and 10 AM'), 'the one window, in words');
-    ok(t.includes('$225') && t.includes('5 hours at $45') && t.includes('Primer, paint and cleanup included.'), 'the one price, its note and the included line');
+    /* road N moves this: the greeting is a sentence ("Hi Rehearsal," stood alone) */ ok(t.includes("Hi Rosalind, here's your price."), '"Hi <first name>, here\'s your price." — the first name only, one whole sentence');
+    /* road W: the page writes days and the hold the way his texts do ("Mon 10/12", "Fri 9/25, 10:00 AM"), and the price's
+       arithmetic ("5 hours at $45") is his, not the customer's: it is no longer shown. */
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(t.includes('Held for you until Fri 9/25, 10:00 AM.'), 'the hold line reads the quote\'s hold_until in words (road W: "Fri 9/25, 10:00 AM"; road XW: "Held for you until")');
+    ok(t.includes('Mon 10/12 Arriving 8–10 AM'), 'the one window, in words (road W: "Mon 10/12" · "Arriving 8–10 AM")');
+    ok(t.includes('$225') && !t.includes('5 hours at $45') && t.includes('Primer, paint and cleanup included.'), 'the one price and the included line; its note ("5 hours at $45") is NOT on the customer\'s page (road W)');
     ok(t.includes('Accept & confirm') && t.includes("This time doesn't work"), 'both buttons (one time: "This time doesn\'t work")');
     eq(t.includes('None of these times work'), false, 'QUOTE-WORDS-01: one time, so not "None of these times work"');
-    ok(t.includes('Accepting books this visit at the price above. Questions? Reply to our text.'), 'the small print');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(t.includes('Accepting books this visit at the price above. Questions? Reply to my text.'), 'the small print');
     eq(/<script/i.test(g1.text), false, 'no <script> anywhere on the page');
     R['2'] = {
       job: P1.id, get1: { status: g1.status, state: stateOf(g1.text) }, get2: { status: g2.status, state: stateOf(g2.text) },
@@ -306,14 +308,14 @@ export async function suitePage(ctx) {
     await p.goto(qurl(P2.code), { waitUntil: 'load' });
     await second.goto(qurl(P2.code), { waitUntil: 'load' });
     const before = textOf(await html(p));
-    ok(before.includes('Tue, Sep 29 Arrival between 8 and 10 AM'), '"Tue, Sep 29 Arrival between 8 and 10 AM"');
+    ok(before.includes('Tue 9/29 Arriving 8–10 AM'), '"Tue 9/29 Arriving 8–10 AM" (road W)');
     const posts0 = proxied(P2.code, 'POST').length;
     const after = await clickAndWait(p, 'button.qgo');
     const post = proxied(P2.code, 'POST')[posts0];
     eq(stateOf(after), 'booked', 'the page after the tap is BOOKED');
     const at = textOf(after);
-    ok(at.includes("You're booked.") && at.includes('Tue, Sep 29') && at.includes('Arrival between 8 and 10 AM') && at.includes('$225') && at.includes("We'll text you to confirm."),
-      'BOOKED names the day, the window, the price and "We\'ll text you to confirm."');
+    ok(at.includes("You're booked.") && at.includes('Tue 9/29') && at.includes('Arriving 8–10 AM') && at.includes('$225') && at.includes('Nothing else to do.') && !at.includes("We'll text you to confirm."),
+      'BOOKED names the day, the window, the price and "Nothing else to do." (road W: the booking is done, not waiting on a text)');
     eq(post && post.status, 303, 'the tap was one POST answered 303');
     eq(post && post.response_headers.location, '/q/' + P2.code, 'with the relative Location /q/<code>');
     if (post) redirects.push({ via: 'browser (proxy log)', method: 'POST', path: post.url, location: post.response_headers.location, headers: post.response_headers });
@@ -328,7 +330,7 @@ export async function suitePage(ctx) {
     eq(rec.accept && rec.accept.by, 'page', 'the record: accept.by "page"');
     const po1 = pushesFor(P2.id);
     eq(po1.pushover.length - po0.pushover.length, 1, 'exactly 1 Pushover (fake)');
-    eq(po1.telegram.length - po0.telegram.length, 1, 'exactly 1 Telegram (fake)');
+    eq(po1.telegram.length - po0.telegram.length, 0, 'road FW · one app: no Telegram (fake) — Pushover took it');
     await shot(p, '3-booked.png');
     R['4'] = {
       freed_first: freed, job: P2.id, origin_header_the_click_carried: origin, sec_fetch_site: post && post.headers['sec-fetch-site'],
@@ -410,11 +412,11 @@ export async function suitePage(ctx) {
     eq(v2.status, 201, 'v2 created');
     const u = await getQ(P4.code, CT(...WED, 11, 11));
     eq(stateOf(u.text), 'updating', "v1's page: UPDATING");
-    ok(textOf(u.text).includes("We're updating this quote. You'll get a new text from us shortly."), 'in those words');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(u.text).includes("I'm updating this quote. You'll get a new text from me shortly."), 'in those words');
     await sentQ(P4.id, 2, CT(...WED, 11, 20));
     const rp = await getQ(P4.code, CT(...WED, 11, 21));
     eq(stateOf(rp.text), 'replaced', "v2 marked sent → v1's page: REPLACED");
-    ok(textOf(rp.text).includes('This quote was replaced. Use the link in our latest text.'), 'in those words');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(rp.text).includes('This quote was replaced. Use the link in my latest text.'), 'in those words');
     const re = await postQ(P4.code, { v: 1 }, CT(...WED, 11, 22));
     eq(re.status, 303, "v1's form re-posted → 303");
     const after = await getQ(P4.code, CT(...WED, 11, 23));
@@ -450,7 +452,7 @@ export async function suitePage(ctx) {
     eq(group.radios, 2, 'two choices');
     eq(group.checked, 0, 'no default: none is checked');
     ok(!/\bchecked\b/.test(h0.replace(/<style[\s\S]*?<\/style>/, '')), 'the markup carries no "checked" at all');
-    ok(textOf(h0).includes("We're holding these times for you until Fri, Sep 25 at 10:00 AM."), '"these times" with two');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(h0).includes('Held for you until Fri 9/25, 10:00 AM.'), 'the hold with two (road W: "Fri 9/25, 10:00 AM"; road XW: "Held for you until")');
     ok(textOf(h0).includes('None of these times work') && !textOf(h0).includes("This time doesn't work"), 'QUOTE-WORDS-01: two times keep "None of these times work", not "This time doesn\'t work"');
     await shot(p, '2-two-times.png');
     /* the browser's own required check: tapping Accept with nothing picked sends nothing */
@@ -474,7 +476,7 @@ export async function suitePage(ctx) {
     await tap(p, 'input[type=radio][name=w][value="2"]');
     const booked = await clickAndWait(p, 'button.qgo');
     eq(stateOf(booked), 'booked', 'choosing the 2nd → BOOKED');
-    ok(textOf(booked).includes('Fri, Oct 16') && textOf(booked).includes('Arrival between 1 and 3 PM'), 'BOOKED names window 2: Fri, Oct 16, 1–3 PM');
+    ok(textOf(booked).includes('Fri 10/16') && textOf(booked).includes('Arriving 1–3 PM') && !textOf(booked).includes('Thu 10/15'), 'BOOKED names window 2: Fri 10/16, 1–3 PM, and not window 1 (road W)');
     const rec = await record(P5.id);
     eq(rec.accept && rec.accept.window && rec.accept.window.date, '2026-10-16', 'the record: accept.window is the 2nd (10/16)');
     eq((await bookingsOn('2026-10-15')).length, 0, 'nothing on the 1st window\'s day');
@@ -494,7 +496,7 @@ export async function suitePage(ctx) {
     eq(stateOf(g.text), 'taken', 'the other quote\'s plain GET → TAKEN');
     const t = textOf(g.text);
     ok(t.includes('That time was just booked.'), '"That time was just booked."');
-    ok(t.includes('Tue, Oct 20 Arrival between 8 and 10 AM') && !t.includes('Mon, Oct 19'), 'only the free window (Tue 10/20) is offered');
+    ok(t.includes('Tue 10/20 Arriving 8–10 AM') && !t.includes('Mon 10/19'), 'only the free window (Tue 10/20) is offered (road W: "Tue 10/20 Arriving 8–10 AM")');
     eq((g.text.match(/type="radio"/g) || []).length, 0, 'no choice to make: no radio');
     ok(/<input type="hidden" name="w" value="2">/.test(g.text), 'the form names window 2');
     const p = await tab(CT(...WED, 12, 6));
@@ -506,9 +508,9 @@ export async function suitePage(ctx) {
     await p.close();
     const g8 = await getQ(P8.code, CT(...WED, 12, 10));
     eq(stateOf(g8.text), 'taken', 'a quote whose only time overlaps it → TAKEN');
-    ok(textOf(g8.text).includes("That time was just booked.") && textOf(g8.text).includes("Reply to our text and we'll find you another time."), 'with no time free: "Reply to our text and we\'ll find you another time."');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(g8.text).includes("That time was just booked.") && textOf(g8.text).includes("Reply to my text and I'll find you another time."), 'with no time free: "Reply to my text and I\'ll find you another time."');
     eq(/<form/.test(g8.text), false, 'and no button');
-    R['9'] = { job: P6.id, other_job: P7.id, page: stateOf(g.text), offered: t.match(/(Mon|Tue), Oct \d+ Arrival between [^.]*?(AM|PM)/g), then_booked: (await record(P6.id)).accept?.window ?? null, no_free_job: P8.id, no_free_page: stateOf(g8.text), no_free_text: textOf(g8.text) };
+    R['9'] = { job: P6.id, other_job: P7.id, page: stateOf(g.text), offered: t.match(/(Mon|Tue) 10\/\d+ Arriving [^ ]+ (AM|PM)/g), then_booked: (await record(P6.id)).accept?.window ?? null, no_free_job: P8.id, no_free_page: stateOf(g8.text), no_free_text: textOf(g8.text) };
   }
 
   /* ============================================================ (10) */
@@ -519,7 +521,7 @@ export async function suitePage(ctx) {
     const sat = CT(2026, 9, 26, 12, 0);
     const g = await getQ(P9.code, sat);
     eq(stateOf(g.text), 'hold_ended', 'after hold_until, before the cutoff → HOLD ENDED BUT OPEN');
-    ok(textOf(g.text).includes("Our hold on this time has ended, but it's still open.") && !textOf(g.text).includes("We're holding"), 'the hold line replaced by "Our hold on this time has ended, but it\'s still open."');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(g.text).includes("My hold on this time has ended, but it's still open.") && !textOf(g.text).includes('Held for you'), 'the hold line replaced by "My hold on this time has ended, but it\'s still open."');
     const p = await tab(sat);
     await p.goto(qurl(P9.code), { waitUntil: 'load' });
     await shot(p, '4-hold-ended.png');
@@ -530,7 +532,7 @@ export async function suitePage(ctx) {
     eq(cutoff, CT(2026, 10, 21, 21, 0), 'P10\'s cutoff is Wed 10/21 9:00 PM Central');
     const tc = await getQ(P10.code, cutoff);
     eq(stateOf(tc.text), 'too_close', 'at the cutoff → TOO CLOSE');
-    ok(textOf(tc.text).includes("This time is too close for us to prepare. Reply to our text and we'll find another."), 'in those words');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(tc.text).includes("This time is too close for me to prepare. Reply to my text and I'll find another."), 'in those words');
     const p2 = await tab(cutoff);
     await p2.goto(qurl(P10.code), { waitUntil: 'load' });
     await shot(p2, '6-too-close.png');
@@ -552,15 +554,15 @@ export async function suitePage(ctx) {
     eq(n1.headers.location, '/q/' + P11.code, 'Location /q/<code>');
     const g = await getQ(P11.code, CT(...WED, 13, 1));
     eq(stateOf(g.text), 'received', 'the page: RECEIVED');
-    ok(textOf(g.text).includes("Got it. We'll text you some other times."), 'in those words');
+    /* road XW moves this: one voice, his */ ok(textOf(g.text).includes("Got it. I'll text you some other times."), 'in those words');
     const a = pushesFor(P11.id);
     eq(a.pushover.length, 1, 'one Pushover');
-    eq(a.telegram.length, 1, 'one Telegram');
+    eq(a.telegram.length, 0, 'road FW · one app: no Telegram');
     const n2 = await postQ(P11.code, { v: 1 }, CT(...WED, 13, 2), {}, '/none');
     eq(n2.status, 303, 'a second None → 303');
     const b = pushesFor(P11.id);
     eq(b.pushover.length, 1, 'no second Pushover');
-    eq(b.telegram.length, 1, 'no second Telegram');
+    eq(b.telegram.length, 0, 'no second Telegram (road FW: and no first)');
     R['11'] = { job: P11.id, first: n1.status, page: stateOf(g.text), pushes: a, second: n2.status, pushes_after_second: b };
   }
 
@@ -571,7 +573,7 @@ export async function suitePage(ctx) {
     eq((await cancelQ(P12.id, 1, CT(...WED, 13, 10))).status, 200, 'the quote is cancelled (admin)');
     const w = await getQ(P12.code, CT(...WED, 13, 11));
     eq(stateOf(w.text), 'withdrawn', 'its page: WITHDRAWN');
-    ok(textOf(w.text).includes('This quote was withdrawn. Reply to our text with any questions.'), 'in those words');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(w.text).includes('This quote was withdrawn. Reply to my text with any questions.'), 'in those words');
     const p = await tab(CT(...WED, 13, 12));
     await p.goto(qurl(P12.code), { waitUntil: 'load' });
     await shot(p, '8-withdrawn.png');
@@ -585,7 +587,7 @@ export async function suitePage(ctx) {
     }
     eq(new Set(got.map((g) => g.sha256)).size, 1, 'every one is the same page, byte for byte');
     const nv = await getQ('AAAAAAAAAAAAAAAAAAAAAA', CT(...WED, 13, 14));
-    ok(textOf(nv.text).includes("This link isn't valid. Check the link in our text, or reply to it."), '"This link isn\'t valid. Check the link in our text, or reply to it."');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ ok(textOf(nv.text).includes("This link isn't valid. Check the link in my text, or reply to it."), '"This link isn\'t valid. Check the link in my text, or reply to it."');
     await p.goto(qurl('AAAAAAAAAAAAAAAAAAAAAA'), { waitUntil: 'load' });
     await shot(p, '9-not-valid.png');
     await p.close();
@@ -655,8 +657,11 @@ export async function suitePage(ctx) {
     await nc.goto(qurl(P1.code), { waitUntil: 'load' });
     const m2 = await measure(nc);
     const order = await nc.evaluate(() => document.body.textContent.replace(/\s+/g, ' '));
-    /* QUOTE-PAGE-03: the strip, then the H1 "Your quote", the ticket (price, then the time), the hold, the work */
-    const seq = ['Umbra Domus', 'Received', 'Quoted', 'Your quote', 'Hi Rosalind,', 'Price', '$225', 'When', 'Mon, Oct 12', "We're holding this time", "What we'll do", 'Before you accept', 'Accept & confirm', "This time doesn't work", 'Accepting books this visit'];
+    /* QUOTE-PAGE-03: the strip, then the H1 "Your quote", the ticket (price, then the time), the hold, the work.
+       road W: the work (folded to one line) now comes before the hold, the hold sits right above Accept, and the
+       notices moved below the buttons under "Good to know". */
+    /* road XW moves two: "What I'll do", "Held for you until" */
+    const seq = ['Umbra Domus', 'Received', 'Quoted', 'Your quote', "Hi Rosalind, here's your price.", 'Price', '$225', 'When', 'Mon 10/12', "What I'll do", 'Held for you until', 'Accept & confirm', "This time doesn't work", 'Accepting books this visit', 'Good to know'];
     const pos = seq.map((s) => order.indexOf(s));
     ok(nc._blocked.length >= 1, 'the stylesheet request was blocked', JSON.stringify(nc._blocked));
     ok(pos.every((x, i) => x >= 0 && (i === 0 || x > pos[i - 1])), 'with no stylesheet the page still reads in order', JSON.stringify(seq.map((s, i) => [s, pos[i]])));
@@ -700,10 +705,13 @@ export async function suitePage(ctx) {
     const open = await getQ(P15.code, CT(...WED, 15, 0));
     eq(/<html lang="es">/.test(open.text), true, '<html lang="es">');
     eq(titleOf(open.text), S.title, 'the title is the Spanish generic line');
-    expectIn('OPEN', open.text, ['title', 'h1_quote', 'hi_name', 'h_work', 'h_price', 'pick_legend', 'when_line', 'hold_two', 'h_notices', 'accept', 'none', 'small'], { name: 'Rocío', window: 'las 8 y las 10 a.m.' });
+    /* road W: each time is a card, "Viernes 30 de octubre, llegada entre …" (card_first, not when_line); the step list
+       folds to one line (work_hint); the notices sit below the buttons under h_notices_below ("Bueno saberlo") */
+    expectIn('OPEN', open.text, ['title', 'h1_quote', 'hi_name', 'h_work', 'work_hint', 'h_price', 'pick_legend', 'card_first', 'hold_two', 'h_notices_below', 'accept', 'none', 'small'], { name: 'Rocío', window: 'las 8 y las 10 a.m.', span: 'las 8 y las 10 a.m.', n: '2' });
     const ot = textOf(open.text);
-    ok(ot.includes('Viernes 30 de octubre Llegada entre las 8 y las 10 a.m.'), 'the first time in Spanish: "Viernes 30 de octubre Llegada entre las 8 y las 10 a.m."');
-    ok(ot.includes('Sábado 31 de octubre Llegada entre las 11 a.m. y la 1 p.m.'), 'across noon: "Sábado 31 de octubre Llegada entre las 11 a.m. y la 1 p.m."');
+    const otc = ot.replace(/\s+,/g, ',');                /* the day is its own <span>: the text reads "octubre, llegada" */
+    ok(otc.includes('Viernes 30 de octubre, llegada entre las 8 y las 10 a.m.'), 'the first time in Spanish: "Viernes 30 de octubre, llegada entre las 8 y las 10 a.m." (road W)');
+    ok(otc.includes('Sábado 31 de octubre, llegada entre las 11 a.m. y la 1 p.m.'), 'across noon: "Sábado 31 de octubre, llegada entre las 11 a.m. y la 1 p.m." (road W)');
     ok(ot.includes('hasta el viernes 25 de septiembre a las 10:00 a.m.'), 'the hold in Spanish: "hasta el viernes 25 de septiembre a las 10:00 a.m."');
     eq((ot.match(/\.\.(?!\.)/g) || []).length, 0, 'no doubled period anywhere ("a.m." ends its own sentence)');
     ok(ot.includes(LIGHTING_ES.lead + ' ' + LIGHTING_ES.text) && !ot.includes(LIGHTING_EN.text.slice(0, 40)), 'the lighting paragraph in Spanish, not English');
@@ -719,7 +727,8 @@ export async function suitePage(ctx) {
     expectIn('HOLD ENDED · one time', (await getQ(P16.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_one']);
     expectIn('HOLD ENDED · two times', (await getQ(P15.code, CT(2026, 9, 26, 9, 0))).text, ['hold_ended_two']);
     await postQ(P15.code, { v: 1, w: 2 }, CT(...WED, 15, 5));
-    expectIn('BOOKED', (await getQ(P15.code, CT(...WED, 15, 6))).text, ['h_booked', 'lbl_visit', 'when_line', 'booked_confirm', 'add_calendar', 'questions'], { window: 'las 11 a.m. y la 1 p.m.' });
+    /* road W: BOOKED says "No tiene que hacer nada más." (booked_done) and "¿Necesita cambiarla o tiene preguntas? …" (booked_small) */
+    expectIn('BOOKED', (await getQ(P15.code, CT(...WED, 15, 6))).text, ['h_booked', 'lbl_visit', 'when_line', 'booked_done', 'add_calendar', 'booked_small'], { window: 'las 11 a.m. y la 1 p.m.' });
     /* P15 booked 10/31, not 10/30 2–4: P16 is still open; book 10/30 2–4 by text for another job to show TAKEN */
     const P17 = await quoted('Nora Echeverría', 'Parche en la pared de la cocina', [win('2026-10-30', '14:00', '16:00')], { extra: ES });
     await acceptText(P17.id, 1, 1, CT(...WED, 15, 8));
@@ -756,8 +765,54 @@ export async function suitePage(ctx) {
   /* SPANISH-FIX-01 (5): every English state this suite renders for reading (21), hashed. The code in each
      /q/… path is random, so it reads as <code>; the two bilingual pages are hashed on their English section only. */
   const enPages = {};
+  /* road XW (2026-09-26): the English page's words moved on purpose — one voice, his ("I", "my text"), the hold in one
+     short line, "Light." cut to one line — and it gained the year box (shown after a pick) and a few style lines for it
+     and for the visit lengths. (21) still proves NOTHING ELSE moved: each English state is hashed after exactly those
+     changes are put back (the old words are the base's, listed here), so the pinned base hashes stand unchanged. */
+  const XW_OLD_EN = {
+     "h_work": "What we'll do",
+     "hold_ended_one": "Our hold on this time has ended, but it's still open.",
+     "hold_ended_two": "Our hold on these times has ended, but they're still open.",
+     "statute_intro": "The disclosure statement Texas Property Code §53.255 asks us to give you before you agree to the work:",
+     "small": "Accepting books this visit at the price above. Questions? Reply to our text.",
+     "taken_none": "Reply to our text and we'll find you another time.",
+     "h_too_close": "This time is too close for us to prepare.",
+     "too_close": "Reply to our text and we'll find another.",
+     "booked_confirm": "We'll text you to confirm.",
+     "h_updating": "We're updating this quote.",
+     "updating": "You'll get a new text from us shortly.",
+     "replaced": "Use the link in our latest text.",
+     "withdrawn": "Reply to our text with any questions.",
+     "received": "We'll text you some other times.",
+     "not_valid": "Check the link in our text, or reply to it.",
+     "h_forbidden": "This didn't come from our page.",
+     "forbidden": "Open the link in our text again, or reply to it.",
+     "questions": "Questions? Reply to our text.",
+     "small_pair": "Accepting books both visits at the price above. Questions? Reply to our text.",
+     "booked_small": "Need to move it, or have a question? Reply to our text."
+    };
+  const escP = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const undoXW = (html) => {
+    let s = String(html).split('\n').filter((l) => !/qlen|qsep|qmore|qyear/.test(l)).join('\n');
+    s = s.split(escP(LIGHT_SHORT.en.text)).join(escP(LIGHTING_EN.text));
+    const plural = (s.match(/class="qopt"/g) || []).length >= 2;
+    s = s.split(escP('Held for you until ')).join(escP(plural ? "We're holding these times for you until " : "We're holding this time for you until "));
+    for (const k of Object.keys(XW_OLD_EN).sort((x, y) => WORDS.en[y].length - WORDS.en[x].length)) s = s.split(escP(WORDS.en[k])).join(escP(XW_OLD_EN[k]));
+    return s;
+  };
+  /* road MW (2026-09-26): the year box moved above the choice (its lines still carry "qyear", so undoXW drops them
+     wherever they sit) and Accept, once a day is picked, is pinned by position: sticky instead of fixed (it never covers
+     what comes after it). Those two changes are put back here too, so the pinned base hashes still stand unchanged. */
+  const MW_PIN = '\n.q:has(.qpick input:checked) .qact.qpin{position:sticky;z-index:30;bottom:0;margin:.5rem 0 .7rem;padding:.6rem 0 calc(10px + env(safe-area-inset-bottom, 0px));background:linear-gradient(rgba(246,243,238,0),#F6F3EE .7rem)}' +
+    '\n.q:has(.qpick input:checked) .qgo{box-shadow:0 10px 28px rgba(15,11,26,.3)}\n';
+  const W_PIN = '\n.q:has(.qpick input:checked){padding-bottom:7rem}' +
+    '\n.q:has(.qpick input:checked) .qact{position:fixed;z-index:30;left:0;right:0;bottom:0;margin:0;padding:1.2rem 16px calc(12px + env(safe-area-inset-bottom, 0px));background:linear-gradient(rgba(246,243,238,0),#F6F3EE 1.2rem)}' +
+    '\n.q:has(.qpick input:checked) .qgo{max-width:40rem;margin:0 auto;box-shadow:0 10px 28px rgba(15,11,26,.3)}\n';
+  const undoMW = (html) => String(html).split(MW_PIN).join(W_PIN).split('<div class="qact qpin">').join('<div class="qact">');
+  /* road N (2026-09-26): the greeting became a sentence ("Hi {name}, here's your price."); put back here so the pinned base hashes still stand. */
+  const undoN = (html) => String(html).split(escP(", here's your price.")).join(escP(','));
   const enHash = (label, h, bilingual = false) => {
-    let s = String(h || '').replace(/\/q\/[A-Za-z0-9]{22}/g, '/q/<code>');
+    let s = undoXW(undoMW(undoN(String(h || '')))).replace(/\/q\/[A-Za-z0-9]{22}/g, '/q/<code>');
     if (bilingual) { const m = /<section style="padding:0 0 1\.2rem">[\s\S]*?<\/section>/.exec(s); s = m ? m[0] : ''; }
     enPages[label] = crypto.createHash('sha256').update(s).digest('hex');
   };
@@ -828,14 +883,16 @@ new_sqlite_classes = ["QuoteBook"]
     const g = await getQ(P1.code, CT(...WED, 16, 0));
     const m = /<p class="qnote" id="notice-lighting"><strong>([^<]*)<\/strong> ([^<]*)<\/p>/.exec(g.text);
     const shown = m ? decode(m[1]) + ' ' + decode(m[2]) : null;
-    eq(shown, LIGHTING_EN.lead + ' ' + LIGHTING_EN.text, 'the lighting paragraph shows, exactly the constant');
-    eq(crypto.createHash('sha256').update(shown || '').digest('hex'), LIGHTING_SHA256, 'its sha256 is the constant\'s');
+    /* road XW moves this: the English page shows "Light." cut to one line (LIGHT_SHORT, his words); READY-4's paragraph is
+       kept, unchanged, in notices.js — its sha256 and READY-4 itself are still checked against the constant below */
+    eq(shown, LIGHT_SHORT.en.lead + ' ' + LIGHT_SHORT.en.text, 'the lighting paragraph shows, exactly the one-line constant (road XW)');
+    eq(crypto.createHash('sha256').update(LIGHTING_EN.lead + ' ' + LIGHTING_EN.text).digest('hex'), LIGHTING_SHA256, 'READY-4\'s constant is kept: its sha256 is the pinned one');
     let ready4 = null;
     if (fs.existsSync(READY4)) {
       const src = fs.readFileSync(READY4, 'utf8');
       const r = /<p><strong>Light\.<\/strong> ([^<]*)<\/p>/.exec(src);
       ready4 = r ? 'Light. ' + r[1] : null;
-      eq(Buffer.compare(Buffer.from(shown || '', 'utf8'), Buffer.from(ready4 || '', 'utf8')), 0, "the page's lighting paragraph equals READY-4's, byte for byte");
+      eq(Buffer.compare(Buffer.from(LIGHTING_EN.lead + ' ' + LIGHTING_EN.text, 'utf8'), Buffer.from(ready4 || '', 'utf8')), 0, "READY-4's constant equals READY-4, byte for byte (road XW: the page shows the one-line cut)");
     } else {
       ok(true, `na() — READY-4 is not on this machine (${READY4}); the constant's sha256 stands in`);
     }
@@ -855,8 +912,9 @@ new_sqlite_classes = ["QuoteBook"]
       eq(paras.length, NOTICE_53255.length, `BOTH: the §53.255 block shows its ${NOTICE_53255.length} paragraphs`);
       eq(JSON.stringify(paras), JSON.stringify(NOTICE_53255), 'BOTH: every paragraph is the statute\'s, exactly');
       eq(crypto.createHash('sha256').update(paras.join('\n')).digest('hex'), NOTICE_53255_SHA256, 'its sha256 is the constant\'s');
-      const pos = ['Before you accept', 'Light.', 'KNOW YOUR RIGHTS', 'OBTAIN TITLE INSURANCE PROTECTION', 'Accept & confirm'].map((s) => textOf(gb.text).indexOf(s));
-      ok(pos.every((x, i) => x >= 0 && (i === 0 || x > pos[i - 1])), 'both notices come before the Accept button', JSON.stringify(pos));
+      /* road W (BRIEF-W 3: "Put the lighting note and the Texas notice below the button"): both notices, whole, under "Good to know" */
+      const pos = ['Accept & confirm', 'Good to know', 'Light.', 'KNOW YOUR RIGHTS', 'OBTAIN TITLE INSURANCE PROTECTION'].map((s) => textOf(gb.text).indexOf(s));
+      ok(pos.every((x, i) => x >= 0 && (i === 0 || x > pos[i - 1])), 'both notices come below the Accept button, under "Good to know" (road W)', JSON.stringify(pos));
       const p = await tab(CT(...WED, 16, 11));
       await p.goto(qurl(q.code, '', both.SN), { waitUntil: 'load' });
       await shot(p, '11-notices-both.png');
@@ -890,7 +948,7 @@ new_sqlite_classes = ["QuoteBook"]
       const q = await quoted('Bettina Marsh', 'Tape seam lifting in the nursery', [win('2026-10-12', '10:00', '12:00')], { base: off.WN });
       const go = await getQ(q.code, CT(...WED, 16, 20), {}, off.SN);
       eq(/id="notice-lighting"/.test(go.text), false, 'NOTICE_LIGHTING "false": the lighting paragraph is hidden');
-      eq(textOf(go.text).includes(LIGHTING_EN.text.slice(0, 30)), false, 'no trace of its words');
+      eq(textOf(go.text).includes(LIGHTING_EN.text.slice(0, 30)) || textOf(go.text).includes(LIGHT_SHORT.en.text.slice(0, 30)), false, 'no trace of its words');
       ok(/id="notice-53255"/.test(go.text), 'while §53.255 (still "true") shows');
       offR = { worker: off.WN, pid: off.pid, vars: ['NOTICE_53255=true', 'NOTICE_LIGHTING=false'], job: q.id, lighting: /id="notice-lighting"/.test(go.text), statute: /id="notice-53255"/.test(go.text) };
     } finally {
@@ -929,16 +987,18 @@ new_sqlite_classes = ["QuoteBook"]
 
     const t2 = textOf((await getQ(S2.code, CT(...WED, 16, 41))).text);
     read.two_windows = t2;
-    ok(t2.includes('Miércoles 11 de noviembre Llegada entre las 8 y las 10 a.m.'), '(5) two windows, the first: "Miércoles 11 de noviembre Llegada entre las 8 y las 10 a.m."');
-    ok(t2.includes('Viernes 13 de noviembre Llegada entre las 11 a.m. y la 1 p.m.'), '(5) two windows, across noon: "Viernes 13 de noviembre Llegada entre las 11 a.m. y la 1 p.m."');
+    const t2c = t2.replace(/\s+,/g, ',');                /* road W: a card, "<day>, llegada entre …" (the day its own <span>) */
+    ok(t2c.includes('Miércoles 11 de noviembre, llegada entre las 8 y las 10 a.m.'), '(5) two windows, the first: "Miércoles 11 de noviembre, llegada entre las 8 y las 10 a.m." (road W)');
+    ok(t2c.includes('Viernes 13 de noviembre, llegada entre las 11 a.m. y la 1 p.m.'), '(5) two windows, across noon: "Viernes 13 de noviembre, llegada entre las 11 a.m. y la 1 p.m." (road W)');
     ok(t2.includes('Ninguno de estos horarios me acomoda') && !t2.includes('Este horario no me acomoda'), 'QUOTE-WORDS-01: two windows keep "Ninguno de estos horarios me acomoda", not "Este horario no me acomoda"');
     ok(t2.includes('Le apartamos estos horarios hasta el viernes 25 de septiembre a la 1:00 p.m.'), '(5) a hold at 1 PM: "… hasta el viernes 25 de septiembre a la 1:00 p.m."');
     noDots('two windows', t2); noOld('two windows', t2);
 
     const t3 = textOf((await getQ(S3.code, CT(...WED, 16, 42))).text);
     read.noon_and_one = t3;
-    ok(t3.includes('Jueves 12 de noviembre Llegada entre las 12 y las 2 p.m.'), '(5) starting at 12: "Jueves 12 de noviembre Llegada entre las 12 y las 2 p.m."');
-    ok(t3.includes('Sábado 14 de noviembre Llegada entre la 1 y las 3 p.m.'), '(5) starting at 1: "Sábado 14 de noviembre Llegada entre la 1 y las 3 p.m."');
+    const t3c = t3.replace(/\s+,/g, ',');
+    ok(t3c.includes('Jueves 12 de noviembre, llegada entre las 12 y las 2 p.m.'), '(5) starting at 12: "Jueves 12 de noviembre, llegada entre las 12 y las 2 p.m." (road W)');
+    ok(t3c.includes('Sábado 14 de noviembre, llegada entre la 1 y las 3 p.m.'), '(5) starting at 1: "Sábado 14 de noviembre, llegada entre la 1 y las 3 p.m." (road W)');
     noDots('12 and 1', t3); noOld('12 and 1', t3);
 
     /* in the browser: the two-window page, then tap the second and book it */
@@ -1016,24 +1076,27 @@ new_sqlite_classes = ["QuoteBook"]
     /* Pinned from this same reading run on the base's own src (645c32d), before any edit of SPANISH-FIX-01; re-pinned by
        QUOTE-PAGE-03 (the new look changes every English page by design) from its own first run on its tip's src; re-pinned
        again by BRAND-01 (the header's mark and its size change every whole English page; the two sections are unchanged);
-       QUOTE-WORDS-01 re-pins the four pages that offer one time (their second button now reads "This time doesn't work"). */
+       QUOTE-WORDS-01 re-pins the four pages that offer one time (their second button now reads "This time doesn't work").
+       road W (2026-09-26) re-pins sixteen: every quote page's look changed (the folded step list, the cards, the days and
+       the hold in his texts' style, Accept right under the choice, the notices below it); NOT VALID and FORBIDDEN, the two
+       bilingual sections, are unchanged. The new values are this reading's own, run on road W's src. */
     const EN_BASE = {
-      "OPEN · both notices (NOTICE_53255 \"true\")": '4887b241b6d0fa48bdeaa63015a7964076c90cac25cddeb940242e0744f639b4',
-      "OPEN · one time": '53b8e7bc51ad8ef33ee7206790a388b731a5d55df1d9ac75d6f509d43604ca85',
-      "OPEN · two times, one across noon": '656b89356680a54f3be618440fb5f61cc449a7bf72c095ca465278eeec9d08ea',
-      "OPEN · from 12 and from 1, hold at 1 PM": '8d44fc2edd8ab323aee502c1fa9df64355080a8bdbf66e6eafdf5579e93571e2',
-      "OPEN · no time picked (?pick=1)": '8db87d7b22f6613da9d7acd3bcb543e732ae807b1bda9c4f95baea127db9f8c7',
-      "HOLD ENDED · one time": '35890fdd8c0d239141f48496771b3d6b6f297d46cf237f1f897222c6a8e92bf4',
-      "HOLD ENDED · two times": '4b92f5fd3c365b50fd3cd15b1f988402c027d206f793b4f5be08826fc0b36d54',
-      "TOO CLOSE": '0dd77b10df23451334b13d035a4e4158d4877f367f73afee8bde70e89ee2b939',
-      "TAKEN · one time free": 'acca87f8f26c756f8add3a881501b535c881256c7eb2da69bbe257af2fb80681',
-      "TAKEN · no time free": '426947812ebe6d02bbb7278e75dc7973cbc495f4f06f8b9270722c0a5cb461ba',
-      "BOOKED · one time": 'b89d10fddc9b8cefc4c2229b2f95b6f6fa7d6bf46cb6d50ba346f1c4fe8ffe78',
-      "BOOKED · the second of two, across noon": 'c43b01c762dee314b75259c3d56d56c8815771cbed860c07982a14fb118e171d',
-      "UPDATING": 'f38a0e9c72972dc58186236f918c841d002f6c6a6823f8547c1bd89a5e12b6b2',
-      "REPLACED": '075494f5714538d9f18fb7880b0c9d8a1e9b4f8b8e5891e79aca9f51448260e4',
-      "RECEIVED": '56f6a65dc08c0f7b33d362c328d206bd1399de959ee62b22aea456d31c310ebd',
-      "WITHDRAWN": 'a46e825303770e83595271c7ff4589e74fd1d32119c3e3fa5d15e6327f34d5cb',
+      "OPEN · both notices (NOTICE_53255 \"true\")": '8c3b55ba35649a07e7d3fba55364fa646da5b393b505f5ec8f3dec1dab03161a',
+      "OPEN · one time": '199f9a31b075c3020aec3b1f781938371a12678c5c361e37535c6da695741a14',
+      "OPEN · two times, one across noon": 'eda147c90122546a8ce8fad3a2e568c1149ca0f1d9ee6ef60e0869d6974d4640',
+      "OPEN · from 12 and from 1, hold at 1 PM": 'adfc2382f37bd1e11a7b9072223a8099ecb61d3b8e1080e0e77b5ec27f85d973',
+      "OPEN · no time picked (?pick=1)": '0e45b8f6ddbf06346c7f4629d177a191b060b1c520c11921b58717ffefead5e2',
+      "HOLD ENDED · one time": 'd51dfc33afc94a8ca6b13fb291daffb280b6225a0108a9840273401161aedbfb',
+      "HOLD ENDED · two times": 'd5658be37e966e3aa9465bed5f146a8ac09dc5d16c9879f7115067e22613b832',
+      "TOO CLOSE": '8892e5e783b9a9282274bcff5cd446f4f55a04e916daa48028bed6f9cbbffc7e',
+      "TAKEN · one time free": '335a4e5b039b446a09a0860202aab3f8fa688c3928f10132ce9881ca5e161dc9',
+      "TAKEN · no time free": '5e05109d0d23fc2ab4b3b7bf38cb16e354502bc320feda93f1feb74a2a412896',
+      "BOOKED · one time": '03609b13cb37ee0a81c7371a2b954499b8180ae70585f3f1c1de5f0c12f70d9b',
+      "BOOKED · the second of two, across noon": 'bc6b2215ffef978411c7689ab4b7ac598314489cb3c1da8c8ee18a344830fbaf',
+      "UPDATING": 'd72ffa8a72fc22ebd674c472344262d6abcb4dccffc80d2200ddd7ffd83770ea',
+      "REPLACED": '5441d266648ab8e317d9d9e1d02566740e836e6bcc64d8baaae1f8d288c6b981',
+      "RECEIVED": 'fdbe75daf335614762dbf59620ce5e596d09751fa7b2ba675de2ac6ef6b27188',
+      "WITHDRAWN": '5f34a46f63d9d40a71d10e745319dd104709e40d493dc2a407f7238e9963033d',
       "NOT VALID · the English section": '138000509adc7aa28e633ed18b2acea71fabadac9edf01dfb0c5e5f455b8bd30',
       "FORBIDDEN · the English section": '469ce356233913d669a7349f17b212818d5e950eb22cc96ee6f61a32c46aa181',
     };
@@ -1123,11 +1186,13 @@ new_sqlite_classes = ["QuoteBook"]
       ok(/<details class="qlaw">[\s\S]*<div class="q53" id="notice-53255" lang="en">[\s\S]*<\/details>/.test(g.text), 'the statute block sits inside the <details> and carries lang="en"');
       const p = await tab(at(18, 11));
       await p.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
-      const isOpen = () => p.$eval('details.qlaw', (d) => d.open);
+      /* road W: the step list folds too (`details.qlaw.qfold`, first on the page); the statute is the qlaw that is not qfold */
+      const LAW = 'details.qlaw:not(.qfold)';
+      const isOpen = () => p.$eval(LAW, (d) => d.open);
       const steps = [['at load', await isOpen()]];
-      await tap(p, 'details.qlaw summary'); steps.push(['click', await isOpen()]);
-      await tap(p, 'details.qlaw summary'); steps.push(['click again', await isOpen()]);
-      await p.focus('details.qlaw summary');
+      await tap(p, LAW + ' summary'); steps.push(['click', await isOpen()]);
+      await tap(p, LAW + ' summary'); steps.push(['click again', await isOpen()]);
+      await p.focus(LAW + ' summary');
       await p.keyboard.press('Enter'); steps.push(['Enter on the focused summary', await isOpen()]);
       await p.keyboard.press('Space'); steps.push(['Space on the focused summary', await isOpen()]);
       eq(JSON.stringify(steps.map((s) => s[1])), JSON.stringify([false, true, false, true, false]), 'closed at load; a click opens it and a click closes it; Enter opens it; Space closes it', JSON.stringify(steps));
@@ -1136,14 +1201,14 @@ new_sqlite_classes = ["QuoteBook"]
       await p.close();
       const nj = await tab(at(18, 12), { js: false });
       await nj.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
-      const nj0 = await nj.$eval('details.qlaw', (d) => d.open);
-      await tap(nj, 'details.qlaw summary');
-      const nj1 = await nj.$eval('details.qlaw', (d) => d.open);
+      const nj0 = await nj.$eval(LAW, (d) => d.open);
+      await tap(nj, LAW + ' summary');
+      const nj1 = await nj.$eval(LAW, (d) => d.open);
       eq(JSON.stringify([nj0, nj1]), JSON.stringify([false, true]), 'with JavaScript off, a click on the summary opens it');
       await nj.close();
       const gs = await getQ(tTwo.code, at(18, 13), {}, TS);
       Q3.spanish_open_two = noLaw(gs.text);                /* for Q3 (7), before the pictures book it */
-      const sum = /<summary>([\s\S]*?)<\/summary>/.exec(gs.text);
+      const sum = /<details class="qlaw"><summary>([\s\S]*?)<\/summary>/.exec(gs.text);   /* road W: the statute's summary, not the step list's */
       const sumText = sum ? textOf(sum[1]) : '';
       eq(sumText, `${S.law_title} ${S.law_hint}`, `in Spanish, the summary reads "${S.law_title}" and "${S.law_hint}"`);
       expectIn('OPEN · NOTICE_53255 "true"', gs.text, ['law_title', 'law_hint', 'statute_intro']);
@@ -1175,7 +1240,7 @@ new_sqlite_classes = ["QuoteBook"]
       await p.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
       await fontsReady(p);
       await qShot(p, '1-open.png');
-      await tap(p, 'details.qlaw summary');
+      await tap(p, 'details.qlaw:not(.qfold) summary');    /* road W: the statute, not the folded step list */
       await qShot(p, '2-open-law-open.png');
       await p.setViewport({ width: 1280, height: 900 });
       await p.goto(qurl(tOne.code, '', TS), { waitUntil: 'load' });
@@ -1377,7 +1442,7 @@ new_sqlite_classes = ["QuoteBook"]
     eq(icsProp(t, 'METHOD'), 'PUBLISH', 'METHOD:PUBLISH');
     eq(icsProp(t, 'DTSTAMP'), at(20, 0).replace(/[-:]/g, '').replace(/\.\d{3}/, ''), 'DTSTAMP = now, in UTC (the named moment)');
     eq(icsUnesc(icsProp(t, 'SUMMARY')), E.ics_title, 'SUMMARY = ics_title');
-    eq(icsUnesc(icsProp(t, 'DESCRIPTION')), 'Arrival between 8 and 10 AM. Questions? Reply to our text.', 'DESCRIPTION = ics_desc filled');
+    /* road XW moves this: one voice, his ("I", "my text"), and the hold in one short line */ eq(icsUnesc(icsProp(t, 'DESCRIPTION')), 'Arrival between 8 and 10 AM. Questions? Reply to my text.', 'DESCRIPTION = ics_desc filled');
     const uid = icsProp(t, 'UID');
     const want = 'umbradomus-' + crypto.createHash('sha256').update(P2.code).digest('hex').slice(0, 32);
     eq(uid, want, 'UID = "umbradomus-" + the first 32 hex of sha256(code)');
@@ -1438,7 +1503,35 @@ new_sqlite_classes = ["QuoteBook"]
     };
     delete Q3.spanish_open_two;
     expectIn('OPEN · one time', pages['OPEN · one time'], ['h1_quote', 'h_price', 'h_when', 'when_line'], { window: 'las 8 y las 10 a.m.' });
-    expectIn('BOOKED', pages.BOOKED, ['h_booked', 'lbl_visit', 'when_line', 'add_calendar', 'booked_confirm', 'h_price'], { window: 'las 11 a.m. y la 1 p.m.' });
+    expectIn('BOOKED', pages.BOOKED, ['h_booked', 'lbl_visit', 'when_line', 'add_calendar', 'booked_done', 'h_price'], { window: 'las 11 a.m. y la 1 p.m.' });
+    /* road W (SW2, the second read): the Spanish of the two-visit options, each on the page that shows it, on this
+       block's own days after 12/22 (none a Sunday). ONE CHOICE OF TWO DAYS (one step of work): the ticket lists both days;
+       TWO CHOICES OF TWO DAYS: two cards; one day of the first taken by another job: TAKEN with the other choice free;
+       the one-choice quote accepted: BOOKED with both days. */
+    const PAIR_ES = { ...ES, scope: ['Resanar el hoyo de la perilla y pintar la pared'] };
+    const oneA = win('2026-12-23', '08:00', '10:00'), oneB = win('2026-12-24', '11:00', '13:00');
+    const esPair = await quoted('Graciela Montes', 'Hoyo de perilla en el pasillo', [oneA], { extra: { ...PAIR_ES, options: [{ windows: [oneA, oneB] }] } });
+    const twoA = [win('2026-12-26', '08:00', '10:00'), win('2026-12-28', '13:00', '15:00')], twoB = [win('2026-12-29', '08:00', '10:00'), win('2026-12-30', '11:00', '13:00')];
+    const esPairs = await quoted('Marisol Cavazos', 'Grietas en la sala y el comedor', [twoA[0], twoB[0]], { extra: { ...ES, options: [{ windows: twoA }, { windows: twoB }] } });
+    pages['OPEN · one choice of two days'] = (await getQ(esPair.code, at(20, 22))).text;
+    pages['OPEN · two choices of two days'] = (await getQ(esPairs.code, at(20, 23))).text;
+    expectIn('OPEN · one choice of two days', pages['OPEN · one choice of two days'], ['work_hint_one', 'h_when', 'ticket_then', 'hold_two', 'none_pair', 'small_pair', 'h_notices_below']);
+    expectIn('OPEN · one choice of two days', pages['OPEN · one choice of two days'], ['ticket_arrive'], { span: 'las 11 a.m. y la 1 p.m.' });
+    expectIn('OPEN · two choices of two days', pages['OPEN · two choices of two days'], ['pick_legend_pair', 'none', 'small_pair'], {});
+    expectIn('OPEN · two choices of two days', pages['OPEN · two choices of two days'], ['card_first'], { span: 'las 8 y las 10 a.m.' });
+    expectIn('OPEN · two choices of two days', pages['OPEN · two choices of two days'], ['card_then'], { span: 'las 11 a.m. y la 1 p.m.' });
+    const tpc = textOf(noLaw(pages['OPEN · two choices of two days'])).replace(/\s+,/g, ',').replace(/\s+/g, ' ');
+    ok(tpc.includes('Sábado 26 de diciembre, llegada entre las 8 y las 10 a.m. luego, lunes 28 de diciembre, llegada entre la 1 y las 3 p.m.'), 'road W: a card lists both its days, the second after "luego," with a small letter', tpc.slice(0, 600));
+    const taker = await quoted('Ofelia Rangel', 'Parche en el pasillo', [win('2026-12-26', '08:00', '10:00')]);
+    eq((await T_ADMIN(taker.id, 'accept', { version: 1, window: 1 }, at(20, 24))).status, 200, 'road W: another job books Sat 12/26 8–10, a day of the first choice');
+    pages['TAKEN · one choice of two days free'] = (await getQ(esPairs.code, at(20, 25))).text;
+    eq(stateOf(pages['TAKEN · one choice of two days free']), 'taken', 'road W: the two-choice quote reads TAKEN');
+    expectIn('TAKEN · one choice of two days free', pages['TAKEN · one choice of two days free'], ['h_taken_pair', 'taken_other_pair']);
+    await postQ(esPair.code, { v: 1 }, at(20, 26));
+    pages['BOOKED · two days'] = (await getQ(esPair.code, at(20, 27))).text;
+    eq(stateOf(pages['BOOKED · two days']), 'booked', 'road W: the one-choice quote of two days, accepted → BOOKED');
+    expectIn('BOOKED · two days', pages['BOOKED · two days'], ['h_booked', 'lbl_visits', 'ticket_then', 'booked_done', 'booked_small']);
+    expectIn('BOOKED · two days', pages['BOOKED · two days'], ['ticket_arrive'], { span: 'las 8 y las 10 a.m.' });
     const enParts = [];
     for (const [k, v] of Object.entries(E)) for (const s of [].concat(v)) for (const x of String(s).split(/\{\w+\}/)) if (x.trim().length > 3) enParts.push([k, x.trim()]);
     const out = {};
@@ -1447,7 +1540,7 @@ new_sqlite_classes = ["QuoteBook"]
       const labels = strip ? [...strip[1].matchAll(/<\/span>([^<]+)<\/li>/g)].map((x) => x[1]) : [];
       eq(JSON.stringify(labels), JSON.stringify(S.steps), `${label}: the strip is labelled "${S.steps_label}" and reads ${S.steps.join(' · ')}`);
       const h1 = /<h1>([^<]*)<\/h1>/.exec(h);
-      if (label !== 'BOOKED') eq(h1 && decode(h1[1]), S.h1_quote, `${label}: the H1 is "${S.h1_quote}"`);
+      if (!label.startsWith('BOOKED')) eq(h1 && decode(h1[1]), S.h1_quote, `${label}: the H1 is "${S.h1_quote}"`);
       const t = textOf(noLaw(h));
       const english = enParts.filter(([, x]) => t.includes(x)).map(([k, x]) => `${k}: ${x}`).concat((t.match(/\b(AM|PM)\b/g) || []));
       eq((t.match(/\.\.(?!\.)/g) || []).length, 0, `${label}: no ".."`);
@@ -1459,8 +1552,27 @@ new_sqlite_classes = ["QuoteBook"]
     /* (15)'s "every Spanish string seen", run here once every Spanish page and file has been read. QUOTE-PAGE-03
        exempts exactly three more by design: `when` and `booked_window` (the day and when_line now sit on two lines)
        and `title` (it stays the <title> and og:title; h1_quote is the heading). hi and statute_intro as before. */
-    const unexercised = Object.keys(E).filter((k) => !seen[k] && !['hi', 'statute_intro', 'when', 'booked_window', 'title'].includes(k));
-    eq(unexercised.length, 0, 'every Spanish string was seen on a page or in the calendar file (hi and statute_intro are checked in (16) and by hand; when, booked_window and title leave the page by design)', unexercised.join(', '));
+    /* road W exempts two more by design: `h_notices` (the notices' heading is h_notices_below now, below the buttons) and
+       `booked_confirm` (BOOKED says booked_done: the booking is done, not waiting on a text). Every one of road W's
+       fifteen new strings must be seen. */
+    /* road XW: its six new strings, each seen on a Spanish page — the plan's step count past the lines listed (one and
+       two more), their paint, the year box, and each visit's length on the booked ticket */
+    {
+      const XW1 = [win('2026-12-15', '16:00', '18:00'), win('2026-12-16', '16:00', '18:00')];
+      const xwExtra = { ...ES, included: 'La pintura para igualar el color está incluida. La limpieza está incluida.', their_paint: true, visit_minutes: [60, 240], options: [{ windows: XW1 }] };
+      const x1 = await quoted('Anita Xochitl', 'Dos hoyos en la pared', [XW1[0]], { extra: { ...xwExtra, step_count: 3 } });
+      expectIn('OPEN · road XW', (await getQ(x1.code, CT(...WED, 21, 0))).text, ['work_more_one', 'paint_theirs', 'year_label', 'year_hint']);
+      const XW2 = [win('2026-12-17', '16:00', '18:00'), win('2026-12-18', '16:00', '18:00')];
+      const x2 = await quoted('Benito Xalapa', 'Grieta en el techo', [XW2[0]], { extra: { ...xwExtra, step_count: 4, options: [{ windows: XW2 }] } });
+      expectIn('OPEN · road XW, two more', (await getQ(x2.code, CT(...WED, 21, 1))).text, ['work_more'], { n: '2' });
+      await postQ(x2.code, { v: 1 }, CT(...WED, 21, 2));
+      /* visit_len is only " · {len}" in both languages: what makes it Spanish is the length's own words */
+      const bt = textOf((await getQ(x2.code, CT(...WED, 21, 3))).text);
+      ok(bt.includes('Llegada entre las 4 y las 6 p.m. · una hora') && bt.includes('Llegada entre las 4 y las 6 p.m. · unas 4 horas') && !/about|hours?\b/.test(bt), 'BOOKED · road XW: visit_len is Spanish (" · una hora", " · unas 4 horas")', bt.slice(0, 400));
+      seen.visit_len = (seen.visit_len || []).concat('BOOKED · road XW');
+    }
+    const unexercised = Object.keys(E).filter((k) => !seen[k] && !['hi', 'statute_intro', 'when', 'booked_window', 'title', 'h_notices', 'booked_confirm'].includes(k));
+    eq(unexercised.length, 0, 'every Spanish string was seen on a page or in the calendar file (hi and statute_intro are checked in (16) and by hand; when, booked_window, title, and since road W h_notices and booked_confirm, leave the page by design)', unexercised.join(', '));
     Q3['7'] = { jobs: [esOne.id, es.id], pages: out, unexercised };
   }
 
@@ -1503,10 +1615,10 @@ new_sqlite_classes = ["QuoteBook"]
   }
 
   /* ============================================================ (18) */
-  suite('I · (18) the site: exactly one rewrite, .vercelignore, and the proxy path works for GET and POST');
+  suite('I · (18) the site: exactly two rewrites (/q and road W\'s /receipt), .vercelignore, and the proxy path works for GET and POST');
   {
     const vj = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'vercel.json'), 'utf8'));
-    eq(JSON.stringify(vj.rewrites), JSON.stringify([{ source: '/q/:path*', destination: 'https://umbra-intake.umbradomus.workers.dev/q/:path*' }]), 'vercel.json has exactly the one rewrite');
+    eq(JSON.stringify(vj.rewrites), JSON.stringify([{ source: '/q/:path*', destination: 'https://umbra-intake.umbradomus.workers.dev/q/:path*' }, { source: '/receipt/:path*', destination: 'https://umbra-intake.umbradomus.workers.dev/receipt/:path*' }]), 'vercel.json has exactly the two rewrites: /q and (road W) /receipt');
     eq(fs.readFileSync(path.join(REPO_DIR, '.vercelignore'), 'utf8'), 'worker/\ntools/\n', '.vercelignore has exactly the two lines');
     const gets = sw.proxyLog.filter((e) => e.method === 'GET' && e.status === 200).length;
     const posts = sw.proxyLog.filter((e) => e.method === 'POST' && e.status === 303).length;

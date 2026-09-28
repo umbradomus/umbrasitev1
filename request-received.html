@@ -10,9 +10,11 @@
 <link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/recibido">
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/request-received">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=6">
+<link rel="stylesheet" href="/assets/site.css?v=7">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
+<!-- road W: what they gave on the form, read back from this tab's own memory (never the address, never the Worker) -->
+<script src="/assets/umbra-sent.js?v=1"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
@@ -49,27 +51,37 @@
     <div class="wrap narrow">
       <p class="kicker" id="kick">Received</p>
       <h1 id="head">Got it.</h1>
-      <p class="lead">We've got it — this page loaded at <strong><time id="when">just now</time></strong> on your phone. The email that reached Drew carries the real timestamp.</p>
+      <!-- road W: the one line that matters first — who texts them, at what number, by when — then what they sent.
+           The number and the times come from this tab's own memory of the form; without it the line names no number. -->
       <div class="note" id="next">
-        <p><strong>What happens next:</strong> We reply within 2 hours, 7am–9pm, seven days a week. If we're late, we tell you why in writing and you go first the next morning.</p>
-        <p id="by" hidden style="margin:0"><strong>Expect to hear from us by <time id="bywhen"></time>.</strong></p>
+        <p class="sent-line" id="byline"><strong>Drew will text you within 2 hours, 7am&ndash;9pm.</strong></p>
+        <!-- road XW: the number his texts come FROM, so the first one isn't ignored as a stranger's -->
+        <p class="sent-from" id="fromline">Texts come from <span class="nw">(956) 556-6438</span>.</p>
+        <div class="sent" id="sent" hidden>
+          <p class="sent-h">What you sent</p>
+          <ul id="sent-times" aria-label="Your times" hidden></ul>
+          <p id="sent-flex" hidden>Any time works for you.</p>
+          <p id="sent-photos" hidden></p>
+          <p class="sent-copy" id="sent-copy"></p>
+        </div>
       </div>
 
       <!-- Shown only when the Worker sent the browser here with ?id= and ?t=. Without them this block stays hidden and the page is exactly as it was. -->
-      <div class="note" id="jobnote" hidden>
-        <p style="margin:0 0 .4rem"><strong>Your request number is <span id="jobid"></span>.</strong></p>
-        <p style="margin:0">Keep this link. It shows which of the four steps your request is on, any time, with no account: <a id="joblink" href="/status">check your request</a>.</p>
+      <!-- road XW: one clear button for the status link (share it to themselves, or copy it), instead of a small
+           inline link and an explainer -->
+      <div id="jobnote" hidden style="margin-top:1.2rem">
+        <p style="margin:0"><a class="btn wide" id="joblink" href="/status">Save my status link</a></p>
+        <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">It shows where your request stands, any time. Your request number is <span id="jobid"></span>.</p>
       </div>
 
       <div id="stands">
         <h2 style="margin-top:2rem">Where it stands</h2>
         <ol class="track" aria-label="Status">
-          <li class="done"><div><strong>Received</strong><small>The clock has started.</small></div></li>
+          <li class="done"><div><strong>Received</strong><small>We have your request.</small></div></li>
           <li><div><strong>Quoted</strong><small>A price and a plan, in writing.</small></div></li>
           <li><div><strong>Scheduled</strong><small>A day and a window, agreed with you.</small></div></li>
           <li><div><strong>Done</strong><small>Finished and photographed.</small></div></li>
         </ol>
-        <p class="fine" style="margin-top:.6rem"><a href="/status">How the status link works, and how to check on this request in the meantime.</a></p>
       </div>
 
       <p style="margin-top:2rem">If it's urgent, don't wait on us: <a href="tel:+19565566438">call (956) 556-6438</a>.</p>
@@ -105,46 +117,86 @@
   <div class="wrap"><p class="fine">Umbra Domus is not an electrical, plumbing, air conditioning or security company. We don't do that work and we don't quote it.</p></div>
 </footer>
 <script>
-// Stamps the time the confirmation was reached. WINDOW_MINUTES is Drew's number (120 = the 2-hour promise);
-// the page also prints the clock time by which he has promised to answer. Null keeps it hidden.
-// The promise runs 7am–9pm (OPEN_HOUR–CLOSE_HOUR). If the window would end after 9:00 PM, or the request
-// arrived before 7:00 AM, the answer-by time is clamped to 7:00 AM + the window (9:00 AM), "tomorrow" when the date rolls.
+// road W · the thank-you page says what they gave. "Drew will text you at (956) 555-0147 by 9:00 AM": the number
+// exactly as they typed it, from this tab's own memory of the form (/assets/umbra-sent.js), never from the address
+// and never from the Worker. No memory (another phone, another tab): "Drew will text you by 9:00 AM".
+// The by-time is the Worker's own two-hour clock: business minutes, 7 AM–9 PM on Chicago's clock.
 (function () {
-  var WINDOW_MINUTES = 120;
-  var OPEN_HOUR = 7, CLOSE_HOUR = 21;
-  var now = new Date();
-  var fmt = function (d) { return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
-  document.getElementById('when').textContent = fmt(now);
-  if (WINDOW_MINUTES) {
-    var by = new Date(now.getTime() + WINDOW_MINUTES * 60000);
-    var close = new Date(now.getFullYear(), now.getMonth(), now.getDate(), CLOSE_HOUR, 0, 0, 0);
-    var early = now.getHours() < OPEN_HOUR;
-    var suffix = '';
-    if (early || by > close) {
-      by = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (early ? 0 : 1), OPEN_HOUR, WINDOW_MINUTES, 0, 0);
-      if (by.getDate() !== now.getDate()) suffix = ' tomorrow';
-    }
-    document.getElementById('bywhen').textContent = fmt(by) + suffix;
-    document.getElementById('by').hidden = false;
-  }
-  // The Worker sends the browser here with the new record's id and its private token.
-  // Neither is present on a plain FormSubmit redirect, and then this block does nothing.
+  var $ = function (id) { return document.getElementById(id); };
   var q = new URLSearchParams(location.search);
   var jobId = q.get('id'), jobTok = q.get('t');
-  if (jobId && jobTok && /^U-\d{4,6}$/.test(jobId)) {
-    document.getElementById('jobid').textContent = jobId;
-    document.getElementById('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
-    document.getElementById('jobnote').hidden = false;
+  var okId = Boolean(jobId && /^U-\d{4,6}$/.test(jobId));
+  var isList = q.get('kind') === 'list';
+  var S = window.UmbraSent || null;
+  var mem = (!isList && S) ? S.read(okId ? jobId : null) : null;
+
+  function say(el, text) { el.textContent = text; }
+  /* one bold line; the number and the time never break across two lines */
+  function bold(parts) {
+    var strong = document.createElement('strong');
+    parts.forEach(function (x) {
+      if (typeof x === 'string') { strong.appendChild(document.createTextNode(x)); return; }
+      var s = document.createElement('span'); s.className = 'nw'; s.textContent = x.nw; strong.appendChild(s);
+    });
+    $('byline').innerHTML = '';
+    $('byline').appendChild(strong);
   }
-  if (new URLSearchParams(location.search).get('kind') === 'list') {
-    document.getElementById('kick').textContent = 'The waiting list';
-    document.getElementById('head').textContent = "You're on the list.";
+  if (S) {
+    var due = S.due(Date.now());
+    var tail = [' by ', { nw: due.at }, (due.tomorrow ? ' tomorrow' : '') + '.'];
+    bold(mem && mem.phone
+      ? [mem.consent === false ? 'Drew will call you at ' : 'Drew will text you at ', { nw: mem.phone }].concat(tail)
+      : ['Drew will text you'].concat(tail));
+    if (mem && mem.phone && mem.consent === false) say($('fromline'), 'His calls come from (956) 556-6438.');
+  }
+  if (mem) {
+    if (mem.first) say($('head'), 'Got it, ' + mem.first + '.');
+    var ul = $('sent-times');
+    (mem.times || []).forEach(function (t, i) {
+      var li = document.createElement('li');
+      var n = document.createElement('span'); n.textContent = String(i + 1);
+      li.appendChild(n); li.appendChild(document.createTextNode(t));
+      ul.appendChild(li);
+    });
+    ul.hidden = !(mem.times && mem.times.length);
+    if (mem.flexible) { say($('sent-flex'), mem.times && mem.times.length ? 'Or any time works for you.' : 'Any time works for you.'); $('sent-flex').hidden = false; }
+    if (mem.photos) { say($('sent-photos'), mem.photos + (mem.photos === 1 ? ' photo' : ' photos')); $('sent-photos').hidden = false; }
+    say($('sent-copy'), mem.email
+      ? (mem.copy === 'yes' ? 'A copy went to ' + mem.email + '.' : 'Your copy should reach ' + mem.email + ' shortly. If it doesn\'t, screenshot this page.')
+      : 'No email given, so no copy was sent. Screenshot this page to keep it.');
+    $('sent').hidden = false;
+  }
+
+  // The Worker sends the browser here with the new record's id and its private token.
+  // Neither is present on a plain FormSubmit redirect, and then this block does nothing.
+  if (okId && jobTok) {
+    $('jobid').textContent = jobId;
+    $('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
+    $('jobnote').hidden = false;
+    /* road XW · "Save my status link": the phone's own share sheet (Notes, Messages, a bookmark); else copied; else the
+       link simply opens, and the browser's own bookmark keeps it */
+    $('joblink').addEventListener('click', function (e) {
+      var url = new URL($('joblink').getAttribute('href'), location.href).href;
+      if (navigator.share) {
+        e.preventDefault();
+        navigator.share({ title: 'My Umbra Domus request', url: url }).catch(function () {});
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        e.preventDefault();
+        navigator.clipboard.writeText(url).then(function () {
+          $('jobsaid').textContent = 'Copied. Paste it into your notes or a text to yourself.';
+        }, function () { location.href = url; });
+      }
+    });
+  }
+  if (isList) {
+    $('kick').textContent = 'The waiting list';
+    $('head').textContent = "You're on the list.";
     // the four-step track belongs to a repair, not to a waiting list
     var track = document.querySelector('.track');
     if (track) track.hidden = true;
-    var stands = document.getElementById('stands');
+    var stands = $('stands');
     if (stands) stands.hidden = true;
-    var next = document.getElementById('next');
+    var next = $('next');
     if (next) next.innerHTML = '<p style="margin:0">We\'ll text you when the first house is ready. Nothing else in between.</p>';
   }
 })();

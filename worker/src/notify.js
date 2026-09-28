@@ -102,11 +102,15 @@ export async function sendTelegram(env, msg) {
 const SENDERS = { pushover: sendPushover, telegram: sendTelegram };
 export const CHANNELS = ['pushover', 'telegram'];
 
-/** The one call the clock makes. `only` limits it to some channels (a retry). Pushover goes first. */
+/** The one call the clock makes. `only` limits it to some channels (a retry). Pushover goes first.
+    road FW (2026-09-26) · ONE APP, his words: "one app, not two". Telegram is the FALLBACK: it is sent only when
+    Pushover did not take the push (a 4xx, a 5xx, no answer, or no Pushover keys on the Worker). When Pushover takes
+    it, Telegram is not called at all. A retry names its own channels, exactly as before. */
 export async function sendAlert(env, msg, only = CHANNELS) {
   const results = [];
   for (const ch of CHANNELS) {
     if (!only.includes(ch)) continue;
+    if (ch !== 'pushover' && results.some((r) => r.channel === 'pushover' && r.ok)) continue;
     const r = await SENDERS[ch](env, msg);
     if (!r.ok && !r.skipped) console.error('alert channel failed', ch, r.status, r.error, r.retry ? '(will retry)' : '(4xx: not retried)');
     results.push(r);

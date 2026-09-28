@@ -24,13 +24,23 @@
      POST /admin/quote/:id?k=          a new version of the quote; answers the /q/<code> link ONCE (QUOTE-API.md)
      POST /admin/quote/:id/sent?k=     "I sent it" — stops the 2-hour clock, restarts the hold from sent_at
      POST /admin/quote/:id/accept?k=   a texted YES he marks — the same booking step as the page, by "text"
-     POST /admin/quote/:id/cancel?k=   withdraws a version; a booked one frees its time
+                                       ({version, option}; the old {version, window} is the same thing)
+     POST /admin/quote/:id/cancel?k=   withdraws a version; a booked one frees every day it held
      GET  /admin/quote/:id?k=          every version's state for the Flux Capacitor (never the code)
+                                       road CO: with {kind:"change"} the create, /sent and /cancel make and move a CHANGE
+                                       ORDER ("Change 1") on a booked job; the state gains `changes` when the job has one
+     POST /admin/status-link/:id?k=    road W: the private status link for a text, /status?id=&v= (customer.js)
+     PUT  /admin/receipt/:id?k=        road W: the receipt page kept, the job marked done and paid → {ok, link}
+     GET  /receipt/:id?v=              road W: the receipt on a phone, no script (the site rewrites /receipt/* here)
+     GET  /receipt/:id/print?v=        road XW: the same receipt, opening the phone's Print (Save as PDF) — one pinned script
      GET  /q/:code                     the customer's quote page — opening it changes nothing but the visit count (page.js)
      POST /q/:code  ·  /q/:code/none   Accept & confirm · None of these times work — same-origin forms, then 303 back
+                                       road CO: a change order's page posts a=ok (with the name typed) or a=no to /q/:code
      GET  /health                      liveness
    The book behind the quote link is a Durable Object (quotebook.js, binding BOOK); quotes.js is the rest.
    The site reaches /q/* through its own rewrite (vercel.json), so the page lives on umbradomus.com.
+   road W: the customer's two GETs and the receipt open with either key — `t` (the thank-you page's link, as always)
+   or `v` (a private link the Flux asks for) — and answer a wrong key exactly as a job that does not exist.
 */
 
 import ADMIN_HTML from '../admin.html';
@@ -50,9 +60,11 @@ import { bizMinutes } from './biztime.js';
 import { readAvailability, readConsent, windowsConfig } from './windows.js';
 import {
   readQuoteBody, createQuote, markSent, cancelQuote, quoteState, bookByJob,
-  bookByCode, markNone, viewByCode, reconcile, bookDump,
+  bookByCode, markNone, viewByCode, reconcile, bookDump, customerQuoteLink,
+  readChangeBody, createChange, markChangeSent, cancelChange, customerChanges,
 } from './quotes.js';
 import { handleQuotePage } from './page.js';
+import { customerKey, statusLink, putReceipt, receiptPage } from './customer.js';
 
 /* ACCEPT-PAGE-01: the book's class rides the main module beside the default export (wrangler.toml
    binds it as BOOK; its migration is new_sqlite_classes, the only kind the Workers Free plan takes). */
@@ -72,7 +84,8 @@ const PHOTO_FIELD = /^attachment(\d*)$/;
    EMAIL-SUBJECT-01: so is `_subject`, which the page now stamps with the first name and the minute
    it was sent, so that Gmail gives every job its own conversation (and its own ring). */
 const DEDUP_WINDOW_MS = 10 * 60000;
-const DEDUP_IGNORE = /^(email_sent|email_copy_id|email_copy_ms|_next|_subject)$/;
+/* road W: `_autoresponse` too — the customer's own copy of what they sent, written by the page from the other fields */
+const DEDUP_IGNORE = /^(email_sent|email_copy_id|email_copy_ms|_next|_subject|_autoresponse)$/;
 
 /** The moment this request is handled. A test may name it, and only when test hooks are on. */
 function nowFor(request, env) {
@@ -145,10 +158,7 @@ function withCors(res) {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
-function tokenOk(rec, url) {
-  const t = url.searchParams.get('t') || '';
-  return Boolean(rec && rec.token) && safeEqual(t, rec.token);
-}
+/* road W: the key check is customer.js's customerKey (`t` exactly as before, or the private view key `v`). */
 
 /* ------------------------------------------------------------------- intake */
 
@@ -446,18 +456,23 @@ function ladder(rec) {
 
 async function handleCustomerJob(env, url, id) {
   const rec = await getRecord(env, id);
-  /* A wrong token and a job that does not exist answer identically. */
-  if (!rec || !tokenOk(rec, url)) return notFound();
+  /* A wrong token and a job that does not exist answer identically. road W: `v` opens it as well as `t`. */
+  const key = await customerKey(rec, url);
+  if (!key) return notFound();
 
-  const t = url.searchParams.get('t');
   const photos = (rec.photos || [])
     .filter((p) => !p.store_failed)
     .map((p) => ({
       n: p.n,
-      url: `/api/photo/${rec.id}/${p.n}?t=${encodeURIComponent(t)}`,
+      url: `/api/photo/${rec.id}/${p.n}?${key.k}=${encodeURIComponent(key.val)}`,
       contentType: p.contentType,
       size: p.size,
     }));
+
+  /* road W: every day the booking holds (both days of a two-visit job), while it stands */
+  const a = rec.accept && !rec.accept.cancelled_at ? rec.accept : null;
+  const visits = a ? (Array.isArray(a.windows) && a.windows.length ? a.windows : (a.window ? [a.window] : []))
+    .map((w) => ({ date: w.date, start: w.start, end: w.end })) : [];
 
   return json({
     id: rec.id,
@@ -469,12 +484,38 @@ async function handleCustomerJob(env, url, id) {
     quote_amount: rec.quote_amount != null ? rec.quote_amount : null,
     scheduled_for: rec.scheduled_for || null,
     photos,
+    /* road W: the visits, the payment and whether a receipt is there (the page links it with the key it came with) */
+    visits,
+    paid: rec.paid ? { method: rec.paid.method, amount: rec.paid.amount, at: rec.paid.at } : null,
+    receipt: Boolean(rec.receipt && rec.receipt.key),
+    /* road FW: the job type for the page's top line ("Your repair · drywall & paint"); when the work finished (the
+       Flux's own word with the receipt, else null — the page then says "Done" with no time); and, while a sent quote
+       is still theirs to answer, their quote page, so the status link books as well as the text's link does */
+    service: serviceWords(rec.fields),
+    finished_at: rec.finished_at || null,
+    quote_link: rec.status === 'quoted' || rec.status === 'received' ? await customerQuoteLink(env, rec, new Date().toISOString()) : null,
+    /* road CO: the change orders they were sent — only when there is one, so a job with none answers exactly as before */
+    ...(await changesFor(env, rec)),
   });
+}
+
+/** road CO: { changes: [...] } for the status page, or nothing at all */
+async function changesFor(env, rec) {
+  if (!Array.isArray(rec.changes) || !rec.changes.length) return {};
+  const list = await customerChanges(env, rec, new Date().toISOString());
+  return list ? { changes: list } : {};
+}
+
+/** road FW: the job type as the customer chose it, one line, or null. */
+function serviceWords(f) {
+  const s = f && f.service;
+  const w = String(Array.isArray(s) ? s.join(', ') : (s || '')).replace(/\s+/g, ' ').trim();
+  return w ? w.slice(0, 80) : null;
 }
 
 async function handlePhoto(env, url, id, nRaw) {
   const rec = await getRecord(env, id);
-  if (!rec || !tokenOk(rec, url)) return notFound();
+  if (!(await customerKey(rec, url))) return notFound();
   const n = parseInt(nRaw, 10);
   const p = (rec.photos || []).find((x) => x.n === n && !x.store_failed);
   if (!p) return notFound();
@@ -531,6 +572,8 @@ function adminRow(rec, nowIso) {
     photos: (rec.photos || []).length,
     name: (rec.fields || {}).name || '',
     phone: (rec.fields || {}).phone || '',
+    /* road W: the email they gave on the contact step, if any (optional; the form asks for it beside the phone) */
+    email: (rec.fields || {}).email || '',
     address: (rec.fields || {}).address || '',
     service: (rec.fields || {}).service || '',
     /* contact.html names the free text `message`, the other three name it `what`. */
@@ -543,6 +586,9 @@ function adminRow(rec, nowIso) {
     accept: rec.accept || null,
     accepted_at: rec.accepted_at || null,
     quote: rec.quote || null,
+    /* road W: the payment the receipt recorded, and when the receipt was kept (never its link or key) */
+    paid: rec.paid || null,
+    receipt_at: rec.receipt ? rec.receipt.at : null,
     status_link: rec.status_link || '',
     token: rec.token,
     /* Everything the form posted, exactly as stored — repeated names stay arrays.
@@ -678,8 +724,8 @@ const REFUSAL = {
   updating: 'a newer version of this quote exists and is not marked sent yet',
   withdrawn: 'this quote was withdrawn',
   too_close: 'the cutoff has passed',
-  choose_window: 'this quote offers two windows: say which (window 1 or 2)',
-  no_such_window: 'this quote has no such window',
+  choose_window: 'this quote offers two choices: say which (option 1 or 2)',
+  no_such_window: 'this quote has no such option',
 };
 
 /** POST|GET /admin/quote/<id>[/sent|/accept|/cancel] — the Flux Capacitor's calls. QUOTE-API.md. */
@@ -693,6 +739,25 @@ async function handleAdminQuote(request, env, url, id, action, method) {
   if (method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: action ? 'POST' : 'GET, POST' });
   const { body, error } = await readJson(request);
   if (error || !body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'bad_body', reason: 'send a JSON object' }, 400);
+
+  /* road CO: a change order — kind "change" on the create, /sent and /cancel; its number rides in `version` */
+  if (body.kind === 'change') {
+    if (!action) {
+      const c = readChangeBody(body);
+      if (c.error) return json({ error: 'invalid', reason: c.error }, c.status);
+      const r = await createChange(env, id, c.change, now);
+      return json(r.body, r.status);
+    }
+    if (!Number.isInteger(body.version) || body.version < 1) return json({ error: 'invalid', reason: 'version must be the change\'s number, a whole number, 1 or more' }, 422);
+    if (action === 'sent') {
+      if (body.sent_at != null && (typeof body.sent_at !== 'string' || isNaN(Date.parse(body.sent_at)))) return json({ error: 'invalid', reason: 'sent_at must be an ISO time' }, 422);
+      const r = await markChangeSent(env, id, body.version, body.sent_at ? new Date(body.sent_at).toISOString() : now, now);
+      return json(r.body, r.status);
+    }
+    if (action === 'cancel') { const r = await cancelChange(env, id, body.version, now); return json(r.body, r.status); }
+    return json({ error: 'invalid', reason: 'a change order is OK\'d by the customer on its own page' }, 422);
+  }
+  if (body.kind != null && body.kind !== 'quote') return json({ error: 'invalid', reason: 'kind is "quote" (the default) or "change"' }, 422);
 
   if (!action) {
     const q = readQuoteBody(body, env);
@@ -708,7 +773,10 @@ async function handleAdminQuote(request, env, url, id, action, method) {
     return json(r.body, r.status);
   }
   if (action === 'accept') {
-    const r = await bookByJob(env, id, body.version, body.window, now);
+    /* road W: {option: n} books every day of that option; the old {window: n} is the same number (an old-shape quote's
+       options are its windows), so both keep working. `option` wins when both are sent. */
+    const choice = body.option !== undefined && body.option !== null ? body.option : body.window;
+    const r = await bookByJob(env, id, body.version, choice, now);
     if (r.state === 'not_found') return notFound();
     const ok = r.state === 'booked' || r.state === 'already_booked';
     return json(ok ? r : { error: r.state, reason: REFUSAL[r.state] || r.state, ...r }, ok ? 200 : 409);
@@ -772,6 +840,27 @@ export default {
     if ((m = /^\/admin\/quote\/(U-\d{4,6})(?:\/(sent|accept|cancel))?$/.exec(path))) {
       return handleAdminQuote(request, env, url, m[1], m[2] || null, method);
     }
+    /* road W: the private status link, and the receipt kept (customer.js) */
+    if ((m = /^\/admin\/status-link\/(U-\d{4,6})$/.exec(path))) {
+      if (!adminOk(env, url)) return json({ error: 'unauthorized' }, 401);
+      if (method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
+      const s = await statusLink(env, m[1], nowFor(request, env));
+      /* the second read: an unknown job says it is the JOB that is missing ("what": "job"), so the Flux can tell it
+         from an older Worker without this route, whose plain 404 {"error":"not_found"} means "no such door" */
+      return s ? json(s) : json({ error: 'not_found', what: 'job' }, 404);
+    }
+    if ((m = /^\/admin\/receipt\/(U-\d{4,6})$/.exec(path))) {
+      if (!adminOk(env, url)) return json({ error: 'unauthorized' }, 401);
+      if (method !== 'PUT') return json({ error: 'method_not_allowed' }, 405, { allow: 'PUT' });
+      const { body, error } = await readJson(request);
+      if (error || !body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'bad_body', reason: 'send a JSON object' }, 400);
+      const r = await putReceipt(env, m[1], body, nowFor(request, env));
+      return json(r.body, r.status);
+    }
+    if ((m = /^\/receipt\/(U-\d{4,6})(\/print)?$/.exec(path))) {
+      /* road XW: /print is the same receipt, opening the phone's Print (Save as PDF) */
+      return receiptPage(env, url, m[1], method, Boolean(m[2]));
+    }
     if ((m = /^\/hooks\/pushover\/([^/]{1,200})$/.exec(path)) && method === 'POST') {
       return handlePushoverHook(request, env, decodeURIComponent(m[1]));
     }
@@ -804,7 +893,7 @@ export default {
         return json({ ok: true });
       }
       const b = (await readJson(request)).body || {};
-      if (hook[1] === 'book-by-code') return json(await bookByCode(env, b.code, b.version, b.window, b.by || 'page', now));
+      if (hook[1] === 'book-by-code') return json(await bookByCode(env, b.code, b.version, b.option !== undefined && b.option !== null ? b.option : b.window, b.by || 'page', now));
       if (hook[1] === 'none-by-code') return json(await markNone(env, b.code, b.version, now));
       return json(await viewByCode(env, b.code, now));
     }

@@ -82,14 +82,74 @@ const LINKISH = /\b(?:https?:\/\/|www\.)\S+/gi;
 const EMAILISH = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
 const PHONEISH = /\+?\d[\d\s().-]{7,}\d/g;
 
-/** "Drywall & Paint — Two holes in the ceiling…" — the service and the customer's first 120 characters. */
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/* road W · R25: no push ever carries the customer's name. Their own words sometimes do ("Hi, this is Ana"): each
+   word of the name on the request, two letters or more, is taken out where it stands as a whole word. A part of three
+   letters or more goes in ANY case ("this is ana", "ANA", "Ana") — the second read, 2026-09-26: people type their own
+   name in lower case. A two-letter part ("Al", "Bo") goes only capitalised or in capitals, so "al" and "bo" in
+   ordinary words stay. A name inside another word is never cut: "Ana" leaves "banana" alone. */
+function withoutName(s, rec) {
+  const parts = String(((rec.fields || {}).name) || '').split(/[\s,]+/)
+    .map((w) => w.replace(/[^\p{L}'-]/gu, '')).filter((w) => w.length >= 2);
+  let out = s;
+  for (const p of parts) {
+    if (p.length >= 3) {
+      out = out.replace(new RegExp('(^|[^\\p{L}])' + escRe(p) + '(?![\\p{L}])', 'giu'), '$1[name]');
+      continue;
+    }
+    const forms = [...new Set([p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(), p.toUpperCase(), p])]
+      .filter((x) => x !== x.toLowerCase());
+    if (!forms.length) continue;
+    out = out.replace(new RegExp('(^|[^\\p{L}])(?:' + forms.map(escRe).join('|') + ')(?![\\p{L}])', 'gu'), '$1[name]');
+  }
+  return out;
+}
+
+/** The service on the request: "Drywall & Paint". */
+function serviceOf(f) {
+  return String(Array.isArray(f.service) ? f.service.join(', ') : (f.service || 'Request')).replace(/\s+/g, ' ').trim();
+}
+
+/** Their words with any link, email address or phone number taken out, and no name (R25). */
+function cleanWords(s, rec) {
+  return withoutName(String(s).replace(/\s+/g, ' ').trim()
+    .replace(LINKISH, '[link]').replace(EMAILISH, '[email]').replace(PHONEISH, '[number]'), rec);
+}
+
+/** "Drywall & Paint — Two holes in the ceiling…" — the service and the customer's first 120 characters.
+    road FW: never cut mid-word — a long one ends at the last whole word inside the 120. */
 export function whatLine(rec) {
   const f = rec.fields || {};
-  const service = String(Array.isArray(f.service) ? f.service.join(', ') : (f.service || 'Request')).replace(/\s+/g, ' ').trim();
-  const raw = String(f.what || f.message || '').replace(/\s+/g, ' ').trim()
-    .replace(LINKISH, '[link]').replace(EMAILISH, '[email]').replace(PHONEISH, '[number]');
-  const words = raw.length > 120 ? raw.slice(0, 120) + '…' : raw;
-  return words ? `${service} — ${words}` : service;
+  const raw = cleanWords(f.what || f.message || '', rec);
+  return raw ? `${serviceOf(f)} — ${wholeWords(raw, 120)}` : serviceOf(f);
+}
+
+/** At most `max` characters, cut only between words (a word longer than the whole room is the one exception). */
+function wholeWords(s, max) {
+  if (s.length <= max) return s;
+  const room = s.slice(0, max);
+  const sp = room.lastIndexOf(' ');
+  return (sp > 0 ? room.slice(0, sp) : room).replace(/[\s,;:·—–-]+$/, '') + '…';
+}
+
+/* road W: the arrival push carries the job type and the FIRST LINE of their words, short enough for a lock screen and
+   never cut mid-word: a long first line ends at its first sentence, or at the last whole word before 100 characters. */
+const FIRST_LINE_MAX = 100;
+export function firstLine(rec) {
+  const f = rec.fields || {};
+  const line = String(f.what || f.message || '').split(/\r?\n/).map((s) => s.trim()).find(Boolean) || '';
+  let words = cleanWords(line, rec);
+  if (words.length > FIRST_LINE_MAX) {
+    const sentence = new RegExp('^(.{20,' + (FIRST_LINE_MAX - 1) + '}?[.!?])(?=\\s|$)').exec(words);
+    if (sentence) words = sentence[1];
+    else {
+      const cut = words.slice(0, FIRST_LINE_MAX);
+      const sp = cut.lastIndexOf(' ');
+      words = (sp > 40 ? cut.slice(0, sp) : cut).replace(/[\s,;:·—–-]+$/, '') + '…';
+    }
+  }
+  return words ? `${serviceOf(f)} — ${words}` : serviceOf(f);
 }
 
 function dueOf(rec) {
@@ -97,10 +157,12 @@ function dueOf(rec) {
   return Date.parse(a.due_at) || replyDue(Date.parse(rec.received_at));
 }
 
+/** road W: "NEW JOB · U-9601 · reply by 9:00 AM" · "Drywall & Paint — Two fist-sized holes in the ceiling…".
+    The job id and the reply-by time, never a name (R25); the priority is unchanged. */
 export function buildIntake(rec) {
   return {
-    title: `NEW REQUEST ${rec.id} · quote due ${clock(dueOf(rec))}`,
-    message: whatLine(rec),
+    title: `NEW JOB · ${rec.id} · reply by ${clock(dueOf(rec))}`,
+    message: firstLine(rec),
     priority: 1,
   };
 }
@@ -165,13 +227,28 @@ export function endOf(rec) {
   return rec.alerts.table.clock === 2 ? bizAdvance(anchorOf(rec), CLOCK_MIN) : dueOf(rec);
 }
 
-/** "STILL OPEN · U-0012 · 45 min left" — his own words for a slot on the table. */
-function buildSlot(rec, slot) {
+/** "STILL OPEN · U-0012 · 45 min left" — his own words for a slot on the table.
+    road FW (2026-09-26): once the Flux has made the quote link and it has not gone (`ready`, asked of the BOOK fresh),
+    the repeat says what is left to do: "QUOTE READY · U-9601 · tap Send · 50 min left". The message is ONE line, never
+    cut mid-word: the job type and the first line of their words, as on the arrival push (the second clock names its
+    promise first). */
+function buildSlot(rec, slot, ready = false, price = null) {
   const second = rec.alerts.table.clock === 2;
+  const left = CLOCK_MIN - slot;
+  /* road MW (2026-09-26): QUOTE READY says what he needs and nothing else — "QUOTE READY · U-9601 · $225 · text ready ·
+     tap Send" — the job number, never a name or their words; the quote is built and waits on one tap, so it goes at
+     normal priority: no siren, no repeat until acknowledged, at any minute of the ladder. The message is the clock. */
+  if (ready) {
+    const dollars = typeof price === 'number' && isFinite(price) && price > 0 ? '$' + (Number.isInteger(price) ? String(price) : price.toFixed(2)) + ' · ' : '';
+    return {
+      title: `QUOTE READY · ${rec.id} · ${dollars}text ready · tap Send`,
+      message: `${left} min left · quote due ${clock(endOf(rec))}`,
+      priority: 0,
+    };
+  }
   return {
-    title: `STILL OPEN · ${rec.id} · ${CLOCK_MIN - slot} min left`,
-    message: whatLine(rec)
-      + `\n${second ? 'Second clock — the holding text has gone. Quote by' : 'Quote due'} ${clock(endOf(rec))}.`,
+    title: `STILL OPEN · ${rec.id} · ${left} min left`,
+    message: (second ? `Holding text went · quote by ${clock(endOf(rec))} · ` : '') + firstLine(rec),
     priority: prioritySlot(slot),
     ...(prioritySlot(slot) === 2 ? { tags: [tagOf(rec.id)] } : {}),
   };
@@ -717,7 +794,11 @@ async function runTable(env, rec, owed, nowIso, nowMs, out) {
     }
     t.fired.push(owed.slot);
     rec.alerts.next_at = nextTableAt(rec, nowMs);
-    out.sent.push(await deliver(env, rec, 'slot:' + owed.slot, nightSafe(buildSlot(rec, owed.slot), nowMs), nowIso, CHANNELS, 1));
+    /* road FW: the BOOK, asked fresh — a quote made and not sent turns the repeat into QUOTE READY (a book that will
+       not answer reads as not ready, so the push is the plain one) */
+    const went = await quoteWentOut(env, rec.id);
+    const ready = Boolean(went.ready);
+    out.sent.push(await deliver(env, rec, 'slot:' + owed.slot, nightSafe(buildSlot(rec, owed.slot, ready, ready ? went.price : null), nowMs), nowIso, CHANNELS, 1));
     return;
   }
 

@@ -74,7 +74,7 @@ function title(rec) {
    field added to the form tomorrow appears here without anyone editing this file.
    That is deliberate: a renderer with a hardcoded list is a second place the form
    has to be maintained by hand, and it goes stale silently. */
-const CONTROL_FIELDS = /^(_subject|_captcha|_template|_next|_honey|_replyto|attachment\d*)$/;
+const CONTROL_FIELDS = /^(_subject|_captcha|_template|_next|_honey|_replyto|_autoresponse|attachment\d*)$/;
 const CHANNEL_FIELDS = /^(email_sent|email_copy_id|email_copy_ms|sent_by|browser_copy_id)$/;
 /* the four places the holes block repeats for */
 const PLACE = /^(ceiling|walls|corner|opening)_(.+)$/;
@@ -102,7 +102,7 @@ function answersSection(f) {
        second printing of either is a second place to read the same fact, and it
        would also make an OLD-form submission show one lonely row that reads like
        a fault instead of the honest "none". */
-    if (name === 'name' || name === 'phone' || name === 'address' || name === 'what' || name === 'service') continue;
+    if (name === 'name' || name === 'phone' || name === 'address' || name === 'what' || name === 'service' || name === 'email') continue;
     const m = PLACE.exec(name);
     const where = m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) : '';
     const ask = m ? (ASKS[m[2]] || m[2]) : (TOP[name] || name);
@@ -140,6 +140,8 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`category\` | ${mdCell(f.service)} |`);
   L.push(`| \`name\` | ${mdCell(f.name)} |`);
   L.push(`| \`phone\` | ${mdCell(f.phone)} |`);
+  /* road W: the form's contact step asks for an email beside the phone (optional); only printed when one was given */
+  if (f.email) L.push(`| \`email\` | ${mdCell(f.email)} ← optional, for their copy of the request |`);
   L.push(`| \`street + city\` | ${mdCell(f.address)} |`);
   L.push(`| \`idioma\` | ${mdCell(f.idioma)} |`);
   /* services.html and the Spanish pages name the free text `what`; contact.html
@@ -239,11 +241,17 @@ export function renderJobMarkdown(rec, opts = {}) {
   {
     const a = rec.accept;
     const w = a && a.window;
+    /* road W: every day the booking holds. The first keeps its two rows exactly as before; a later day adds its own. */
+    const days = a && Array.isArray(a.windows) && a.windows.length ? a.windows : (w ? [w] : []);
     L.push('## E2 · ACCEPTED — the quote they said yes to');
     L.push('| slot | |');
     L.push('|---|---|');
     L.push(`| **Day** | ${w ? mdCell(w.date + ' (' + windowLabel(w).split(' ')[0] + ')') : '`____`'} |`);
     L.push(`| **Arrival window** | ${w ? mdCell(windowLabel(w).split(' ').slice(2).join(' ') + ' Central') : '`____`'} |`);
+    days.slice(1).forEach((d, i) => {
+      L.push(`| **Day ${i + 2}** | ${mdCell(d.date + ' (' + windowLabel(d).split(' ')[0] + ')')} |`);
+      L.push(`| **Arrival window ${i + 2}** | ${mdCell(windowLabel(d).split(' ').slice(2).join(' ') + ' Central')} |`);
+    });
     L.push(`| **Price** | ${a ? mdCell('$' + a.price) : '`____`'} ← one price (R38) |`);
     L.push(`| **By** | ${a ? mdCell(a.by === 'page' ? 'page — they tapped Accept & confirm' : 'text — a YES he marked') : '`____`'} |`);
     L.push(`| **Quote version** | ${a ? mdCell('v' + a.version) : '`____`'} |`);
@@ -284,7 +292,9 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push('| **Job photos** — before / during / after, GPS stripped, no house number or face | `____` |');
   L.push('| **The audit** — by an agent that did not build it | `____` |');
   L.push(`| \`outcome\` | ${mdCell(rec.outcome)} |`);
-  L.push('| **Paid / unpaid · account it landed in** | `____` |');
+  /* road W: the payment the receipt recorded (PUT /admin/receipt), and the receipt's own time */
+  L.push(`| **Paid / unpaid · account it landed in** | ${rec.paid ? mdCell('PAID $' + rec.paid.amount + ' · ' + rec.paid.method + ' · ' + rec.paid.at) : '`____`'} |`);
+  if (rec.receipt) L.push(`| \`receipt\` | ${mdCell('kept ' + rec.receipt.at + ' · ' + rec.receipt.bytes + ' bytes · ' + rec.receipt.key)} ← the customer's receipt page, served on their private link |`);
   L.push('| **What Flo should have said** | `____` |');
   L.push('| **Lessons for the retro** | `____` |');
   L.push('');

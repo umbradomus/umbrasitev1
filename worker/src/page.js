@@ -6,11 +6,24 @@
                            link previews and mail scanners open links by themselves, so opening must be harmless.
      POST /q/<code>        Accept & confirm → bookByCode(…, "page") → 303 back to GET, which then says BOOKED.
      POST /q/<code>/none   None of these times work → markNone → 303 back to GET, which then says RECEIVED.
-     GET  /q/<code>/calendar.ics   QUOTE-PAGE-03: a BOOKED quote's visit as an .ics file (else NOT VALID, 404).
-                           Like the page's GET it moves only the visit count; a POST to it answers 405.
+     GET  /q/<code>/calendar.ics   QUOTE-PAGE-03: a BOOKED quote's visits as an .ics file, one event per day (road W)
+                           (else NOT VALID, 404). Like the page's GET it moves only the visit count; a POST answers 405.
+
+   ROAD W (2026-09-26): a quote offers 1–2 options, each 1–2 visits on different days. Each option is one card listing
+   all its days; Accept sits right under the choice and is pinned to the bottom of the screen once one is picked (CSS
+   :has — still no JavaScript; road MW: sticky, so it covers nothing after it); the step list folds to one line; the trust lines and the notices sit below the button;
+   the price's arithmetic is never shown to the customer; the hold is `hold_until`, to the minute (road FW: the one hold
+   the Flux shows too). The radio is
+   still `w` and its value is the option's number, which on an old-shape quote is the window's — so a page left open
+   across a deploy still posts what the book expects.
 
    THE SEAM (the ignite's AMENDMENT 2, E1): this file calls only ACCEPT-PAGE-01's viewByCode, bookByCode and
    markNone, which already count, stamp and push. It never writes KV and never pushes by itself.
+
+   ROAD CO (2026-09-26): the same /q/<code> road carries a CHANGE ORDER when the code is a change's (the book answers
+   which, in the one view call). Its page: what and why, the price, the new total, what it adds (folded), then "OK the
+   change" with their name typed as the signature, or "No thanks". POST /q/<code> with a=ok (and name) or a=no →
+   answerChangeByCode → 303 back to GET, which then says OK'd or No change. A quote's form never sends `a`.
 
    THE ORIGIN CHECK RUNS FIRST on a POST, before the code is looked up: an Origin header that is present and not
    one of the site's own origins (SITE_BASE_URL's and its www/apex twin — "null" is foreign), or
@@ -20,10 +33,10 @@
    URL would leave the site (and form-action 'self' would block the next post), and Response.redirect() throws
    on a relative one in workerd. So: new Response(null, { status: 303, headers: { Location: '/q/' + code } }). */
 
-import { viewByCode, bookByCode, markNone, codeHash, windowStartMs } from './quotes.js';
+import { viewByCode, bookByCode, markNone, codeHash, windowStartMs, answerChangeByCode, readYear, noteYearByCode, stampAfterYear } from './quotes.js';
 import { chicagoWall } from './biztime.js';
-import { LIGHTING_EN, NOTICE_53255 } from './notices.js';
-import { WORDS, LIGHTING_ES } from './page-words.js';
+import { NOTICE_53255 } from './notices.js';
+import { WORDS, LIGHTING_ES, CHANGE_WORDS, LIGHT_SHORT } from './page-words.js';
 
 /* The site's stylesheet, at the version every page of the site loads today (status.html: site.css?v=3). */
 const CSS_V = '3';
@@ -108,6 +121,92 @@ function momentLabel(iso, lang) {
 function money(n) {
   const v = Number(n);
   return '$' + (Number.isInteger(v) ? v.toLocaleString('en-US') : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+}
+
+/* ------------------------------------------------------------------ road W · the days, as the options show them */
+
+/** English, the way his texts write it: "Mon 9/28". */
+function dayShort(date) {
+  const [y, mo, d] = String(date).split('-').map(Number);
+  return `${DOW.en[new Date(Date.UTC(y, mo - 1, d)).getUTCDay()]} ${mo}/${d}`;
+}
+
+/** English: "8–10 AM" · "11 AM–1 PM" · "8:30–10:30 AM". Spanish keeps its sentence: "las 8 y las 10 a.m.". */
+function spanOf(w, lang) {
+  if (lang === 'es') return windowSpan(w, 'es');
+  const a = clock(toMin(w.start), 'en'), b = clock(toMin(w.end), 'en');
+  return a.ap === b.ap ? `${a.t}–${b.t} ${b.ap}` : `${a.t} ${a.ap}–${b.t} ${b.ap}`;
+}
+
+/** A day at the start of a line (visit 1): "Mon 9/28" · "Lunes 28 de septiembre"; after "then": "Tue 9/29" · "martes 29 de septiembre". */
+const dayFirst = (date, lang) => (lang === 'es' ? lineDay(date, 'es') : dayShort(date));
+const dayThen = (date, lang) => (lang === 'es' ? dayLabel(date, 'es') : dayShort(date));
+
+/** road XW · how long a visit takes, in plain words: "about 4 hours" · "about 1½ hours" · "about 45 minutes" ·
+    "unas 4 horas" · "una hora y media". Rounded to the half hour from an hour up. */
+function lengthWords(min, lang) {
+  const m = Number(min);
+  if (!Number.isInteger(m) || m <= 0) return '';
+  if (m < 60) return lang === 'es' ? `unos ${m} minutos` : `about ${m} minutes`;
+  const halves = Math.round(m / 30), h = Math.floor(halves / 2), half = halves % 2 === 1;
+  if (lang === 'es') {
+    if (h === 1) return half ? 'una hora y media' : 'una hora';
+    return `unas ${h} horas${half ? ' y media' : ''}`;
+  }
+  return `about ${h}${half ? '½' : ''} ${h === 1 && !half ? 'hour' : 'hours'}`;
+}
+/** "about 4 hours" for visit i (0 = the first), when the quote carries its length; else ''. */
+function visitLenWords(b, i, lang) {
+  const list = b && Array.isArray(b.visit_minutes) ? b.visit_minutes : null;
+  return list ? lengthWords(list[i], lang) : '';
+}
+
+/** One visit on an option card, the day in bold: "<b>Mon 9/28</b>, arriving 8–10 AM" · "then <b>Tue 9/29</b>, arriving 11 AM–1 PM".
+    road XW: and how long it takes, when the Flux sends it, on a small line of its own under its arrival window
+    ("about 4 hours") — on one line with the window it would break "11 AM–1 PM" across two lines on a phone. */
+function cardVisitHtml(x, i, lang, w, b) {
+  const [pre, post] = (i === 0 ? w.card_first : w.card_then).split('{day}');
+  const len = visitLenWords(b, i, lang);
+  return `<span class="qvl">${esc(pre)}<span class="qod">${esc(i === 0 ? dayFirst(x.date, lang) : dayThen(x.date, lang))}</span>` +
+    `${esc(fill(post, { span: spanOf(x, lang) }))}${len ? `<span class="qlen"><span class="qsep"> · </span>${esc(len)}</span>` : ''}</span>`;
+}
+
+/** road XW · the "included" line as the page says it. When they said they have leftover paint (the form's answer, or
+    the Flux's their_paint), the sentence that says the paint is included ("Paint for the color match is included." ·
+    "La pintura … incluida.") reads "Painted with your paint." instead. Any other line is left exactly as sent. */
+const PAINT_INCLUDED = /^\s*(paint\b[^.!?]*\bincluded\b|la pintura\b[^.!?]*\bincluida\b)/i;
+function includedLine(b, lang, w) {
+  const inc = b && b.included ? String(b.included) : '';
+  if (!inc || !(b.their_paint === true)) return inc;
+  const parts = inc.match(/[^.!?]+[.!?]*\s*/g) || [inc];
+  let swapped = false;
+  const out = parts.map((p) => {
+    if (!swapped && PAINT_INCLUDED.test(p)) { swapped = true; return w.paint_theirs + (/\s$/.test(p) ? ' ' : ''); }
+    return p;
+  }).join('').trim();
+  return swapped ? out : inc;
+}
+
+/** Every option the quote offers, each with all its visits: [{ n, visits: [{date, start, end, free}], free }]. */
+function optionsOf(v) {
+  if (Array.isArray(v.options) && v.options.length) return v.options.map((o) => ({ n: o.n, visits: o.windows || [], free: o.free }));
+  return (v.windows || []).map((x) => ({ n: x.n, visits: [x], free: x.free }));
+}
+
+/** The hold as the page says it. road FW (2026-09-26) · ONE HOLD: exactly the book's `hold_until` — the value the
+    create, /sent and GET /admin/quote/<id> answer and the Flux shows — to the minute, never rounded, never an older one.
+    The rule is quotes.js's: (sent_at, or created_at until it is sent) + 48 hours, and never past the cutoff. */
+function heldUntilMs(v) {
+  const at = Date.parse(v.hold_until);
+  return isFinite(at) ? Math.floor(at / 60000) * 60000 : NaN;
+}
+
+/** "Sat 9/26, 8:00 AM" (the text's own style) · "sábado 26 de septiembre a las 8:00 a.m." */
+function holdLabel(ms, lang) {
+  if (lang === 'es') return momentLabel(new Date(ms).toISOString(), 'es');
+  const p = Object.fromEntries(CHI.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  const c = clock(Number(p.hour) % 24 * 60 + Number(p.minute), 'en', true);
+  return `${p.weekday} ${p.month}/${p.day}, ${c.t} ${c.ap}`;
 }
 
 /* ------------------------------------------------------------------ the page frame */
@@ -200,6 +299,58 @@ body{background:#F6F3EE;color:#0F0B1A}
 @keyframes qpop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
 .qok{animation:qpop .45s ease-out both}
 @media (prefers-reduced-motion:reduce){.qok{animation:none}.qlaw summary .chev{transition:none}}
+.qopt .qov{display:grid;gap:.3rem;min-width:0}
+.qopt .qvl{display:block;font-size:1.02rem;line-height:1.35}
+.qopt .qvl .qod{display:inline;font-weight:600;font-size:inherit}
+.qopt .qvl+.qvl{color:#4E4960}
+.qticket .qtw .qtd+.qtwin{margin:0}
+.qticket .qtw .qtwin+.qtd{margin-top:.6rem}
+.qticket .qtd .qthen{font-weight:500;color:#4E4960}
+.qact{margin:1.1rem 0 .7rem}
+.qact .qgo{margin:0}
+.qfold{margin:0 0 1.1rem}
+.qfold summary svg:first-child{color:#0D7471}
+.qfold .qlb{padding:.85rem .95rem .3rem}
+.qfold .qwork{margin:0 0 .6rem}
+.qbelow{margin-top:1.8rem}
+.qopt .qvl .qlen{display:block;font-size:.85rem;line-height:1.25;color:#4E4960}
+.qopt .qvl .qsep,.qtwin .qsep{display:none}
+.qtwin .qlen{display:block;font-size:.88rem;line-height:1.3;color:#4E4960}
+.qopt:has(.qlen){padding-top:.55rem;padding-bottom:.55rem}
+.qopt:has(.qlen) .qov{gap:.2rem}
+.q:has(.qlen) .qhold{margin-bottom:.9rem}
+.q:has(.qlen) .qact{margin-top:.8rem}
+.qmore{text-align:left;margin:0 0 .6rem}
+.qyear{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:.75rem;row-gap:.4rem;margin:0 0 1.1rem;padding:.7rem .95rem;background:#fff;border:1px solid #D9D2C7;border-radius:14px}
+.qyear label{font-weight:600;font-size:1rem;line-height:1.3;grid-column:1 / -1;grid-row:1}
+.qyear .qsmall{text-align:left;margin:0;grid-column:2;grid-row:2;font-size:.85rem;line-height:1.3}
+.qyear input{grid-column:1;grid-row:2;font:inherit;font-size:1.1rem;width:5.6rem;min-height:48px;box-sizing:border-box;padding:.5rem .7rem;border:2px solid #D9D2C7;border-radius:12px;background:#fff;color:#0F0B1A}
+.qyear input:focus-visible{outline:3px solid #2F6BB0;outline-offset:2px;border-color:#0D7471}
+@supports selector(:has(a)){
+.q:has(.qpick input:checked) .qact.qpin{position:sticky;z-index:30;bottom:0;margin:.5rem 0 .7rem;padding:.6rem 0 calc(10px + env(safe-area-inset-bottom, 0px));background:linear-gradient(rgba(246,243,238,0),#F6F3EE .7rem)}
+.q:has(.qpick input:checked) .qgo{box-shadow:0 10px 28px rgba(15,11,26,.3)}
+}
+`;
+
+/* road CO: the change order's page adds these, on its own pages only (every quote page stays byte for byte as it was) */
+const CHANGE_STYLE = `
+.qwhat{font-size:1.12rem;font-weight:600;line-height:1.35;margin:.55rem 0 0}
+.qtot{display:flex;align-items:baseline;justify-content:space-between;gap:.8rem;padding:.95rem 1.2rem 1.05rem}
+.qtot .qtl{margin:0}
+.qtot .qtv{font-size:1.6rem;font-weight:600;margin:0}
+.qtot .qtwas{display:block;font-size:.9rem;color:#4E4960;font-weight:400}
+.qsign{display:grid;gap:.4rem;margin:1.1rem 0 0}
+.qsign label{font-weight:600;font-size:1.05rem}
+.qsign input{font:inherit;font-size:1.15rem;min-height:52px;box-sizing:border-box;width:100%;padding:.6rem .9rem;border:2px solid #D9D2C7;border-radius:14px;background:#fff;color:#0F0B1A}
+.qsign input:focus-visible{outline:3px solid #2F6BB0;outline-offset:2px;border-color:#0D7471}
+.qsign .qsmall{text-align:left;margin:0}
+.qadds{background:#fff;border:1px solid #D9D2C7;border-radius:14px;margin:0 0 .7rem}
+.qadds .qah{display:flex;gap:.7rem;align-items:center;min-height:52px;box-sizing:border-box;padding:.55rem .95rem;border-bottom:1px solid #ECE7DF}
+.qadds .qah svg{color:#0D7471;width:1.4em;height:1.4em;flex:none}
+.qadds .qlt{display:grid;gap:.05rem}
+.qadds .qlh{font-weight:600;font-size:.97rem}
+.qadds .qlp{font-weight:400;font-size:.88rem;color:#4E4960}
+.qadds .qwork{padding:.8rem .95rem .3rem;margin:0}
 `;
 
 /* The mock's icons. Decoration only: every one is aria-hidden, and the words beside it carry the meaning. */
@@ -213,6 +364,7 @@ const ICON = {
   law: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v17M7 20.5h10M4 7.5h16M6.5 7.5L4 13.5a3 3 0 0 0 5 0L6.5 7.5zM17.5 7.5L15 13.5a3 3 0 0 0 5 0l-2.5-6z"/></svg>',
   chev: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10l4 4 4-4"/></svg>',
   plus: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>',
+  list: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="M3.8 6.6l1.3 1.3 2.4-2.6M3.8 12.1l1.3 1.3 2.4-2.6M3.8 17.6l1.3 1.3 2.4-2.6"/></svg>',
 };
 
 /** The four steps. `done` are ticked; `now` (an index, or -1) is the current one. */
@@ -223,25 +375,30 @@ function stepsHtml(w, done, now) {
   }).join('') + '</ol>';
 }
 
-/** The ticket's time half: the calendar icon, a small label, the day, and "Arrival between …". */
-function whenHtml(label, x, lang, w) {
-  return `<div class="qtw">${ICON.cal}<div><p class="qtl">${esc(label)}</p><p class="qtd">${esc(lineDay(x.date, lang))}</p>` +
-    `<p class="qtwin">${esc(fill(w.when_line, { window: windowSpan(x, lang) }))}</p></div></div>`;
+/** The ticket's time half: the calendar icon, a small label, and every visit — its day, then "Arriving 8–10 AM".
+    road W: a second visit reads "then Tue 9/29". */
+function ticketVisitsHtml(label, visits, lang, w, b) {
+  const rows = visits.map((x, i) => `<p class="qtd">${i === 0 ? esc(dayFirst(x.date, lang))
+    : `<span class="qthen">${esc(w.ticket_then)}</span> ${esc(dayThen(x.date, lang))}`}</p>` +
+    `<p class="qtwin">${esc(fill(w.ticket_arrive, { span: spanOf(x, lang) }))}${visitLenWords(b, i, lang)
+      ? `<span class="qlen"><span class="qsep">${esc(fill(w.visit_len, { len: '' }))}</span>${esc(visitLenWords(b, i, lang))}</span>` : ''}</p>`).join('');
+  return `<div class="qtw">${ICON.cal}<div><p class="qtl">${esc(label)}</p>${rows}</div></div>`;
 }
 
-function frame(lang, state, inner, { bilingual = false } = {}) {
+function frame(lang, state, inner, { bilingual = false, changeTitle = null } = {}) {
   const w = WORDS[lang] || WORDS.en;
   /* The title and the preview tags are generic on every state: never a price, a name or an address. */
+  const title = changeTitle || (bilingual ? WORDS.en.title : w.title);
   return `<!DOCTYPE html>
 <html lang="${lang === 'es' ? 'es' : 'en'}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>${esc(bilingual ? WORDS.en.title : w.title)}</title>
-<meta property="og:title" content="${esc(bilingual ? WORDS.en.title : w.title)}">
+<title>${esc(title)}</title>
+<meta property="og:title" content="${esc(title)}">
 <link rel="stylesheet" href="/assets/site.css?v=${CSS_V}">
-<style>${STYLE}</style>
+<style>${STYLE}</style>${changeTitle ? `\n<style>${CHANGE_STYLE}</style>` : ''}
 </head>
 <body data-state="${esc(state)}">
 <header class="qtop"><div class="wrap narrow"><p class="qbrand"><img src="/assets/apple-touch-icon.png?v=5" width="36" height="36" alt=""><span>Umbra Domus</span></p></div></header>
@@ -285,8 +442,11 @@ function noticesHtml(env, lang) {
   const light = String(env.NOTICE_LIGHTING ?? 'true') === 'true';
   const law = String(env.NOTICE_53255 ?? 'false') === 'true' && NOTICE_53255.length > 0;
   if (!light && !law) return '';
-  const L = lang === 'es' ? LIGHTING_ES : LIGHTING_EN;
-  let out = `<h2>${esc(w.h_notices)}</h2>\n`;
+  /* road XW: the one-line "Light." in English — READY-4's full paragraph stays in notices.js for the record. The Spanish
+     keeps its reviewed paragraph (LIGHTING_ES) until his reviewer has read a one-line version. */
+  const L = lang === 'es' ? LIGHTING_ES : LIGHT_SHORT.en;
+  /* road W: the notices sit below the button now, under the page's own "Good to know" heading (openPage writes it) */
+  let out = '';
   /* The paragraph keeps its own opening tag and bytes; the card and the sun go around it. */
   if (light) out += `<div class="qnotebox">${ICON.sun}<p class="qnote" id="notice-lighting"><strong>${esc(L.lead)}</strong> ${esc(L.text)}</p></div>\n`;
   if (law) {
@@ -300,90 +460,133 @@ function noticesHtml(env, lang) {
   return out;
 }
 
-/** OPEN, HOLD ENDED BUT OPEN, and TAKEN with a time still free: the quote and its two buttons. */
+/**
+ * OPEN, HOLD ENDED BUT OPEN, and TAKEN with a choice still free: the quote and its two buttons.
+ * road W, phone first: the dots · "Your quote" · the big price (never its arithmetic) · the step list folded to one
+ * line · the choice, each option one card listing all its days · the hold (hold_until, to the minute) · Accept, right under
+ * the choice, pinned to the bottom of the screen once a choice is picked (CSS :has, no JavaScript) · None of these
+ * times work · then, below the buttons, his promise, his insurance and the notices.
+ */
 function openPage(env, v, code, nowIso, pickError) {
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
   const b = v.body || {};
-  const all = v.windows || [];
-  const free = all.filter((x) => x.free);
+  const all = optionsOf(v);
+  const free = all.filter((o) => o.free);
   const taken = v.state === 'taken';
+  const pairs = all.some((o) => o.visits.length > 1);
 
   if (taken && free.length === 0) {
-    return wordsPage(200, lang, 'taken', w.h_taken, w.taken_none);
+    return wordsPage(200, lang, 'taken', pairs ? w.h_taken_pair : w.h_taken, w.taken_none);
   }
 
   const offer = taken ? free : all;
-  const plural = offer.length > 1;
+  const choose = offer.length > 1;
+  /* "these times" once more than one visit is on the page (two choices, or one choice of two days) */
+  const plural = offer.reduce((n, o) => n + o.visits.length, 0) > 1;
   const parts = [];
   parts.push(stepsHtml(w, 1, 1));
-  if (taken) parts.push(`<p class="qerr" role="status">${esc(w.h_taken)} ${esc(w.taken_other)}</p>`);
+  if (taken) parts.push(`<p class="qerr" role="status">${esc(pairs ? w.h_taken_pair : w.h_taken)} ${esc(pairs ? w.taken_other_pair : w.taken_other)}</p>`);
   parts.push(`<h1>${esc(w.h1_quote)}</h1>`);
   parts.push(`<p class="qhi">${esc(b.first_name ? fill(w.hi_name, { name: b.first_name }) : w.hi)}</p>`);
 
-  /* the ticket: the price, and — with one time offered — the time, below the tear */
+  /* the ticket: the one price and what it includes (a tick, never a "+" that reads like an add-on) — and, with one
+     choice offered, all its days below the tear. The price's arithmetic ("5 hours at $45") is his, not theirs. */
   parts.push('<div class="qticket"><div class="qtt">' +
     `<p class="qtl">${esc(w.h_price)}</p><p class="qprice">${esc(money(b.price))}</p>` +
-    (b.price_note ? `<p class="qtn">${esc(b.price_note)}</p>` : '') +
-    (b.included ? `<p class="qti">${ICON.plus}<span>${esc(b.included)}</span></p>` : '') + '</div>' +
-    (plural ? '' : `<div class="qtear" aria-hidden="true"></div>${whenHtml(w.h_when, offer[0], lang, w)}`) + '</div>');
+    (b.included ? `<p class="qti">${ICON.check}<span>${esc(includedLine(b, lang, w))}</span></p>` : '') + '</div>' +
+    (choose ? '' : `<div class="qtear" aria-hidden="true"></div>${ticketVisitsHtml(w.h_when, offer[0].visits, lang, w, b)}`) + '</div>');
+
+  /* what we'll do: one line until it is tapped (<details>, no JavaScript) */
+  const scope = b.scope || [];
+  if (scope.length) {
+    /* road XW: the count is the Flux's plan (step_count, when it sends one), never fewer than the lines listed; the
+       steps the list does not name (setting up, cleaning up) are counted in one line under it */
+    const count = Number.isInteger(b.step_count) && b.step_count >= scope.length ? b.step_count : scope.length;
+    const more = count - scope.length;
+    parts.push(`<details class="qlaw qfold"><summary>${ICON.list}<span class="qlt"><span class="qlh">${esc(w.h_work)}</span>` +
+      `<span class="qlp">${esc(count === 1 ? w.work_hint_one : fill(w.work_hint, { n: count }))}</span></span>` +
+      `<span class="chev">${ICON.chev}</span></summary>\n<div class="qlb"><ul class="qwork">` +
+      scope.map((s) => `<li><span class="ck">${ICON.check}</span><span>${esc(s)}</span></li>`).join('') + '</ul>' +
+      (more > 0 ? `<p class="qsmall qmore">${esc(more === 1 ? w.work_more_one : fill(w.work_more, { n: more }))}</p>` : '') + '</div></details>');
+  }
 
   const form = [];
   form.push(`<form method="post" action="/q/${esc(code)}">`);
   form.push(`<input type="hidden" name="v" value="${esc(v.version)}">`);
-  if (plural) {
+  /* road XW: the year their house was built — one optional box, kept on the record with the accept (and even if the
+     booking is refused); the Flux reads it as year_built. Filled in again if they gave it already.
+     road MW (2026-09-26): shown from the start, ABOVE the choice. Accept sits last in this form and, once a day is
+     picked, is stuck to the bottom of the screen while its own place is below it (position: sticky, CSS :has — no
+     JavaScript). A sticky bar only ever covers what comes before its own place, and the page opens at the top with the
+     year box on the first screen, so the bar never sits over the year box; "None of these times work" comes after the
+     form, so never over that either. With one choice there is nothing to pick and nothing is pinned. */
+  form.push(`<div class="qyear"><label for="q-year">${esc(w.year_label)}</label><p class="qsmall" id="q-year-hint">${esc(w.year_hint)}</p>` +
+    `<input type="text" id="q-year" name="year" inputmode="numeric" maxlength="4" autocomplete="off" aria-describedby="q-year-hint"` +
+    `${v.year_built ? ` value="${esc(v.year_built)}"` : ''}></div>`);
+  if (choose) {
     if (pickError) form.push(`<p class="qerr" id="pick-error">${esc(w.pick_error)}</p>`);
-    form.push(`<fieldset class="qpick"${pickError ? ' aria-describedby="pick-error"' : ''}><legend>${esc(w.pick_legend)}</legend>`);
-    for (const x of offer) {
-      form.push(`<label class="qopt"><input type="radio" name="w" value="${esc(x.n)}" required><span><span class="qod">${esc(lineDay(x.date, lang))}</span>` +
-        `<span class="qot">${esc(fill(w.when_line, { window: windowSpan(x, lang) }))}</span></span></label>`);
+    form.push(`<fieldset class="qpick"${pickError ? ' aria-describedby="pick-error"' : ''}><legend>${esc(pairs ? w.pick_legend_pair : w.pick_legend)}</legend>`);
+    for (const o of offer) {
+      form.push(`<label class="qopt"><input type="radio" name="w" value="${esc(o.n)}" required><span class="qov">` +
+        o.visits.map((x, i) => cardVisitHtml(x, i, lang, w, b)).join('') + '</span></label>');
     }
     form.push('</fieldset>');
   } else if (all.length > 1) {
-    /* One window of two left free: name it, so the book never has to guess. One window of one: nothing to say. */
+    /* One choice of two left free: name it, so the book never has to guess. One choice of one: nothing to say. */
     form.push(`<input type="hidden" name="w" value="${esc(offer[0].n)}">`);
   }
-  const holdEnded = v.state === 'hold_ended' || (v.hold_until && Date.parse(nowIso) >= Date.parse(v.hold_until));
-  form.push(`<p class="qhold">${ICON.clock}<span>${esc(holdEnded
-    ? (plural ? w.hold_ended_two : w.hold_ended_one)
-    : fill(plural ? w.hold_two : w.hold_one, { at: momentLabel(v.hold_until, lang) }))}</span></p>`);
-
-  form.push(`<h2>${esc(w.h_work)}</h2>`);
-  form.push('<ul class="qwork">' + (b.scope || []).map((s) => `<li><span class="ck">${ICON.check}</span><span>${esc(s)}</span></li>`).join('') + '</ul>');
-  /* his promise and his insurance: each only if the quote carries it; with neither, no card */
-  const trust = [];
-  if (b.guarantee) trust.push(`<li>${ICON.redo}<span>${esc(b.guarantee)}</span></li>`);
-  if (b.insurance) trust.push(`<li>${ICON.shield}<span>${esc(b.insurance)}</span></li>`);
-  if (trust.length) form.push(`<ul class="qtrust">${trust.join('')}</ul>`);
-
-  form.push(noticesHtml(env, lang));
-  form.push(`<button type="submit" class="qgo">${esc(w.accept)}</button>`);
+  const heldMs = heldUntilMs(v);
+  const holdEnded = v.state === 'hold_ended' || (isFinite(heldMs) && Date.parse(nowIso) >= heldMs);
+  if (holdEnded || isFinite(heldMs)) {
+    form.push(`<p class="qhold">${ICON.clock}<span>${esc(holdEnded
+      ? (plural ? w.hold_ended_two : w.hold_ended_one)
+      : fill(plural ? w.hold_two : w.hold_one, { at: holdLabel(heldMs, lang) }))}</span></p>`);
+  }
+  form.push(`<div class="qact qpin"><button type="submit" class="qgo">${esc(w.accept)}</button></div>`);
   form.push('</form>');
   parts.push(form.join('\n'));
 
-  parts.push(`<form method="post" action="/q/${esc(code)}/none"><input type="hidden" name="v" value="${esc(v.version)}"><button type="submit" class="qalt">${esc(plural ? w.none : w.none_one)}</button></form>`);
-  parts.push(`<p class="qsmall">${esc(w.small)}</p>`);
+  parts.push(`<form method="post" action="/q/${esc(code)}/none"><input type="hidden" name="v" value="${esc(v.version)}"><button type="submit" class="qalt">` +
+    `${esc(choose ? w.none : plural ? w.none_pair : w.none_one)}</button></form>`);
+  parts.push(`<p class="qsmall">${esc(offer.every((o) => o.visits.length === 1) ? w.small : w.small_pair)}</p>`);
+
+  /* below the buttons: his promise and his insurance (each only if the quote carries it), then the notices */
+  const below = [];
+  const trust = [];
+  if (b.guarantee) trust.push(`<li>${ICON.redo}<span>${esc(b.guarantee)}</span></li>`);
+  if (b.insurance) trust.push(`<li>${ICON.shield}<span>${esc(b.insurance)}</span></li>`);
+  if (trust.length) below.push(`<ul class="qtrust">${trust.join('')}</ul>`);
+  const notices = noticesHtml(env, lang);
+  if (notices) below.push(notices);
+  if (below.length) parts.push(`<div class="qbelow">\n<h2>${esc(w.h_notices_below)}</h2>\n${below.join('\n')}</div>`);
 
   const state = taken ? 'taken' : holdEnded ? 'hold_ended' : 'open';
   return page(200, lang, state + (pickError ? ' pick' : ''), parts.join('\n'));
 }
 
-/** The window a booked quote holds (the one accepted, else its only one). */
-const bookedWindow = (v) => (v.windows || []).find((y) => y.n === v.accepted_window) || (v.windows || [])[0];
+/** Every visit a booked quote holds: all the days of the option they accepted (else of its only one). */
+function bookedVisits(v) {
+  const opts = optionsOf(v);
+  const o = opts.find((y) => y.n === v.accepted_window) || opts[0];
+  return o ? o.visits : [];
+}
+const bookedWindow = (v) => bookedVisits(v)[0];
 
 function bookedPage(v, code) {
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
-  const x = bookedWindow(v);
+  const visits = bookedVisits(v);
+  /* road W: the ticket lists every day booked; "Nothing else to do." — the booking is done, not waiting on a text */
   const inner = [
     stepsHtml(w, 3, -1),
     `<div class="qok" aria-hidden="true">${ICON.check}</div>`,
     `<h1>${esc(w.h_booked)}</h1>`,
-    `<p class="qhi">${esc(w.booked_confirm)}</p>`,
-    '<div class="qticket">' + (x ? whenHtml(w.lbl_visit, x, lang, w) + '<div class="qtear" aria-hidden="true"></div>' : '') +
+    `<p class="qhi">${esc(w.booked_done)}</p>`,
+    '<div class="qticket">' + (visits.length ? ticketVisitsHtml(visits.length > 1 ? w.lbl_visits : w.lbl_visit, visits, lang, w, v.body) + '<div class="qtear" aria-hidden="true"></div>' : '') +
       `<div class="qtt"><p class="qtl">${esc(w.h_price)}</p><p class="qprice" style="font-size:2.1rem">${esc(money(v.body && v.body.price))}</p></div></div>`,
-    x ? `<a class="qalt" href="/q/${esc(code)}/calendar.ics">${ICON.cal}<span>${esc(w.add_calendar)}</span></a>` : '',
-    `<p class="qsmall">${esc(w.questions)}</p>`,
+    visits.length ? `<a class="qalt" href="/q/${esc(code)}/calendar.ics">${ICON.cal}<span>${esc(w.add_calendar)}</span></a>` : '',
+    `<p class="qsmall">${esc(w.booked_small)}</p>`,
   ].join('\n');
   return page(200, lang, 'booked', inner);
 }
@@ -409,13 +612,11 @@ function icsFold(line) {
 /** 20260929T130000Z */
 const icsUtc = (ms) => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
-/** The booked visit as one VEVENT. No name, phone, address or price: the day, the window and a line of words. */
+/** Every booked visit as its own VEVENT (road W: both days of a two-visit job). No name, phone, address or price:
+    the day, the window and a line of words. The first visit keeps the UID it always had. */
 async function calendarFile(v, code, nowIso) {
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
-  const x = bookedWindow(v);
-  const [y, mo, d] = String(x.date).split('-').map(Number);
-  const [eh, em] = String(x.end).split(':').map(Number);
   /* the UID is never the code itself: the first 32 hex of sha256(code), with no @ in it */
   const uid = 'umbradomus-' + (await codeHash(code)).slice(0, 32);
   const lines = [
@@ -423,21 +624,100 @@ async function calendarFile(v, code, nowIso) {
     'VERSION:2.0',
     'PRODID:-//Umbra Domus//Quote page//EN',
     'METHOD:PUBLISH',
-    'BEGIN:VEVENT',
-    'UID:' + uid,
-    'DTSTAMP:' + icsUtc(Date.parse(nowIso)),
-    'DTSTART:' + icsUtc(windowStartMs(x)),
-    'DTEND:' + icsUtc(chicagoWall(y, mo, d, eh, em)),
-    'SUMMARY:' + icsText(w.ics_title),
-    'DESCRIPTION:' + icsText(fill(w.ics_desc, { window: windowSpan(x, lang) })),
-    'END:VEVENT',
-    'END:VCALENDAR',
   ];
+  bookedVisits(v).forEach((x, i) => {
+    const [y, mo, d] = String(x.date).split('-').map(Number);
+    const [eh, em] = String(x.end).split(':').map(Number);
+    lines.push(
+      'BEGIN:VEVENT',
+      'UID:' + uid + (i ? '-' + (i + 1) : ''),
+      'DTSTAMP:' + icsUtc(Date.parse(nowIso)),
+      'DTSTART:' + icsUtc(windowStartMs(x)),
+      'DTEND:' + icsUtc(chicagoWall(y, mo, d, eh, em)),
+      'SUMMARY:' + icsText(w.ics_title),
+      'DESCRIPTION:' + icsText(fill(w.ics_desc, { window: windowSpan(x, lang) })),
+      'END:VEVENT',
+    );
+  });
+  lines.push('END:VCALENDAR');
   return lines.map(icsFold).join('\r\n') + '\r\n';
+}
+
+/* ------------------------------------------------------------------ road CO · the change order's page */
+
+/** "Tue 9/29, 1:02 PM" · "martes 29 de septiembre a la 1:02 p.m." — when they OK'd it, on Chicago's clock */
+function answeredLabel(iso, lang) {
+  if (lang === 'es') return momentLabel(iso, 'es');
+  const p = Object.fromEntries(CHI.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  const c = clock(Number(p.hour) % 24 * 60 + Number(p.minute), 'en', true);
+  return `${p.weekday} ${p.month}/${p.day}, ${c.t} ${c.ap}`;
+}
+
+function changePage(v, code, signError) {
+  const lang = v.lang === 'es' ? 'es' : 'en';
+  const w = CHANGE_WORDS[lang];
+  const b = v.body || {};
+  const ticket = (big) => '<div class="qticket"><div class="qtt">' +
+    `<p class="qtl">${esc(fill(w.lbl, { n: v.version }))}</p><p class="qprice"${big ? '' : ' style="font-size:2.1rem"'}>${esc(fill(w.more, { price: money(b.price) }))}</p>` +
+    `<p class="qwhat" id="change-what">${esc(b.what)}</p></div><div class="qtear" aria-hidden="true"></div>` +
+    `<div class="qtot"><p class="qtl">${esc(w.lbl_total)}<span class="qtwas">${esc(fill(w.was, { base: money(b.base) }))}</span></p><p class="qtv" id="change-total">${esc(money(b.total))}</p></div></div>`;
+  const scope = b.scope || [];
+  /* road MW (2026-09-26): when the Flux says which lines are the work (work_lines), the page shows the WORK, in the open,
+     and when it happens — "What it adds · 5 steps · done during your booked visits" — and the store items only under a
+     fold of their own ("What it uses · 2 items"). Without it, every line in one fold, as road CO made it. */
+  const nWork = Number.isInteger(b.work_lines) && b.work_lines > 0 ? Math.min(b.work_lines, scope.length) : 0;
+  const fold = (head, hint, lines) => `<details class="qlaw qfold"><summary>${ICON.list}<span class="qlt"><span class="qlh">${esc(head)}</span>` +
+    `<span class="qlp">${esc(hint)}</span></span>` +
+    `<span class="chev">${ICON.chev}</span></summary>\n<div class="qlb"><ul class="qwork">` +
+    lines.map((x) => `<li><span class="ck">${ICON.plus}</span><span>${esc(x)}</span></li>`).join('') + '</ul></div></details>';
+  let adds = '';
+  if (nWork) {
+    const work = scope.slice(0, nWork), items = scope.slice(nWork);
+    adds = `<div class="qadds" id="change-work"><div class="qah">${ICON.list}<span class="qlt"><span class="qlh">${esc(w.h_adds)}</span>` +
+      `<span class="qlp">${esc(nWork === 1 ? w.work_hint_one : fill(w.work_hint, { n: nWork }))}</span></span></div>` +
+      `<ul class="qwork">${work.map((x) => `<li><span class="ck">${ICON.plus}</span><span>${esc(x)}</span></li>`).join('')}</ul></div>` +
+      (items.length ? '\n' + fold(w.h_items, items.length === 1 ? w.items_hint_one : fill(w.items_hint, { n: items.length }), items) : '');
+  } else if (scope.length) {
+    adds = fold(w.h_adds, scope.length === 1 ? w.adds_hint_one : fill(w.adds_hint, { n: scope.length }), scope);
+  }
+  if (v.state === 'accepted') {
+    const who = v.signed_name || '';
+    return page(200, lang, 'change_ok', [
+      `<div class="qok" aria-hidden="true">${ICON.check}</div>`,
+      `<h1>${esc(w.h_ok)}</h1>`,
+      `<p class="qhi">${esc(fill(w.ok_lead, { name: who }))}</p>`,
+      ticket(false), adds,
+      v.answered_at ? `<p class="qsmall" id="change-signed">${esc(fill(w.ok_small, { name: who, at: answeredLabel(v.answered_at, lang) }))}</p>` : '',
+      `<p class="qsmall">${esc(w.questions)}</p>`,
+    ].join('\n'), { changeTitle: w.title });
+  }
+  if (v.state === 'declined') {
+    return page(200, lang, 'change_no', `<div class="qwords">\n<h1>${esc(w.h_no)}</h1>\n<p class="qhi">${esc(w.no_lead)}</p>\n<p class="qsmall">${esc(w.questions)}</p>\n</div>`, { changeTitle: w.title });
+  }
+  if (v.state !== 'open') {
+    return page(200, lang, 'change_withdrawn', `<div class="qwords">\n<h1>${esc(w.h_withdrawn)}</h1>\n<p class="qhi">${esc(w.withdrawn)}</p>\n</div>`, { changeTitle: w.title });
+  }
+  const parts = [];
+  parts.push(`<h1>${esc(w.h1)}</h1>`);
+  parts.push(`<p class="qhi">${esc(b.first_name ? fill(w.lead_name, { name: b.first_name }) : w.lead)} ${esc(w.nothing_yet)}</p>`);
+  parts.push(ticket(true));
+  if (adds) parts.push(adds);
+  parts.push(`<form method="post" action="/q/${esc(code)}">` +
+    `<input type="hidden" name="v" value="${esc(v.version)}"><input type="hidden" name="a" value="ok">` +
+    (signError ? `<p class="qerr" id="sign-error">${esc(w.sign_error)}</p>` : '') +
+    `<div class="qsign"><label for="change-name">${esc(w.sign_label)}</label>` +
+    `<input type="text" id="change-name" name="name" autocomplete="name" maxlength="80" required${signError ? ' aria-describedby="sign-error" autofocus' : ''}>` +
+    `<p class="qsmall">${esc(w.sign_hint)}</p></div>` +
+    `<div class="qact"><button type="submit" class="qgo">${esc(w.ok)}</button></div></form>`);
+  parts.push(`<form method="post" action="/q/${esc(code)}"><input type="hidden" name="v" value="${esc(v.version)}"><input type="hidden" name="a" value="no">` +
+    `<button type="submit" class="qalt">${esc(w.no)}</button></form>`);
+  parts.push(`<p class="qsmall">${esc(w.no_small)}</p>`);
+  return page(200, lang, 'change_open' + (signError ? ' sign' : ''), parts.join('\n'), { changeTitle: w.title });
 }
 
 function statePage(env, v, code, nowIso, pickError) {
   if (!v || v.state === 'not_found') return notValid();
+  if (v.kind === 'change') return changePage(v, code, pickError);
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
   switch (v.state) {
@@ -504,13 +784,24 @@ export async function handleQuotePage(request, env, url, rest, method, nowIso) {
     let form = null;
     try { form = await request.formData(); } catch (err) { form = null; }
     const v = form ? String(form.get('v') || '') : '';
+    /* road CO: a change order's answer — a=ok with the name they typed, or a=no. A quote's form never sends `a`. */
+    const act = form ? String(form.get('a') || '') : '';
+    if (!isNone && (act === 'ok' || act === 'no')) {
+      const r = await answerChangeByCode(env, code, v, act === 'ok' ? 'yes' : 'no', form.get('name'), nowIso);
+      return seeOther(code, r && r.state === 'need_name' ? '?sign=1' : '');
+    }
     const wRaw = form ? form.get('w') : null;
     const win = wRaw === null || wRaw === '' ? null : (/^\d{1,2}$/.test(String(wRaw)) ? Number(wRaw) : -1);
     if (isNone) {
       await markNone(env, code, v, nowIso);
       return seeOther(code);
     }
+    /* road XW: the year their house was built, if they typed one — kept first, so a refused booking never loses it */
+    const year = readYear(form ? form.get('year') : null, nowIso);
+    const kept = year ? await noteYearByCode(env, code, v, year, nowIso, { stamp: false }) : null;
     const r = await bookByCode(env, code, v, win, 'page', nowIso);
+    /* a booking stamps the record (the year with it); anything else, the year's own stamp */
+    if (kept && kept.state === 'kept' && !(r && r.state === 'booked')) await stampAfterYear(env, kept.job_id, nowIso);
     /* Two times offered and none chosen: back to the page, which asks again. Nothing was written. */
     if (r && r.state === 'choose_window') return seeOther(code, '?pick=1');
     /* Every other answer — booked, already_booked, taken, too_close, updating, replaced, withdrawn,
@@ -533,7 +824,7 @@ export async function handleQuotePage(request, env, url, rest, method, nowIso) {
         },
       }));
     }
-    return head(method, statePage(env, v, code, nowIso, url.searchParams.get('pick') === '1'));
+    return head(method, statePage(env, v, code, nowIso, url.searchParams.get(v && v.kind === 'change' ? 'sign' : 'pick') === '1'));
   }
 
   return notAllowed(isCal ? 'GET, HEAD' : 'GET, HEAD, POST');

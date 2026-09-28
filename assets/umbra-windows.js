@@ -7,7 +7,8 @@
 
    A day is a button, never a date input: a plain date input cannot hide a
    Sunday. Tapping a day opens its four blocks; tapping a block adds the pick;
-   every pick is a chip that removes itself when tapped. No state is shown by
+   every pick is a chip that removes itself when tapped (road MW: a full-width
+   row that says "Remove ✕" at its end — the whole row is the target). No state is shown by
    colour alone — a picked block says "Picked", a day with picks says how many.
 
    WHAT IT POSTS (the Worker's worker/src/windows.js reads it):
@@ -49,6 +50,7 @@
     count: function (n) { return n + ' de ' + MAX + ' elegidos'; },
     full: 'Ya eligió 3. Para cambiar, quite uno.',
     remove: function (s) { return 'Quitar ' + s; },
+    removeWord: 'Quitar',
     dayHas: function (n) { return n === 1 ? '1 elegido' : n + ' elegidos'; },
     none: 'Todavía no ha elegido ningún horario.'
   } : {
@@ -57,6 +59,7 @@
     count: function (n) { return n + ' of ' + MAX + ' picked'; },
     full: "You've picked 3. Remove one to change it.",
     remove: function (s) { return 'Remove ' + s; },
+    removeWord: 'Remove',
     dayHas: function (n) { return n === 1 ? '1 picked' : n + ' picked'; },
     none: 'No times picked yet.'
   };
@@ -196,8 +199,18 @@
       /* the pick's text starts its line, so in Spanish it takes a capital ("Sáb 26 sep · …"); its
          remove label keeps the lowercase form ("Quitar sáb 26 sep · …") */
       var shown = shownOf(picks[i]);
-      b.appendChild(el('span', 'wpt', ES ? shown.charAt(0).toUpperCase() + shown.slice(1) : shown));
-      b.appendChild(el('span', 'wpx', '✕'));
+      shown = ES ? shown.charAt(0).toUpperCase() + shown.slice(1) : shown;
+      /* road MW: the day and the block each stay whole; a narrow row breaks between them, never inside "8–11" */
+      var cut = shown.indexOf(' · ');
+      var wpt = el('span', 'wpt');
+      if (cut > 0) {
+        wpt.appendChild(el('span', 'wpd', shown.slice(0, cut)));
+        wpt.appendChild(document.createTextNode(' · '));
+        wpt.appendChild(el('span', 'wpd', shown.slice(cut + 3)));
+      } else wpt.textContent = shown;
+      b.appendChild(wpt);
+      /* road MW: the row's end says what a tap does, in a word ("Remove ✕"); the whole row is the target */
+      b.appendChild(el('span', 'wpx', T.removeWord + ' ✕'));
       b.lastChild.setAttribute('aria-hidden', 'true');
       li.appendChild(b);
       pickList.appendChild(li);

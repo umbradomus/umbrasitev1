@@ -268,7 +268,8 @@ export async function suiteWindows(ctx) {
     await pick(page, '2026-10-02', '11-14');
     const chips = await page.$$eval('.wpick', (b) => b.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     eq(chips.length, 3, 'three removable chips');
-    eq(chips[0], '1Tue 9/29 · Morning 8–11✕', 'the first chip reads Tue 9/29 · Morning 8–11');
+    /* road MW moves this: the chip's end says what a tap does, "Remove ✕" (the whole chip is the target, as it always was) */
+    eq(chips[0], '1Tue 9/29 · Morning 8–11Remove ✕', 'the first chip reads Tue 9/29 · Morning 8–11 (road MW: and ends "Remove ✕")');
     const full = await page.evaluate(async () => {
       document.querySelector('.wday[data-date="2026-10-05"]').click();
       await new Promise((r) => setTimeout(r, 50));
@@ -572,7 +573,7 @@ export async function suiteWindows(ctx) {
     eq(two.id, one.id, 'the second post lands on the same request number');
     eq(n1 - n0, 1, 'one record');
     eq(aboutPO(one.id).length, 1, 'one push');
-    eq(aboutTG(one.id).length, 1, 'one Telegram message');
+    eq(aboutTG(one.id).length, 0, 'road FW · one app: no Telegram message (Pushover took it)');
     const row = await rowOf(W, one.id);
     eq(row.consent.at, T, 'the consent time is the first post\'s (the server stamps it; it is not part of the match)');
     R['11'] = { first: one.id, second_at_plus2: two.id, records_added: n1 - n0, pushover: aboutPO(one.id).length, telegram: aboutTG(one.id).length, consent_at: row.consent.at, choices: row.availability.choices };
@@ -771,32 +772,36 @@ export async function suiteWindows(ctx) {
 
   suite('G · (14) SPANISH-FIX-01: es/recibido — one time style, la/las, "mañana antes de …", never "p. m."');
   {
+    /* road W: es/recibido no longer says when the page opened (#when, "se abrió … en su teléfono") or keeps a separate
+       answer-by line (#by, "Le contestamos …"). Its first line (#byline) says who texts, and by when: two business hours
+       on Chicago's clock, the Worker's own reply clock (7 a.m.–9 p.m.), so an evening request is answered "mañana antes
+       de las 7:30 a.m.". This tab never had the form, so the line carries no number. The la/las and a.m./p.m. rules
+       are read on that time. */
     R['14'] = [];
     const read = (page) => page.evaluate(() => {
       const t = (sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; };
-      const by = document.getElementById('by');
-      return { when: t('#when'), bywhen: t('#bywhen'), lead: t('main .lead'), by_line: t('#by'), by_hidden: by ? by.hidden : null, text: document.body.innerText, html: document.documentElement.outerHTML };
+      const by = document.getElementById('byline');
+      return { when: t('#when'), by_line: t('#byline'), by_hidden: by ? by.hidden || getComputedStyle(by).display === 'none' : null, text: document.body.innerText, html: document.documentElement.outerHTML };
     });
     const cases = [
-      ['1:05 PM', '2026-09-23T18:05:00.000Z', 'a la 1:05 p.m.', 'Le contestamos antes de las 3:05 p.m.', '5-recibido-afternoon.png'],
-      ['12:40 PM', '2026-09-23T17:40:00.000Z', 'a las 12:40 p.m.', 'Le contestamos antes de las 2:40 p.m.'],
-      ['11:05 AM', '2026-09-23T16:05:00.000Z', 'a las 11:05 a.m.', 'Le contestamos antes de la 1:05 p.m.'],
-      ['7:30 PM', '2026-09-24T00:30:00.000Z', 'a las 7:30 p.m.', 'Le contestamos mañana antes de las 9:00 a.m.', '6-recibido-night.png'],
-      ['5:30 AM', '2026-09-23T10:30:00.000Z', 'a las 5:30 a.m.', 'Le contestamos antes de las 9:00 a.m.'],
+      ['1:05 PM', '2026-09-23T18:05:00.000Z', 'Drew le enviará un mensaje de texto antes de las 3:05 p.m.', '5-recibido-afternoon.png'],
+      ['12:40 PM', '2026-09-23T17:40:00.000Z', 'Drew le enviará un mensaje de texto antes de las 2:40 p.m.'],
+      ['11:05 AM', '2026-09-23T16:05:00.000Z', 'Drew le enviará un mensaje de texto antes de la 1:05 p.m.'],
+      ['7:30 PM', '2026-09-24T00:30:00.000Z', 'Drew le enviará un mensaje de texto mañana antes de las 7:30 a.m.', '6-recibido-night.png'],
+      ['5:30 AM', '2026-09-23T10:30:00.000Z', 'Drew le enviará un mensaje de texto antes de las 9:00 a.m.'],
     ];
-    for (const [label, now, when, byLine, picture] of cases) {
+    for (const [label, now, byLine, picture] of cases) {
       const page = await newPage({ now, tz: 'America/Chicago' });
       await page.goto(SITE + '/es/recibido', { waitUntil: 'load' });
       const r = await read(page);
-      eq(r.when, when, `(4) ${label}: #when reads "${when}"`);
-      ok(r.lead && r.lead.includes(`se abrió ${when} en su teléfono`), `(4) ${label}: "…se abrió ${when} en su teléfono."`, r.lead);
       eq(r.by_line, byLine, `(4) ${label}: "${byLine}"`);
-      eq(r.by_hidden, false, `(4) ${label}: the answer-by line shows`);
+      eq(r.by_hidden, false, `(4) ${label}: the line shows`);
+      eq(r.when, null, `(4) ${label}: no "se abrió" time any more (road W)`);
       if (label === '5:30 AM') eq(/mañana/.test(r.by_line || ''), false, '(4) 5:30 AM: same day, so no "mañana"');
       eq((r.text.match(/[ap]\. m\./g) || []).length + (r.html.match(/[ap]\. m\./g) || []).length, 0, `(4) ${label}: no "a. m."/"p. m." in the page or its source`);
       eq((r.text.match(/\.\./g) || []).length, 0, `(4) ${label}: no ".." anywhere on the page`);
       if (picture) await sfShot(page, picture);
-      R['14'].push({ case: label, now, when: r.when, bywhen: r.bywhen, lead: r.lead, by_line: r.by_line });
+      R['14'].push({ case: label, now, by_line: r.by_line });
       await page.close();
     }
     const off = await browser.newPage();
@@ -804,11 +809,12 @@ export async function suiteWindows(ctx) {
     await off.setJavaScriptEnabled(false);
     await off.goto(SITE + '/es/recibido', { waitUntil: 'load' });
     const r = await read(off);
-    ok(r.lead && r.lead.includes('se abrió hace un momento en su teléfono'), '(4) JavaScript off: "se abrió hace un momento en su teléfono"', r.lead);
-    eq(r.by_hidden, true, '(4) JavaScript off: no answer-by line (#by stays hidden)');
-    eq(/Le contestamos/.test(r.text), false, '(4) JavaScript off: "Le contestamos" is nowhere in the visible text');
+    /* road W: with no script the page cannot know the time, so its first line keeps the plain promise, no hour */
+    eq(r.by_line, 'Drew le enviará un mensaje de texto en menos de 2 horas, de 7 a.m. a 9 p.m.', '(4) JavaScript off: "Drew le enviará un mensaje de texto en menos de 2 horas, de 7 a.m. a 9 p.m."');
+    eq(/antes de (la|las) /.test(r.text), false, '(4) JavaScript off: no reply-by hour ("antes de la/las …") anywhere in the visible text');
+    eq((r.text.match(/[ap]\. m\./g) || []).length + (r.html.match(/[ap]\. m\./g) || []).length, 0, '(4) JavaScript off: no "a. m."/"p. m." in the page or its source');
     eq((r.text.match(/\.\./g) || []).length, 0, '(4) JavaScript off: no ".."');
-    R['14'].push({ case: 'JavaScript off', lead: r.lead, by_hidden: r.by_hidden });
+    R['14'].push({ case: 'JavaScript off', by_line: r.by_line });
     await off.close();
   }
 
