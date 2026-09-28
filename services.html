@@ -13,9 +13,17 @@
 <link rel="stylesheet" href="/assets/site.css?v=8">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
+<!-- SITE-FIX-01 · the key's one place. Ships EMPTY; only Drew fills it in. -->
+<script src="/site.config.js?v=1"></script>
+<!-- SITE-FIX-01 · the chooser. The data file holds every tile, every question and the
+     checklist, in both languages — a new tile is added there and nowhere else. The
+     chooser must run BEFORE the stepper: it makes the screens the stepper then orders. -->
+<script src="/assets/umbra-chooser-data.js?v=1" defer></script>
+<script src="/assets/umbra-address.js?v=1" defer></script>
+<script src="/assets/umbra-chooser.js?v=1" defer></script>
 <!-- INTAKE v2 · the 14-screen wizard (INTAKE-FORM-V2-SPEC-2026-09-21). The v1 file
      /assets/umbra-intake.js stays in the repo and is no longer referenced. -->
-<script src="/assets/umbra-intake-v2.js?v=9" defer></script>
+<script src="/assets/umbra-intake-v2.js?v=10" defer></script>
 <script src="/assets/umbra-windows.js?v=3" defer></script>
 <!-- road W: what they gave, carried to the thank-you page in this tab's own memory; before the email leg, always -->
 <script src="/assets/umbra-sent.js?v=1" defer></script>
@@ -90,10 +98,10 @@
         </a>
 
         <a class="tile rise" href="#request" data-service="Doors &amp; Carpentry">
-          <div class="ph"><picture><source type="image/webp" srcset="/assets/img/construction-640.webp?v=2 640w, /assets/img/construction-784.webp?v=2 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/construction-640.jpg?v=2" srcset="/assets/img/construction-640.jpg?v=2 640w, /assets/img/construction-784.jpg?v=2 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Framing for exterior steps beside a stucco wall" loading="lazy" decoding="async"></picture></div>
+          <div class="ph panel ph-none" aria-hidden="true"></div>
           <div class="body">
             <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="#003153"><path d="M5 2h11a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm9 9.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg>Doors, Trim &amp; Carpentry</h3>
-            <p>Doors that stick or won't latch, trim, steps, decks, fences, rotted wood, and the small jobs nobody else will come out for.</p>
+            <p>Doors that stick or won't latch, trim, steps, deck boards and rails, fence repairs, rotted wood, and the small jobs nobody else will come out for.</p>
           </div>
         </a>
 
@@ -114,7 +122,7 @@
         </a>
 
         <a class="tile rise" href="/automate">
-          <div class="ph"><picture><source type="image/webp" srcset="/assets/img/automation-640.webp?v=1 640w, /assets/img/automation-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/automation-640.jpg?v=1" srcset="/assets/img/automation-640.jpg?v=1 640w, /assets/img/automation-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A phone controlling the lights in a home" loading="lazy" decoding="async"></picture></div>
+          <div class="ph panel ph-none" aria-hidden="true"></div>
           <div class="body">
             <h3><svg viewBox="0 0 24 24" aria-hidden="true" fill="#4FB87B"><path d="M12 2a5 5 0 0 1 5 5c0 2-1 3-1.8 4-.6.7-.9 1.3-1 2.2H9.8c-.1-.9-.4-1.5-1-2.2C8 10 7 9 7 7a5 5 0 0 1 5-5zM9.8 15.7h4.4v1.5H9.8zm.4 3h3.6a1.8 1.8 0 0 1-3.6 0z"/></svg>Home Automation</h3>
             <p>Wi-Fi that reaches the whole house, smart lighting and plugs, water leak detection, and low-voltage landscape lighting.</p>
@@ -143,14 +151,10 @@
         <a class="tile rise" href="#request" data-service="Drywall &amp; Paint"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-01-640.webp?v=1 640w, /assets/img/ideas-01-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-01-640.jpg?v=1" srcset="/assets/img/ideas-01-640.jpg?v=1 640w, /assets/img/ideas-01-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A fresh coat, one room" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A fresh coat, one room</h3><p class="fine">Drywall &amp; Paint</p></div></a>
         <a class="tile rise" href="#request" data-service="Drywall &amp; Paint"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-02-640.webp?v=1 640w, /assets/img/ideas-02-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-02-640.jpg?v=1" srcset="/assets/img/ideas-02-640.jpg?v=1 640w, /assets/img/ideas-02-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Grey walls, white trim, done right" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Grey walls, white trim, done right</h3><p class="fine">Drywall &amp; Paint</p></div></a>
         <a class="tile rise" href="#request" data-service="Doors &amp; Carpentry"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-03-640.webp?v=1 640w, /assets/img/ideas-03-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-03-640.jpg?v=1" srcset="/assets/img/ideas-03-640.jpg?v=1 640w, /assets/img/ideas-03-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A door that won't latch and trim gone soft" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A door that won't latch and trim gone soft</h3><p class="fine">Doors, Trim &amp; Carpentry</p></div></a>
-        <a class="tile rise" href="#request" data-service="Doors &amp; Carpentry"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-04-640.webp?v=1 640w, /assets/img/ideas-04-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-04-640.jpg?v=1" srcset="/assets/img/ideas-04-640.jpg?v=1 640w, /assets/img/ideas-04-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A deck from the frame up" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A deck from the frame up</h3><p class="fine">Doors, Trim &amp; Carpentry</p></div></a>
-        <a class="tile rise" href="#request" data-service="Doors &amp; Carpentry"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-05-640.webp?v=1 640w, /assets/img/ideas-05-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-05-640.jpg?v=1" srcset="/assets/img/ideas-05-640.jpg?v=1 640w, /assets/img/ideas-05-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A deck you'll actually use" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A deck you'll actually use</h3><p class="fine">Doors, Trim &amp; Carpentry</p></div></a>
-        <a class="tile rise" href="#request" data-service="Doors &amp; Carpentry"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-06-640.webp?v=1 640w, /assets/img/ideas-06-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-06-640.jpg?v=1" srcset="/assets/img/ideas-06-640.jpg?v=1 640w, /assets/img/ideas-06-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A new fence line" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A new fence line</h3><p class="fine">Doors, Trim &amp; Carpentry</p></div></a>
         <a class="tile rise" href="#request" data-service="Yard &amp; Property"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-07-640.webp?v=1 640w, /assets/img/ideas-07-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-07-640.jpg?v=1" srcset="/assets/img/ideas-07-640.jpg?v=1 640w, /assets/img/ideas-07-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Gutters cleaned before the storms" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Gutters cleaned before the storms</h3><p class="fine">Yard &amp; Property Care</p></div></a>
         <a class="tile rise" href="#request" data-service="Yard &amp; Property"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-08-640.webp?v=1 640w, /assets/img/ideas-08-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-08-640.jpg?v=1" srcset="/assets/img/ideas-08-640.jpg?v=1 640w, /assets/img/ideas-08-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Beds edged and mulched" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Beds edged and mulched</h3><p class="fine">Yard &amp; Property Care</p></div></a>
-        <a class="tile rise" href="#request" data-service="Yard &amp; Property"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-09-640.webp?v=1 640w, /assets/img/ideas-09-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-09-640.jpg?v=1" srcset="/assets/img/ideas-09-640.jpg?v=1 640w, /assets/img/ideas-09-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A driveway pressure-washed" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A driveway pressure-washed</h3><p class="fine">Yard &amp; Property Care</p></div></a>
         <a class="tile rise" href="#request" data-service="Comfort &amp; Efficiency"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-10-640.webp?v=1 640w, /assets/img/ideas-10-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-10-640.jpg?v=1" srcset="/assets/img/ideas-10-640.jpg?v=1 640w, /assets/img/ideas-10-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Shade over the west windows" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Shade over the west windows</h3><p class="fine">Comfort &amp; Efficiency</p></div></a>
-        <a class="tile rise" href="#request" data-service="Comfort &amp; Efficiency"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-11-640.webp?v=1 640w, /assets/img/ideas-11-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-11-640.jpg?v=1" srcset="/assets/img/ideas-11-640.jpg?v=1 640w, /assets/img/ideas-11-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Insulation topped up in the attic" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Insulation topped up in the attic</h3><p class="fine">Comfort &amp; Efficiency</p></div></a>
+        <a class="tile rise" href="#request" data-service="Comfort &amp; Efficiency"><div class="ph panel ph-none" aria-hidden="true"></div><div class="body"><h3 style="font-size:1.02rem">Insulation topped up in the attic</h3><p class="fine">Comfort &amp; Efficiency</p></div></a>
         <a class="tile rise" href="#request" data-service="Home Automation"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-12-640.webp?v=1 640w, /assets/img/ideas-12-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-12-640.jpg?v=1" srcset="/assets/img/ideas-12-640.jpg?v=1 640w, /assets/img/ideas-12-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Low-voltage lights on the steps" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Low-voltage lights on the steps</h3><p class="fine">Home Automation</p></div></a>
       </div>
     </div>
@@ -159,9 +163,8 @@
   <section class="band" id="request">
     <div class="wrap narrow">
       <p class="kicker">Request</p>
-      <h2>Tell us what's wrong.</h2>
-      <p class="lead">A few photos and quick questions. No account, no email needed. You'll get a confirmation that says when you'll hear from us.</p>
-      <p>If the work isn't right, we come back and fix it. You don't pay twice for the same job.</p>
+      <h2 id="request-top">Tell us what's wrong. We'll tell you what it takes.</h2>
+      <p class="lead">Tap what sounds like your house. No account, no email needed, and nothing is sent until you've looked it over.</p>
 
       <form class="req" action="https://formsubmit.co/07242513cc0b8b4dac5ae320baa7c431" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="_subject" value="Service request from umbradomus.com">
@@ -180,7 +183,7 @@
              the service tiles above still tick it, and Drywall & Paint is the default,
              so the field arrives as it always did without spending a screen on it. -->
         <div class="v2service" hidden aria-hidden="true">
-          <label><input type="radio" name="service" value="Drywall &amp; Paint" checked><span>Drywall &amp; Paint</span></label>
+          <label><input type="radio" name="service" value="Drywall &amp; Paint"><span>Drywall &amp; Paint</span></label>
           <label><input type="radio" name="service" value="Doors &amp; Carpentry"><span>Doors &amp; Carpentry</span></label>
           <label><input type="radio" name="service" value="Yard &amp; Property"><span>Yard &amp; Property</span></label>
           <label><input type="radio" name="service" value="Comfort &amp; Efficiency"><span>Comfort &amp; Efficiency</span></label>
@@ -190,6 +193,15 @@
 
         <div class="intake2" data-intake2>
           <div class="v2bar" aria-hidden="true"><i data-v2fill></i></div>
+        <!-- SITE-FIX-01 · THE CHOOSER. "Fix something" lands HERE, at the top of this
+             screen — never in a filled form, no category preselected, nothing focused.
+             The tiles and the "while we're there" list are drawn from
+             /assets/umbra-chooser-data.js by /assets/umbra-chooser.js. With JavaScript
+             off this section is empty and the page's own screens below still stand. -->
+        <section class="fstep ch-step" data-fstep="chooser" hidden></section>
+        <!-- SITE-FIX-01 · one screen of questions per lit tile, drawn here from the same
+             data file. Everything they answer travels in the ADDED field `answers`. -->
+        <div data-tile-steps></div>
         <section class="fstep" data-fstep="photos" hidden>
           <p class="v2q">Show us the problem areas</p>
           <p class="v2hint">Photos help us quote accurately &mdash; the more, the better</p>
@@ -201,7 +213,7 @@
           <input type="file" accept="image/*" capture="environment" data-photo-capture hidden aria-hidden="true" tabindex="-1" style="display:none">
           <ul class="pix" data-photo-list aria-label="Add photos" hidden></ul>
         </section>
-        <section class="fstep" data-fstep="what" data-need="1" hidden>
+        <section class="fstep" data-fstep="what" data-need="1" data-keep hidden>
           <p class="v2q">What is the issue?</p>
           <p class="v2hint">Select all that apply</p>
           <ul class="v2opts">
@@ -214,7 +226,7 @@
           </ul>
           <p class="v2need" role="alert" hidden>Please select at least one</p>
         </section>
-        <section class="fstep" data-fstep="where" data-need="1" hidden>
+        <section class="fstep" data-fstep="where" data-need="1" data-keep hidden>
           <p class="v2q">Where is the issue?</p>
           <p class="v2hint">Select all that apply</p>
           <ul class="v2opts">
@@ -357,8 +369,13 @@
         <section class="fstep" data-fstep="address" hidden>
           <label class="v2field"><span class="v2q">Address</span><input class="field" type="text" name="address" autocomplete="street-address" enterkeyhint="next"></label>
         </section>
+        <!-- SITE-FIX-01 · three one-tap rows, every one optional. Drawn by
+             /assets/umbra-chooser.js; each posts its own ADDED field. It sits HERE,
+             before the sentence, because the three screens the time picker's suite
+             reads must stay the last three in this file: notes, times, send. -->
+        <section class="fstep ch-step" data-fstep="details" hidden></section>
         <section class="fstep" data-fstep="notes" hidden>
-          <label class="v2field"><span class="v2q">Anything else we should know?</span><span class="v2hint">Optional</span><textarea class="field" name="what" rows="4"></textarea></label>
+          <label class="v2field"><span class="v2q">Anything else, in a sentence</span><span class="v2hint">Optional &mdash; tap the mic on your keyboard to talk.</span><textarea class="field" name="what" rows="4"></textarea></label>
         </section>
         <!-- FORM-WINDOWS-01 · "When could we come?" — the picker is drawn by /assets/umbra-windows.js.
              avail_form marks a page that has this screen; the Worker gives every other form availability null. -->
@@ -393,7 +410,9 @@
           <div class="v2nav">
             <button class="btn ghost v2back" type="button" data-v2back>Back</button>
             <button class="btn v2next" type="button" data-v2next>Next</button>
-            <button class="btn v2send" type="submit" data-v2send hidden>Send</button>
+            <!-- SITE-FIX-01 · THE ONE SEND. It is revealed on the review screen and
+                 nowhere else: no earlier screen carries a control that sends. -->
+            <button class="btn v2send" type="submit" data-v2send hidden>Send it &mdash; we reply within 2 hours.</button>
           </div>
         </div>
       </form>

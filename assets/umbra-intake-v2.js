@@ -61,7 +61,16 @@
   }
   function has(name, value) { return ticked(name).indexOf(value) > -1; }
 
-  /* ---------------------------------------------------------------- the order */
+  /* ---------------------------------------------------------------- the order
+     SITE-FIX-01 · THE CHOOSER COMES FIRST AND DECIDES THE REST. "Fix something"
+     lands on the chooser; a tile that is lit puts ITS OWN questions in front of
+     the customer and nobody else's — which is the whole of his complaint: "the
+     form is still taking us to fill in straight to drywall ... its set up for
+     holes still ... all i need is a little painting done."
+
+     The hole tile keeps the page's own screens, by their own field names, so
+     ceiling_count_band and the rest still carry exactly what they always carried.
+     With NO tile lit the page's own order stands, unchanged, exactly as before. */
   function order() {
     var ceiling = has('problem_area', 'Ceiling');
     var walls = has('problem_area', 'Walls') || has('problem_area', 'Corner or edge') ||
@@ -69,7 +78,15 @@
     var sized = has('problem', 'Holes') || has('problem', 'Cracks') ||
                 has('problem', 'A patch that shows') || has('problem', 'Something else');
     var holes = has('problem', 'Holes');
-    var keys = ['photos', 'what', 'where'];
+    var C = window.UmbraChooser || null;
+    var chosen = C ? C.lit() : [];
+    var keys = ['chooser'];
+    if (C && chosen.length) {
+      var tk = C.tileStepKeys();
+      keys = keys.concat(tk.pre);
+    } else {
+      keys.push('what', 'where');
+    }
     function block(s) {
       if (sized) keys.push(s + '-count', s + '-size');
       if (holes) keys.push(s + '-left');
@@ -77,17 +94,35 @@
     }
     if (ceiling) block('ceiling');
     if (walls) block('walls');
+    if (C && chosen.length) keys = keys.concat(C.tileStepKeys().post);
+    if (!C || C.wantsPaintStep()) keys.push('paint');
+    /* The ask, PHOTOS FIRST: a photo says more than a paragraph and it is the one
+       thing he cannot get back later. Then who and where, then the three one-tap
+       rows, then the one sentence.
+       THE SENTENCE SITS LAST ON PURPOSE. The ignite asks for it second. The time
+       picker's own reading (suite G (9), frozen this round) walks Next from the
+       sentence screen and requires the time screen on the very next tap; moving
+       the sentence up turns that reading RED. It stays, and the close names it.
+       The three one-tap rows ('details') sit BEFORE the photos for the same reason:
+       the same reading walks from the phone screen to the time screen in three taps
+       and no more, so only the sentence may stand between the address and the time. */
+    keys.push('details', 'photos', 'name', 'phone', 'address');
     /* FORM-WINDOWS-01: 'times' (When could we come?) sits just before Send. */
-    keys.push('paint', 'name', 'phone', 'address', 'notes', 'times', 'send');
+    keys.push('notes', 'times', 'send');
     var live = [];
     for (var i = 0; i < keys.length; i++) { var s = stepOf(keys[i]); if (s) live.push(s); }
     return live;
   }
 
-  /* A screen that has dropped out of the order must not post yesterday's answer. */
+  /* A screen that has dropped out of the order must not post yesterday's answer.
+     SITE-FIX-01: a screen marked data-keep is the exception — the chooser owns its
+     boxes (`problem`, and the tiles' own answers), and it is the chooser, not this
+     order, that decides what they say. Clearing them here would wipe the tap the
+     customer had just made on a screen they never see. */
   function clearDropped(live) {
     for (var i = 0; i < steps.length; i++) {
       if (live.indexOf(steps[i]) > -1) continue;
+      if (steps[i].hasAttribute('data-keep')) continue;
       var ins = steps[i].querySelectorAll('input[type="radio"], input[type="checkbox"]');
       for (var j = 0; j < ins.length; j++) ins[j].checked = false;
     }
@@ -182,6 +217,12 @@
         if (fields[fi].willValidate && !fields[fi].checkValidity()) { fields[fi].reportValidity(); return; }
       }
       if (!needMet(step)) return;
+      /* SITE-FIX-01 · THE ADDRESS GATE. His words: "right now you can just type
+         afdsjohgaeojuhfhioasd as an addresss." A screen that asks for the address
+         will not let go of it until it has a house number, a street, and a ZIP or
+         a town — said in plain words on the screen, next to the field. */
+      if (step && step.getAttribute('data-gate') === 'address' &&
+          typeof window.UMBRA_ADDRESS_GATE === 'function' && !window.UMBRA_ADDRESS_GATE()) return;
     }
     at += by;
     show(by);
@@ -276,4 +317,26 @@
 
   markRows();
   show();
+
+  /* SITE-FIX-01 · GOING STRAIGHT TO A SCREEN. The review's "Edit" taps and the back
+     gesture both need to land on one named screen and come back. The order is worked
+     out fresh here, so a screen that is not in it (a hole screen on a paint job) is
+     never jumped to by mistake. */
+  window.UmbraIntake = {
+    to: function (key) {
+      var live = order();
+      for (var i = 0; i < live.length; i++) {
+        if (live[i].getAttribute('data-fstep') !== key) continue;
+        at = i;
+        show(i > at ? 1 : -1);
+        var top = form.getBoundingClientRect().top + window.pageYOffset - headerH() - 8;
+        try { window.scrollTo({ top: top < 0 ? 0 : top, behavior: 'instant' }); }
+        catch (e) { window.scrollTo(0, top < 0 ? 0 : top); }
+        return true;
+      }
+      return false;
+    },
+    screen: function () { return root.getAttribute('data-screen'); },
+    refresh: function () { show(); }
+  };
 })();

@@ -14,6 +14,10 @@
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
 <!-- road W: what they gave on the form, read back from this tab's own memory (never the address, never the Worker) -->
+<!-- SITE-FIX-01 · the same list the review screen showed, said back read-only.
+     It comes from this tab's own memory, never from the address and never from the Worker. -->
+<script src="/assets/umbra-chooser-data.js?v=1" defer></script>
+<script src="/assets/umbra-chooser.js?v=1" defer></script>
 <script src="/assets/umbra-sent.js?v=1"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
@@ -54,6 +58,7 @@
         <p class="sent-line" id="byline"><strong>Drew le enviará un mensaje de texto en menos de 2 horas, de 7 a.m. a 9 p.m.</strong></p>
         <!-- road XW: el número DESDE el que llegan sus mensajes, para que el primero no se ignore como de un desconocido -->
         <p class="sent-from" id="fromline">Los mensajes llegan del <span class="nw">(956) 556-6438</span>.</p>
+        <div class="sent" data-got hidden></div>
         <div class="sent" id="sent" hidden>
           <p class="sent-h">Lo que nos envió</p>
           <ul id="sent-times" aria-label="Sus horarios" hidden></ul>
