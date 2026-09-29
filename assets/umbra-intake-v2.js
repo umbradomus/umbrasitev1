@@ -162,6 +162,13 @@
     root.setAttribute('data-of', String(live.length));
     var key = live[at] ? live[at].getAttribute('data-fstep') : '';
     root.setAttribute('data-screen', key);
+    /* SITE-FIX-02 · CDO 7 · THE PRIVACY LINE, TWICE, NOT ON EVERY STEP. It sits under the
+       form, so it was under every one of the eleven screens, pushing the buttons down a
+       phone. It is read once on the screen they land on and once on the review, where it
+       is read just before they send — and nowhere in between. With no JavaScript the
+       form shows every screen at once and this never runs, so the line stays put. */
+    var priv = document.getElementById('privacy');
+    if (priv) priv.hidden = !(at === 0 || key === 'send');
   }
 
   /* road MW (2026-09-26) · "SAME TEXTURE AS THE CEILING?" On the walls' texture screen, once the ceiling has a texture

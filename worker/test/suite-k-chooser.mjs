@@ -185,6 +185,8 @@ function namesAny(text, terms) {
         count: tiles.length,
         headTop: head ? Math.round(head.getBoundingClientRect().top) : null,
         lastBottom: tiles.length ? Math.round(tiles[tiles.length - 1].getBoundingClientRect().bottom) : null,
+        firstBottom: tiles.length ? Math.round(tiles[0].getBoundingClientRect().bottom) : null,
+        docH: document.documentElement.scrollHeight,
         smallest: tiles.length ? Math.min(...tiles.map((t) => Math.round(t.getBoundingClientRect().height))) : 0,
         narrowest: tiles.length ? Math.min(...tiles.map((t) => Math.round(t.getBoundingClientRect().width))) : 0,
         boxes: tiles.map((t) => { const i = t.querySelector('input'); return i ? i.type : 'none'; }),
@@ -193,9 +195,18 @@ function namesAny(text, terms) {
       };
     });
     ok(g.count >= 6, 'there are tiles to choose from', String(g.count));
-    ok(g.lastBottom !== null && g.lastBottom <= 844,
-      'the heading and every last tile fit on one 390x844 screen',
-      `last tile ends at ${g.lastBottom}px of 844`);
+    /* RE-CUT by SITE-FIX-02 (6d). CDO 8: the phone had lost the little line under each tile
+       that the desktop has — the thing that tells people they picked the right one. Putting
+       it back makes the list taller than one screen, so this reading no longer asks for the
+       whole list on the first screen. It asks what it was really guarding: the chooser opens
+       on the heading and a whole tile, and every tile below is reachable by an ordinary
+       downward scroll — nothing clipped, nothing sideways. */
+    ok(g.headTop !== null && g.headTop >= 0 && g.headTop < 844 && g.firstBottom <= 844,
+      'the chooser opens on the heading and a whole tile on a 390x844 screen',
+      `heading at ${g.headTop}px, first tile ends at ${g.firstBottom}px of 844`);
+    ok(g.lastBottom !== null && g.lastBottom <= g.docH,
+      'and every tile below is reached by scrolling down, not clipped',
+      `last tile ends at ${g.lastBottom}px of a ${g.docH}px page`);
     ok(g.smallest >= 44 && g.narrowest >= 44, 'every tile is a 44pt target or bigger',
       `${g.narrowest} x ${g.smallest}`);
     eq(g.boxes.filter((b) => b !== 'checkbox').length, 0, 'every tile is a checkbox: more than one thing can be wrong at once');
@@ -491,6 +502,8 @@ function namesAny(text, terms) {
         headTop: head ? Math.round(head.getBoundingClientRect().top) : null,
         count: tiles.length,
         lastBottom: tiles.length ? Math.round(tiles[tiles.length - 1].getBoundingClientRect().bottom) : null,
+        firstBottom: tiles.length ? Math.round(tiles[0].getBoundingClientRect().bottom) : null,
+        docH: document.documentElement.scrollHeight,
         preselected: [...document.querySelectorAll('input[name="service"]')].filter((x) => x.checked).length,
         focused: document.activeElement === document.body ? 'nothing' : document.activeElement.tagName,
         scrollW: document.documentElement.scrollWidth,
@@ -499,8 +512,14 @@ function namesAny(text, terms) {
     eq(g.head, 'Díganos qué está mal. Nosotros le decimos qué necesita.', 'con el mismo encabezado');
     eq(g.focused, 'nothing', 'nada toma el foco');
     eq(g.preselected, 0, 'ninguna categoría viene preseleccionada');
-    ok(g.lastBottom !== null && g.lastBottom <= 844, 'y todo cabe en una sola pantalla de 390x844',
-      `${g.lastBottom} de 844`);
+    /* RE-CUT por SITE-FIX-02 (6d) — igual que K (2): la línea bajo cada azulejo vuelve al
+       teléfono, la lista pasa de una pantalla, y la lectura pide lo que de verdad cuidaba. */
+    ok(g.headTop !== null && g.headTop >= 0 && g.headTop < 844 && g.firstBottom <= 844,
+      'el selector abre con el encabezado y un azulejo entero en 390x844',
+      `encabezado en ${g.headTop}, primer azulejo termina en ${g.firstBottom} de 844`);
+    ok(g.lastBottom !== null && g.lastBottom <= g.docH,
+      'y el resto se alcanza bajando, sin recorte',
+      `${g.lastBottom} de una página de ${g.docH}`);
     ok(g.scrollW <= 391, 'sin barrido lateral', String(g.scrollW));
     const words = (await readable(page)).toLowerCase();
     const bad = ['electricista', 'plomero', 'plomería', 'aire acondicionado', 'termostato', 'cámara', 'cerradura', 'detector de humo'];
@@ -620,8 +639,8 @@ function namesAny(text, terms) {
       }));
     });
     const set = await readSet();
-    const WANT = ['What gets paint?', 'All of it, or just a spot?', 'How high?', 'The surface?',
-      'The colour?', 'What’s wrong with it now?'];
+    const WANT = ['What needs paint?', 'All of it, or just a spot?', 'How high?', 'The surface?',
+      'The color?', 'What’s wrong with it now?'];
     eq(set.map((x) => x.q).join(' · '), WANT.join(' · '),
       'the six questions A6.2 names, in its order, and nothing else', JSON.stringify(set.map((x) => x.q)));
     eq(set.filter((x) => x.opts.indexOf('Not sure') === -1).map((x) => x.q).join(', '), '',
@@ -642,21 +661,21 @@ function namesAny(text, terms) {
       box.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     }, q, opt);
-    ok(await tapOpt('What gets paint?', 'A ceiling'), 'a ceiling can be tapped');
+    ok(await tapOpt('What needs paint?', 'A ceiling'), 'a ceiling can be tapped');
     await sleep(120);
     eq((await readSet()).filter((x) => /rooms/i.test(x.q)).length, 0,
       'a ceiling is not asked how many rooms');
-    ok(await tapOpt('What gets paint?', 'The walls'), 'the walls can be tapped too');
+    ok(await tapOpt('What needs paint?', 'The walls'), 'the walls can be tapped too');
     await sleep(150);
     const withWalls = await readSet();
     const rooms = withWalls.find((x) => /rooms/i.test(x.q));
     ok(rooms, 'the walls ARE asked how many rooms', JSON.stringify(withWalls.map((x) => x.q)));
     ok(rooms && rooms.opts.indexOf('Not sure') > -1, 'with "Not sure" on it as well');
     /* the review reads the set back in those words */
-    ok(await tapOpt('What gets paint?', 'The walls'), 'the walls are untapped again');
+    ok(await tapOpt('What needs paint?', 'The walls'), 'the walls are untapped again');
     await sleep(120);
     for (const [q, o] of [['All of it, or just a spot?', 'The whole thing'], ['How high?', 'Normal'],
-      ['The surface?', 'Textured'], ['The colour?', 'Match what’s there'],
+      ['The surface?', 'Textured'], ['The color?', 'Match what’s there'],
       ['What’s wrong with it now?', 'A repair spot that doesn’t match']]) {
       ok(await tapOpt(q, o), `"${o}" can be tapped under "${q}"`);
     }

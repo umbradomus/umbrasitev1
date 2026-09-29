@@ -396,11 +396,15 @@ if (!ONLY || ONLY === '6') {
       'e \u00b7 ' + url + ' \u2014 the heading is first, the promise banner sits under it', order);
     await page.close();
   }
-  for (const url of ['/services', '/es/servicios', '/request-received']) {
+  for (const url of ['/services', '/es/servicios', '/request-received', '/es/recibido', '/index', '/es/index']) {
     const page = await open(390, url, false);
+    /* A footer line says what Umbra is if it is the kit's own .foot-what line or if it reads
+       like the old second one. The Spanish never said "bienes raices" — it says
+       "desarrollo inmobiliario" — so the reading asks the question in both tongues. */
     const said = await page.evaluate(() => [...document.querySelectorAll('footer.foot p')]
-      .map((p) => p.textContent.replace(/\s+/g, ' ').trim())
-      .filter((t) => /real estate|bienes ra\u00edces/i.test(t)));
+      .filter((p) => p.classList.contains('foot-what')
+        || /real estate|inmobiliari|bienes ra\u00edces/i.test(p.textContent))
+      .map((p) => p.textContent.replace(/\s+/g, ' ').trim()));
     ok(said.length === 1, 'f \u00b7 ' + url + ' \u2014 the footer says what Umbra is once', said);
     await page.close();
   }

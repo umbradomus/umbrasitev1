@@ -566,12 +566,14 @@ textarea.field { min-height: 8rem; resize: vertical; }
   .req .ch-tiles { gap: 0.3rem; }
   .req .ch-tiles .ch-tap { min-height: 52px; padding: 0.45rem 0.7rem; gap: 0.55rem; }
   .req .ch-tiles .ch-label { font-size: 0.97rem; line-height: 1.18; }
-  /* The second line goes on a phone. Eight tiles and their second lines do not fit
-     on one 390-wide screen in English and come nowhere near it in Spanish, and the
-     ignite asks for one screen. The label names the symptom; the screen that follows
-     the tap asks the detail the second line was hinting at. From 481 px up there is
-     room and it is back. */
-  .req .ch-tiles .ch-sub { display: none; }
+  /* SITE-FIX-02 · CDO 8 · THE LINE UNDER EACH TILE IS BACK ON THE PHONE. The round before
+     this one took it away to hold the eight tiles on one 390x844 screen. The CDO's read of
+     that screen: "the tiles lost the little line under each one that the desktop has — put
+     it back, that's what tells people they picked the right one." It is back, at every
+     width, and it turns white on the tile they picked, as it always did at 1440. The list
+     now runs past the fold and is scrolled, which is what suite K (2) and its Spanish twin K (8)'s
+     one-screen readings were re-cut to say. */
+  .req .ch-tiles .ch-sub { font-size: 0.84rem; line-height: 1.25; }
 }
 
 /* "While we're there" — the second thing on the chooser's screen, under the tiles */

@@ -71,7 +71,7 @@
                es: 'Toda la pared o el techo desde la puerta, y luego de cerca con su mano al lado.' },
       questions: [
         { key: 'what_gets_paint', multi: true,
-          en: { q: 'What gets paint?', opts: ['A ceiling', 'The walls', 'The whole room, ceiling and walls', 'Trim and doors', 'Outside', NOT_SURE_EN] },
+          en: { q: 'What needs paint?', opts: ['A ceiling', 'The walls', 'The whole room, ceiling and walls', 'Trim and doors', 'Outside', NOT_SURE_EN] },
           es: { q: '¿Qué se va a pintar?', opts: ['Un techo', 'Las paredes', 'El cuarto entero, techo y paredes', 'Molduras y puertas', 'Afuera', NOT_SURE_ES] } },
         { key: 'all_or_spot', multi: false,
           en: { q: 'All of it, or just a spot?', opts: ['The whole thing', 'Just a patch or spot', NOT_SURE_EN] },
@@ -89,8 +89,10 @@
         { key: 'surface', multi: false,
           en: { q: 'The surface?', opts: ['Smooth', 'Textured', NOT_SURE_EN] },
           es: { q: '¿La superficie?', opts: ['Lisa', 'Con textura', NOT_SURE_ES] } },
+        /* SITE-FIX-02 · CDO 5 · the word a customer reads is "color" — we are in Brownsville.
+           The KEY stays `colour`, because the Worker reads the field `a_paint_colour`. */
         { key: 'colour', multi: false,
-          en: { q: 'The colour?', opts: ['Match what’s there', 'A new colour', 'Help me choose', NOT_SURE_EN] },
+          en: { q: 'The color?', opts: ['Match what’s there', 'A new color', 'Help me choose', NOT_SURE_EN] },
           es: { q: '¿El color?', opts: ['Igualar el que ya está', 'Un color nuevo', 'Ayúdenme a escoger', NOT_SURE_ES] } },
         { key: 'why', multi: false,
           en: { q: 'What’s wrong with it now?', opts: ['Peeling or stained', 'A repair spot that doesn’t match', 'Just tired', 'A new look', NOT_SURE_EN] },
