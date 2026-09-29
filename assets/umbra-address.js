@@ -109,8 +109,13 @@
     return String(raw || '').replace(/\s+/g, ' ').trim().replace(/\s*,\s*/g, ', ')
       .replace(/[A-Za-zÁÉÍÓÚÑÜáéíóúñü][\wÁÉÍÓÚÑÜáéíóúñü'']*/g, function (w) {
         if (/^(TX|USA|NE|NW|SE|SW|N|S|E|W)$/i.test(w)) return w.toUpperCase();
+        /* nobody writes "4Th Ave" — an ordinal keeps its small suffix */
+        if (/^\d+(st|nd|rd|th)$/i.test(w)) return w.toLowerCase();
         return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-      });
+      })
+      /* SITE-FIX-02 · CDO 3 · a geocoder writes "BROWNSVILLE, TX, 78520"; a person writes
+         "Brownsville, TX 78520". The comma before the zip goes. */
+      .replace(/,\s*(\d{5}(?:-\d{4})?)\s*$/, ' $1');
   }
 
   /* ------------------------------------------------------------------ JSONP, never fetch/XHR
@@ -227,6 +232,11 @@
     function clear() { box.className = 'uaddr'; box.textContent = ''; }
 
     function card(address, how, extra) {
+      /* SITE-FIX-02 · CDO 3 · THE ADDRESS AS PEOPLE WRITE IT. The card is the one place the
+         address is decided: what it shows is what "Yes, that's it" puts in the field, and so
+         what the review, the sent list and the Worker's record all read back. tidy() is the
+         only thing that decides how it is written, and it decides once, here. */
+      address = tidy(address);
       box.className = 'uaddr uaddr-card';
       box.setAttribute('data-uaddr-card', '1');
       box.textContent = '';
@@ -343,7 +353,7 @@
         }
         /* no match, a garbled body, or silence for 8 seconds: the typed card, flagged typed */
         state.lat = null; state.lng = null; state.place_id = '';
-        card(tidy(bits.full), 'typed', T.noMatch);
+        card(bits.full, 'typed', T.noMatch);   /* card() tidies — one place decides */
       });
     }
 
