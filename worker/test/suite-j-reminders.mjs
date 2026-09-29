@@ -12,6 +12,7 @@
    Each reading is returned with its actual values, for the round's close. */
 
 import { chicagoWall } from '../src/biztime.js';
+import crypto from 'node:crypto';
 
 export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSGATE_AUTH, suite, ok, eq, json, sleep }) {
   /* UMBRA_J="6" runs one reading of this suite and skips the rest. It exists for the mutant pass: a
@@ -121,9 +122,14 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     windows, lang: 'en',
   });
 
-  /* what no push and no Telegram message may ever carry */
+  /* what no push and no Telegram message may ever carry.
+     P moves (UMBRA-SIDE-01, lane P): ONE link is now carried, and read on its own — that job's page on his phone,
+     /j/<U-id>.<key> — and the slots carry his drafted REPLY ("Hi [name], it's Drew with Umbra Domus. I got…"), which
+     is theirs to carry; what may still never ride in a push is the HOLDING TEXT's own words. */
+  const jobLink = (id) => `${W}/j/${id}.${crypto.createHmac('sha256', ADMIN_KEY).update('umbra-owner|' + id).digest('base64url')}`;
+  const OWN_LINK = new RegExp(W.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/j/U-\\d{4,6}\\.[A-Za-z0-9_-]{43}', 'g');
   const leaks = (c) => {
-    const t = textOf(c) + '\n' + (c.p ? [...c.p.entries()].filter(([k]) => !['token', 'user', 'callback'].includes(k)).map(([, v]) => v).join('\n') : JSON.stringify(c.j));
+    const t = (textOf(c) + '\n' + (c.p ? [...c.p.entries()].filter(([k]) => !['token', 'user', 'callback'].includes(k)).map(([, v]) => v).join('\n') : JSON.stringify(c.j))).replace(OWN_LINK, '<his job page>');
     const found = [];
     if (/https?:\/\/|www\./i.test(t)) found.push('link');
     if (t.includes(ADMIN_KEY)) found.push('admin key');
@@ -131,7 +137,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     for (const half of FAKE_SMSGATE_AUTH.split(':')) if (t.includes(half)) found.push('smsgate key');
     if (/\+1\d{10}|555-?0\d{3}|\(956\)/.test(t)) found.push('phone');
     if (/Invented Lane/.test(t)) found.push('address');
-    if (/it's Drew with Umbra Domus|soy Drew de Umbra Domus/.test(t)) found.push("the text's words");
+    if (/running behind|voy atrasado|We got your request|Recibimos su solicitud/.test(t)) found.push("the text's words");
     return found;
   };
 
@@ -284,7 +290,9 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     ok(b && Array.isArray(b.phoneNumbers) && b.phoneNumbers.length === 1 && /^\+1[2-9]\d{2}[2-9]\d{6}$/.test(b.phoneNumbers[0]),
       `${label} phoneNumbers is one E.164 US number`, JSON.stringify(b && b.phoneNumbers));
     eq(b && b.withDeliveryReport, true, `${label} withDeliveryReport true`);
-    eq(b && b.ttl, 3600, `${label} ttl = min(3600, seconds to 9 PM) = 3600 at 11:00 AM`);
+    /* P moves: every customer text carries validUntil (no later than 9 PM that day) — the same moment the ttl named */
+    eq(b && b.validUntil, CT(...DAY_C, 12, 0), `${label} P moves · validUntil = 11:00 AM + 3600 s = 12:00 PM (min(3600, seconds to 9 PM))`);
+    eq(b && b.ttl, undefined, `${label} P moves · validUntil, not ttl`);
     const words = (b && b.textMessage && b.textMessage.text) || '';
     ok(typeof words === 'string' && !/[{}]/.test(words), `${label} no brace is left anywhere in the words`, String(words));
     ok(!/[‘’“”–—áíóúÁÍÓÚ]/.test(words),
@@ -302,7 +310,7 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     eq(JSON.stringify([...new Set(mine(a.id).map(leaks).flat())]), '[]', `${label} no push carries the number, the key or the text's words`);
     return {
       id: a.id, sent_at: at(rec.alerts.holding.at),
-      post: b ? { id: b.id, phoneNumbers: b.phoneNumbers, withDeliveryReport: b.withDeliveryReport, ttl: b.ttl } : null,
+      post: b ? { id: b.id, phoneNumbers: b.phoneNumbers, withDeliveryReport: b.withDeliveryReport, validUntil: b.validUntil } : null,
       auth: { scheme: p.authScheme, username: p.authUser, password_in_log: false },
       words, chars: words.length, parts: rec.alerts.holding && rec.alerts.holding.parts,
       holding: h, second_clock_started_at: rec.alerts.second_clock_started_at,
@@ -314,8 +322,9 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
   let holdingJob = null;
   if (want('4') || want('7') || want('11')) {
     suite('J · (4) the holding text at two hours, in English');
+    /* P moves: the holding text's words are the brief's (UMBRA-SIDE-01); a request that did not say where reads "your request" */
     four.en = await holdingReading('en', '(4)', 'Holding Hollis',
-      "Hi Holding, it's Drew with Umbra Domus. We got your request and we're working on your quote. You'll have it by 1:00 PM, or I'll call and tell you why.");
+      "Hi Holding, it's Drew with Umbra Domus. Sorry, I'm running behind today. I'll text you about your request by 1:00 PM. Reply STOP to stop texts.");
     holdingJob = four.en.id;
   }
 
@@ -355,8 +364,9 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
 
   if (want('4')) {
     suite('J · (4b) the same in Spanish');
+    /* P moves: the Spanish twin of the brief's words */
     four.es = await holdingReading('es', '(4b)', 'Esperanza María',
-      'Hola Esperanza, soy Drew de Umbra Domus. Recibimos su solicitud y estamos preparando su cotizacion. La tendra antes de la 1:00 p. m. Si no le llega para entonces, le llamo y le explico por qué.');
+      'Hola Esperanza, soy Drew de Umbra Domus. Disculpe, hoy voy atrasado. Le escribo sobre su solicitud antes de la 1:00 p. m. Si no quiere mensajes, responda STOP.');
     await noText(four.es.id);
   }
   R['4'] = four;
@@ -372,9 +382,11 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     const m = mark();
     await walk(CT(...DAY_C, 9, 5), CT(...DAY_C, 11, 0));
     eq(gatePosts(m.gate).length, 0, '(6) no POST to the gateway at minute 120');
-    const call = mine(a.id).filter((c) => /CALL THEM NOW/.test(titleOf(c)));
-    eq(call.length, 1, '(6) ONE "CALL THEM NOW" push');
-    eq(titleOf(one(call)), `CALL THEM NOW · ${a.id} — no texts tick`, '(6) naming the reason');
+    /* P moves: a guard that stops the holding text rings "LATE · U-NNNN · call them now"; the reason is in the message */
+    const call = mine(a.id).filter((c) => /^LATE · /.test(titleOf(c)));
+    eq(call.length, 1, '(6) P moves · ONE "LATE · call them now" push');
+    eq(titleOf(one(call)), `LATE · ${a.id} · call them now`, '(6) P moves · in the brief\'s words');
+    ok((one(call).p.get('message') || '').startsWith('No auto-text: they did not tick the texts box.'), '(6) P moves · naming the reason', one(call).p.get('message'));
     eq(Number(one(call).p.get('priority')), 2, '(6) at priority 2');
     const before = mine(a.id).length;
     await walk(CT(...DAY_C, 11, 5), CT(...DAY_C, 13, 30), 15);
@@ -520,13 +532,13 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     const posts = gatePosts(m2.gate);
     eq(posts.length, 2, '(5) one POST each on the first run at or after 7:00 AM');
     const texts = posts.map((p) => (bodyOf(p).textMessage || {}).text);
-    ok(texts.every((t) => /by 9:00 AM,/.test(t)), '(5) and both promise 9:00 AM', JSON.stringify(texts));
-    ok(posts.every((p) => bodyOf(p).ttl === 3600), '(5) with ttl 3600 — min(3600, seconds to 9 PM) at 7 AM');
+    ok(texts.every((t) => /by 9:00 AM\./.test(t)), '(5) and both promise 9:00 AM (P moves: the new words)', JSON.stringify(texts));
+    ok(posts.every((p) => bodyOf(p).validUntil === CT(...D2, 8, 0)), '(5) P moves · with validUntil 8:00 AM — min(3600, seconds to 9 PM) at 7 AM');
     R['5'] = {
       ids: [a.id, b.id], landed: [at(CT(...D1, 18, 52)), at(CT(...D1, 18, 57))],
       evening_pushes: evening, quiet_runs: ['9:00 PM', '11:00 PM', '2:00 AM', '6:55 AM'],
       quiet_pushes: 0, quiet_gateway_calls: 0, priority2_still_ringing_at_2100: 0,
-      morning_posts: posts.map((p) => ({ id: bodyOf(p).id, ttl: bodyOf(p).ttl, text: (bodyOf(p).textMessage || {}).text })),
+      morning_posts: posts.map((p) => ({ id: bodyOf(p).id, validUntil: bodyOf(p).validUntil, text: (bodyOf(p).textMessage || {}).text })),
     };
     for (const id of [a.id, b.id]) await noText(id);
 
@@ -538,10 +550,10 @@ export async function suiteReminders({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSG
     await walk(CT(...CST, 18, 35), CT(...CST, 20, 30));
     const p5 = gatePosts(m3.gate);
     eq(p5.length, 1, '(5b) in Central Standard Time the text goes at 8:30 PM');
-    eq(bodyOf(p5[0]).ttl, 1800, '(5b) with ttl 1800 — exactly the seconds left to 9 PM');
+    eq(bodyOf(p5[0]).validUntil, CT(...CST, 21, 0), '(5b) P moves · with validUntil 9:00 PM — exactly the seconds left to 9 PM');
     const rec = await record(c.id);
     eq(hhmm(rec.alerts.holding.at), '8:30 PM', '(5b) and the holding block is stamped 8:30 PM Central');
-    R['5b'] = { id: c.id, landed: at(CT(...CST, 18, 30)), sent_at: at(rec.alerts.holding.at), ttl: bodyOf(p5[0]).ttl, text: (bodyOf(p5[0]).textMessage || {}).text };
+    R['5b'] = { id: c.id, landed: at(CT(...CST, 18, 30)), sent_at: at(rec.alerts.holding.at), validUntil: bodyOf(p5[0]).validUntil, text: (bodyOf(p5[0]).textMessage || {}).text };
     await noText(c.id);
 
     /* (5c) AMENDMENT 1 D's last clause: inside the last two minutes a priority-2 slot goes as

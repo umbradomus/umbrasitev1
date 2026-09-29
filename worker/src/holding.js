@@ -94,11 +94,16 @@ export function textParts(s) {
 
 /* ------------------------------------------------------------ the words */
 
-/* THE HOLDING TEXT, folded to GSM-7, exactly as REPLY-CLOCK's "Recommended" line and its Spanish twin
-   read after AMENDMENT 1 B's fold. `{name}` is "" or " " + the first name; `{time}` carries its own
-   Spanish article ("las 9:00 a. m."), so the Spanish line reads "antes de {time}", not "antes de las". */
-export const HOLDING_EN = "Hi{name}, it's Drew with Umbra Domus. We got your request and we're working on your quote. You'll have it by {time}, or I'll call and tell you why.";
-export const HOLDING_ES = 'Hola{name}, soy Drew de Umbra Domus. Recibimos su solicitud y estamos preparando su cotizacion. La tendra antes de {time}. Si no le llega para entonces, le llamo y le explico por qu\u00E9.';
+/* THE HOLDING TEXT, folded to GSM-7. UMBRA-SIDE-01 (lane P, 2026-09-28) gives it the research's words, which the round's
+   brief picked: it says sorry, names the new time and — as the first text of the thread when it goes — says how to stop.
+   `{name}` is "" or " " + the first name; `{area}` is "your ceiling" / "su techo" (draft.js, from what they tapped),
+   else "your request" / "su solicitud"; `{time}` carries its own Spanish article ("las 9:00 a. m."), so the Spanish
+   line reads "antes de {time}", not "antes de las". The words before this round (REPLY-CLOCK's "Recommended" line) are
+   kept below as HOLDING_EN_R1 / HOLDING_ES_R1 for the record; nothing sends them. */
+export const HOLDING_EN = "Hi{name}, it's Drew with Umbra Domus. Sorry, I'm running behind today. I'll text you about {area} by {time}. Reply STOP to stop texts.";
+export const HOLDING_ES = 'Hola{name}, soy Drew de Umbra Domus. Disculpe, hoy voy atrasado. Le escribo sobre {area} antes de {time}. Si no quiere mensajes, responda STOP.';
+export const HOLDING_EN_R1 = "Hi{name}, it's Drew with Umbra Domus. We got your request and we're working on your quote. You'll have it by {time}, or I'll call and tell you why.";
+export const HOLDING_ES_R1 = 'Hola{name}, soy Drew de Umbra Domus. Recibimos su solicitud y estamos preparando su cotizacion. La tendra antes de {time}. Si no le llega para entonces, le llamo y le explico por qu\u00E9.';
 
 const MAX_FIRST_NAME = 24;
 
@@ -138,14 +143,17 @@ export function langOf(rec) {
 /**
  * The words that go to this customer at `nowMs`, with the second clock's end filled in.
  * Answers { text, lang, parts } or { error } — and never a text still holding a brace.
+ * `area` (lane P): the caller's "your ceiling" / "su techo" for this request (draft.js jobWords), or null.
  */
-export function holdingText(rec, nowMs) {
+export function holdingText(rec, nowMs, area = null) {
   const lang = langOf(rec);
   const endMs = bizAdvance(nowMs, 120);
   const name = firstNameOf(rec);
+  const place = gsmFold(area || (lang === 'es' ? 'su solicitud' : 'your request'));
   const text = (lang === 'es' ? HOLDING_ES : HOLDING_EN)
     /* SEAT FIX (1Supe7, 2026-09-25, review N5): a replacer FUNCTION, so a name holding "$&" or "$'" is text, not a pattern */
     .replace('{name}', () => (name ? ' ' + name : ''))
+    .replace('{area}', () => place)
     .replace('{time}', () => promiseTime(endMs, nowMs, lang))
     /* "las 9:00 a. m." already ends the sentence; the template's own full stop would double it */
     .replace(/\.\.(?!\.)/g, '.');
@@ -216,16 +224,19 @@ async function call(env, method, path, bodyObj) {
 }
 
 /**
- * ONE POST. `id` is minted once by the caller and never minted again for this request.
+ * ONE POST of one text to the work phone's outbox. `id` is minted once by the caller and never minted again.
+ * lane P (UMBRA-SIDE-01): every text carries `validUntil` — an ISO moment no later than 9:00 PM Central that day
+ * (outbox.js validUntilFor) — so a phone that is off lets it expire instead of sending it late. The same one door
+ * serves the holding text, his one-tap reply and the STOP confirmation.
  * Answers { state, gateway_id?, status } — state is accepted | refused | unknown.
  */
-export async function postHolding(env, { id, e164, text, ttl }) {
+export async function postText(env, { id, e164, text, validUntil }) {
   const r = await call(env, 'POST', SEND_PATH, {
     id,
     textMessage: { text },
     phoneNumbers: [e164],
     withDeliveryReport: true,
-    ttl,
+    validUntil,
   });
   if (r.status >= 200 && r.status < 300) {
     const gid = r.body && typeof r.body.id === 'string' ? r.body.id : id;
@@ -233,6 +244,11 @@ export async function postHolding(env, { id, e164, text, ttl }) {
   }
   if (r.status >= 400 && r.status < 500) return { state: 'refused', status: r.status };
   return { state: 'unknown', status: r.status, ...(r.timeout ? { timeout: true } : {}) };
+}
+
+/** The holding text's one POST (its caller hands in validUntil = the ttl's own end, never after 9 PM). */
+export async function postHolding(env, { id, e164, text, validUntil }) {
+  return postText(env, { id, e164, text, validUntil });
 }
 
 /** ONE GET of a message's state. Answers { state } as SMSGate words it, or null when it could not be read. */

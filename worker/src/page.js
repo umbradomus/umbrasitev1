@@ -36,6 +36,8 @@
 import { viewByCode, bookByCode, markNone, codeHash, windowStartMs, answerChangeByCode, readYear, noteYearByCode, stampAfterYear } from './quotes.js';
 import { chicagoWall } from './biztime.js';
 import { NOTICE_53255 } from './notices.js';
+import { getRecord } from './store.js';
+import { leadApplies } from './draft.js';
 import { WORDS, LIGHTING_ES, CHANGE_WORDS, LIGHT_SHORT } from './page-words.js';
 
 /* The site's stylesheet, at the version every page of the site loads today (status.html: site.css?v=3). */
@@ -437,6 +439,16 @@ const notValid = (status = 404) => bothPage(status, 'not_valid', 'h_not_valid', 
 
 /* ------------------------------------------------------------------ the states */
 
+/* UMBRA-SIDE-01 (lane P, 2026-09-28) · THE LEAD LINE. A house built before 1978 (or "not sure"), on a paint or hole job:
+   one line under "Good to know" with the EPA's own pamphlet, which the renovation rule has him hand over before the work.
+   Only then; every other quote page is byte for byte as before. */
+export const RENOVATE_RIGHT = 'https://www.epa.gov/lead/renovate-right-important-lead-hazard-information-families-child-care-providers-and-schools';
+function leadHtml(lang) {
+  return lang === 'es'
+    ? `<p class="qnote" id="notice-lead">¿Casa de antes de 1978? Lea primero el folleto de la EPA <a href="${RENOVATE_RIGHT}" rel="noreferrer">Renovate Right</a>.</p>\n`
+    : `<p class="qnote" id="notice-lead">Built before 1978? Read the EPA's <a href="${RENOVATE_RIGHT}" rel="noreferrer">Renovate Right</a> first.</p>\n`;
+}
+
 function noticesHtml(env, lang) {
   const w = WORDS[lang] || WORDS.en;
   const light = String(env.NOTICE_LIGHTING ?? 'true') === 'true';
@@ -467,7 +479,7 @@ function noticesHtml(env, lang) {
  * the choice, pinned to the bottom of the screen once a choice is picked (CSS :has, no JavaScript) · None of these
  * times work · then, below the buttons, his promise, his insurance and the notices.
  */
-function openPage(env, v, code, nowIso, pickError) {
+function openPage(env, v, code, nowIso, pickError, lead = false) {
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
   const b = v.body || {};
@@ -559,6 +571,7 @@ function openPage(env, v, code, nowIso, pickError) {
   if (trust.length) below.push(`<ul class="qtrust">${trust.join('')}</ul>`);
   const notices = noticesHtml(env, lang);
   if (notices) below.push(notices);
+  if (lead) below.push(leadHtml(lang));
   if (below.length) parts.push(`<div class="qbelow">\n<h2>${esc(w.h_notices_below)}</h2>\n${below.join('\n')}</div>`);
 
   const state = taken ? 'taken' : holdEnded ? 'hold_ended' : 'open';
@@ -715,7 +728,7 @@ function changePage(v, code, signError) {
   return page(200, lang, 'change_open' + (signError ? ' sign' : ''), parts.join('\n'), { changeTitle: w.title });
 }
 
-function statePage(env, v, code, nowIso, pickError) {
+function statePage(env, v, code, nowIso, pickError, lead = false) {
   if (!v || v.state === 'not_found') return notValid();
   if (v.kind === 'change') return changePage(v, code, pickError);
   const lang = v.lang === 'es' ? 'es' : 'en';
@@ -724,7 +737,7 @@ function statePage(env, v, code, nowIso, pickError) {
     case 'open':
     case 'hold_ended':
     case 'taken':
-      return openPage(env, v, code, nowIso, pickError);
+      return openPage(env, v, code, nowIso, pickError, lead);
     case 'booked': return bookedPage(v, code);
     case 'too_close': return wordsPage(200, lang, 'too_close', w.h_too_close, w.too_close);
     case 'updating': return wordsPage(200, lang, 'updating', w.h_updating, w.updating);
@@ -824,7 +837,12 @@ export async function handleQuotePage(request, env, url, rest, method, nowIso) {
         },
       }));
     }
-    return head(method, statePage(env, v, code, nowIso, url.searchParams.get(v && v.kind === 'change' ? 'sign' : 'pick') === '1'));
+    /* lane P: the lead line reads the job's own record (read only — the GET still writes nothing but the visit count) */
+    let lead = false;
+    if (v && v.kind !== 'change' && ['open', 'hold_ended', 'taken'].includes(v.state) && v.job_id) {
+      try { const rec = await getRecord(env, v.job_id); lead = Boolean(rec && leadApplies(rec)); } catch (err) { lead = false; }
+    }
+    return head(method, statePage(env, v, code, nowIso, url.searchParams.get(v && v.kind === 'change' ? 'sign' : 'pick') === '1', lead));
   }
 
   return notAllowed(isCal ? 'GET, HEAD' : 'GET, HEAD, POST');

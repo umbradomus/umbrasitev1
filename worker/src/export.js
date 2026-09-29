@@ -223,6 +223,10 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`holding detail\` | ${mdCell(holdingCell(rec))} ← never the number, never the words |`);
   L.push(`| \`second_clock_started_at\` | ${mdCell(a.second_clock_started_at || null)} ← the second two hours |`);
   L.push(`| \`call_push_at\` | ${mdCell(a.call_push_at || null)} ← "CALL THEM NOW" |`);
+  /* UMBRA-SIDE-01 (lane P): his reply from the job page on his phone, his first acknowledgement, and a STOP */
+  L.push(`| \`replied_at\` | ${mdCell(rec.replied_at || null)}${rec.reply ? ' — ' + mdCell(rec.reply.how === 'call' ? 'he called' : 'texted from the work phone' + (rec.reply.promised_by ? ', price promised by ' + clock(Date.parse(rec.reply.promised_by)) : '')) : ''} ← his reply from the job page |`);
+  L.push(`| \`seen_at\` | ${mdCell(a.seen_at || null)} ← he acknowledged the arrival push |`);
+  if (rec.sms_opt_out) L.push(`| \`texts\` | ${mdCell('OFF since ' + rec.sms_opt_out.at + ' — ' + (rec.sms_opt_out.by === 'tap' ? 'he tapped No texts' : 'they texted ' + (rec.sms_opt_out.word || 'STOP')))} ← no text may go to this number |`);
   if (rec.nudged_at) L.push(`| \`nudged_at\` | ${mdCell(rec.nudged_at)} ← the retired Stage 1 push |`);
   L.push(`| **2-hour window met?** | ${mdCell(metWindow)} — *business minutes (R32). Ruled 09-17: "we know we will miss it." Recorded, not chased.* |`);
   L.push('');

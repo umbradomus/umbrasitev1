@@ -7,7 +7,9 @@
    the admin key.
 
    THE RULES EVERY MESSAGE KEEPS:
-     · NO LINK. The request waits on the computer (R25); nothing here opens a page.
+     · ONE LINK, AND ONLY HIS OWN (UMBRA-SIDE-01, lane P, 2026-09-28 — his words: "this all needs to be easier on the
+       umbra side too"). A push may carry `url` + `url_title`: the job page on his phone (/j/<U-id>.<key>, ownerlink.js)
+       or his board. Never a customer's link, never the admin key. Before this round no push carried a link (R25).
      · Never the admin key, a customer's phone, address or email. The builders in alerts.js are the only
        place a message is written, and they are given none of those.
      · Never throws. Each channel answers { ok, channel, status, receipt?, retry }.
@@ -16,6 +18,9 @@
 
 const PUSHOVER_MAX_MESSAGE = 1024;
 const PUSHOVER_MAX_TITLE = 250;
+const PUSHOVER_MAX_URL = 512;
+const PUSHOVER_MAX_URL_TITLE = 100;
+const PUSHOVER_MAX_EXPIRE = 10800;
 const TELEGRAM_MAX_TEXT = 4096;
 
 function cut(s, n) {
@@ -37,9 +42,11 @@ async function bodyOf(res) {
 }
 
 /**
- * Pushover. `msg` = { title, message, priority (-2..2), tags?: string[], expire?, retry? }.
+ * Pushover. `msg` = { title, message, priority (-2..2), tags?: string[], expire?, retry?, expireCap?, url?, url_title? }.
  * Priority 2 carries retry 120, expire 1800, the tags, and the callback that acknowledges it.
  * REMINDERS-01 AMENDMENT 1 D: the clock hands in a shorter `expire` so no repeat ever rings past 9 PM.
+ * lane P: a ring that must last longer (the arrival ring to the 15-minutes-left mark, "LATE · call them now" to 9 PM)
+ * names `expireCap` (at most Pushover's own 10800 s); every other push keeps the 1800 cap. `url` opens his job page.
  */
 export async function sendPushover(env, msg) {
   const channel = 'pushover';
@@ -51,10 +58,15 @@ export async function sendPushover(env, msg) {
   form.set('message', cut(msg.message, PUSHOVER_MAX_MESSAGE));
   const priority = Number(msg.priority || 0);
   form.set('priority', String(priority));
+  if (msg.url) {
+    form.set('url', cut(msg.url, PUSHOVER_MAX_URL));
+    form.set('url_title', cut(msg.url_title || 'Open the job', PUSHOVER_MAX_URL_TITLE));
+  }
   if (priority === 2) {
     const retry = Math.max(30, Number(msg.retry) || 120);
     /* Pushover's own floor is 30 s retry and 30 s expire; the caller may only shorten the window. */
-    const expire = Math.max(30, Math.min(1800, Number(msg.expire) || 1800));
+    const cap = Math.min(PUSHOVER_MAX_EXPIRE, Math.max(1800, Number(msg.expireCap) || 1800));
+    const expire = Math.max(30, Math.min(cap, Number(msg.expire) || 1800));
     form.set('retry', String(retry));
     form.set('expire', String(expire));
     if (msg.tags && msg.tags.length) form.set('tags', msg.tags.join(','));
@@ -82,7 +94,7 @@ export async function sendPushover(env, msg) {
 export async function sendTelegram(env, msg) {
   const channel = 'telegram';
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return { ok: false, channel, status: 0, skipped: true, retry: false, error: 'TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set' };
-  const text = cut(msg.title + '\n' + msg.message, TELEGRAM_MAX_TEXT);
+  const text = cut(msg.title + '\n' + msg.message + (msg.url ? '\n' + (msg.url_title || 'Open the job') + ': ' + msg.url : ''), TELEGRAM_MAX_TEXT);
   try {
     const res = await fetch(base(env, env.TELEGRAM_API_BASE, 'https://api.telegram.org') + '/bot' + env.TELEGRAM_BOT_TOKEN + '/sendMessage', {
       method: 'POST',

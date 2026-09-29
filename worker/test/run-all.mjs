@@ -27,6 +27,7 @@ import { suiteReminders } from './suite-j-reminders.mjs';
 import { suiteSeat } from './suite-s-seat.mjs';
 /* SITE-FIX-01: the chooser "Fix something" lands on. Site-only; it reads no Worker. */
 import { suiteChooser } from './suite-k-chooser.mjs';
+import { suitePhone } from './suite-p-phone.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -89,6 +90,8 @@ const FAKE = {
 /* REMINDERS-01: the SMSGate pair is one value, "user:pass", and it is FAKE. It is kept out of FAKE above
    because the leak scan treats every FAKE value as a single token, and this one is deliberately a pair. */
 const FAKE_SMSGATE_AUTH = 'FAKEsmsuser' + crypto.randomBytes(5).toString('hex') + ':FAKEsmspass' + crypto.randomBytes(8).toString('hex');
+/* UMBRA-SIDE-01 (lane P): the key SMSGate signs its webhooks with (SMSGATE_WEBHOOK_KEY) — FAKE, fresh each run */
+const FAKE_WEBHOOK_KEY = 'FAKEwebhook' + crypto.randomBytes(12).toString('hex');
 /** The Chrome that puppeteer-core drives. CHROME_PATH wins; otherwise the first
     of the usual install locations that exists on this machine. No Chrome is a
     loud stop, never a silent skip. */
@@ -356,6 +359,8 @@ async function main() {
        ALLOW_TEST_HOOKS is on. Drew's real SMSGATE_AUTH is never read, written or printed by this suite. */
     `SMSGATE_AUTH=${FAKE_SMSGATE_AUTH}`,
     `SMSGATE_API_BASE=http://127.0.0.1:${PORT.smsgate}`,
+    /* UMBRA-SIDE-01 (lane P): SMSGate's webhook signing key, FAKE */
+    `SMSGATE_WEBHOOK_KEY=${FAKE_WEBHOOK_KEY}`,
     /* ACCEPT-PAGE-01: the quote link points at the local site copy, never umbradomus.com */
     `QUOTE_LINK_BASE=http://127.0.0.1:${PORT.siteWorker}`,
     '',
@@ -1025,6 +1030,19 @@ async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, 
     } catch (err) {
       suite('K · the suite ran to its end');
       ok(false, 'suite K stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
+    }
+  }
+
+  /* ====================================================================== P */
+  /* UMBRA-SIDE-01 (lane P, 2026-09-28): the job page on his phone, the push that opens it, the one-tap reply, the
+     ladder's draft, STOP, the holding text's guards, the lead line. Readings go to .tmp/phone-readings.json. */
+  if (want('P')) {
+    try {
+      const readings = await suitePhone({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSGATE_AUTH, FAKE_WEBHOOK_KEY, suite, ok, eq, json, sleep });
+      fs.writeFileSync(path.join(TMP, 'phone-readings.json'), JSON.stringify(readings, null, 2));
+    } catch (err) {
+      suite('P · the suite ran to its end');
+      ok(false, 'suite P stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
     }
   }
 

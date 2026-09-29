@@ -36,6 +36,10 @@
      GET  /q/:code                     the customer's quote page — opening it changes nothing but the visit count (page.js)
      POST /q/:code  ·  /q/:code/none   Accept & confirm · None of these times work — same-origin forms, then 303 back
                                        road CO: a change order's page posts a=ok (with the name typed) or a=no to /q/:code
+     GET  /j/<U-id>.<key>              UMBRA-SIDE-01 (lane P): the job on HIS phone — the page every push opens (owner.js);
+                                       ?c=reply shows the one confirm; POST …/reply · …/called · …/no-texts · …/no-auto are
+                                       his taps; GET …/p/<n> their photos. GET /j/board/<key>: every open job, the same way
+     POST /hooks/smsgate               lane P: SMSGate's webhook (their texts back, STOP included), signed (inbound.js)
      GET  /health                      liveness
    The book behind the quote link is a Durable Object (quotebook.js, binding BOOK); quotes.js is the rest.
    The site reaches /q/* through its own rewrite (vercel.json), so the page lives on umbradomus.com.
@@ -53,7 +57,7 @@ import {
 } from './store.js';
 import { forwardToFormSubmit } from './forward.js';
 import {
-  initialAlerts, sendIntakeAlert, runAlerts, acknowledge, acknowledgeReceipt, noTextByHand,
+  initialAlerts, sendIntakeAlert, runAlerts, acknowledge, acknowledgeReceipt, noTextByHand, sendQuietArrival,
 } from './alerts.js';
 import { renderJobMarkdown } from './export.js';
 import { bizMinutes } from './biztime.js';
@@ -65,6 +69,8 @@ import {
 } from './quotes.js';
 import { handleQuotePage } from './page.js';
 import { customerKey, statusLink, putReceipt, receiptPage } from './customer.js';
+import { handleOwner } from './owner.js';
+import { handleSmsgateHook } from './inbound.js';
 
 /* ACCEPT-PAGE-01: the book's class rides the main module beside the default export (wrangler.toml
    binds it as BOOK; its migration is new_sqlite_classes, the only kind the Workers Free plan takes). */
@@ -436,6 +442,11 @@ async function handleIntake(request, env, ctx) {
       const p = sendIntakeAlert(env, id, rec.alerts.claim, received_at).catch((err) => console.error('intake alert failed for', id, err));
       if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
     }
+    /* lane P: 9 PM–7 AM, one QUIET push now (no sound), with the link; the ring starts at 7 AM */
+    if (kept && rec.alerts.stage === 'held') {
+      const p = sendQuietArrival(env, id, received_at).catch((err) => console.error('quiet arrival push failed for', id, err));
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
+    }
   } else {
     console.error('no record created (id allocation failed):', allocError, 'forward ok:', forward.ok);
   }
@@ -560,7 +571,24 @@ function adminRow(rec, nowIso) {
       second_clock_started_at: rec.alerts.second_clock_started_at || null,
       call_push_at: rec.alerts.call_push_at || null,
       no_text_at: rec.alerts.no_text_at || null,
+      /* lane P: the first acknowledgement of his, and his "Don't auto-text" tap */
+      seen_at: rec.alerts.seen_at || null,
+      no_auto_text_at: rec.alerts.no_auto_text_at || null,
     } : null,
+    /* lane P · UMBRA-SIDE-01 — what the Flux learns from the phone (01-RAW-SUBMISSION.json carries this row):
+       replied_at  his reply from the job page (a text from the work phone, or "I called"): the reply clock stops
+       reply       { at, how: text|call, promised_by, state, gateway_id } — never the number; the words stay on the page
+       seen_at     the first time he acknowledged the arrival push
+       sms_opt_out { at, by: text|tap, word } — they texted STOP (or he tapped "No texts"): no text may go to them
+       inbound     their texts back, newest last: [{ at, text }] */
+    replied_at: rec.replied_at || null,
+    reply: rec.reply ? {
+      at: rec.reply.at, how: rec.reply.how, promised_by: rec.reply.promised_by || null,
+      state: rec.reply.state || null, gateway_id: rec.reply.gateway_id || null,
+    } : null,
+    seen_at: rec.alerts && rec.alerts.seen_at ? rec.alerts.seen_at : null,
+    sms_opt_out: rec.sms_opt_out ? { at: rec.sms_opt_out.at, by: rec.sms_opt_out.by, word: rec.sms_opt_out.word || null } : null,
+    inbound: Array.isArray(rec.inbound) ? rec.inbound.slice(-5).map((x) => ({ at: x.at, text: x.text, ...(x.stop ? { stop: true } : {}) })) : [],
     forward_failed: Boolean(rec.forward_failed),
     /* EMAIL-01: which leg was tried, which channel owned the email, and whether any email went at all */
     forwarded_by: rec.forwarded_by || null,
@@ -863,6 +891,15 @@ export default {
     }
     if ((m = /^\/hooks\/pushover\/([^/]{1,200})$/.exec(path)) && method === 'POST') {
       return handlePushoverHook(request, env, decodeURIComponent(m[1]));
+    }
+    /* lane P · UMBRA-SIDE-01: SMSGate's webhook — their texts back, STOP included (signed; inbound.js) */
+    if (path === '/hooks/smsgate') {
+      if (method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
+      return handleSmsgateHook(request, env, nowFor(request, env));
+    }
+    /* lane P · the job on his phone, and the board (owner.js). Its own headers on every answer. */
+    if (path.startsWith('/j/')) {
+      return handleOwner(request, env, ctx, path.slice(3), method, nowFor(request, env));
     }
 
     /* ACCEPT-PAGE-02: the customer's page. Everything under /q answers from page.js with its own headers. */

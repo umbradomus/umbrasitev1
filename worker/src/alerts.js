@@ -14,9 +14,9 @@
                                 clock on the same table
      the second clock's 120     ONE "CALL THEM NOW" push, and the ladder ends for good
 
-   Each push says the minutes left. The cron stays every five minutes: a slot is due when its minute is at
-   or past it and it has not fired; never two in one run — the latest due slot fires and the earlier ones
-   are marked skipped in the log.
+   Each push says the minutes left. The timer runs every minute (UMBRA-SIDE-01; it was every five): a slot is due
+   when its minute is at or past it and it has not fired; never two in one run — the latest due slot fires and the
+   earlier ones are marked skipped in the log.
 
    WHAT STOPS IT (AMENDMENT 1 C): the quote going out — the quote API's /sent, the Quoted tap, or a SENT
    version in the BOOK read fresh · the request leaving "received" (Scheduled, Done, withdrawn) · the
@@ -41,8 +41,26 @@
 
    Every message is built in this file and is given only the job id, the service, the customer's own
    first 120 characters (with any link, phone number or email address in them removed), and clock
-   times. Never a link (R25), never the admin key, never a phone, an address, an email, the texting key
-   or the holding text's own words. */
+   times. Never the admin key, never a phone, an address, an email, the texting key or the holding
+   text's own words.
+
+   ═══ UMBRA-SIDE-01 (lane P, 2026-09-28) · THE PUSH OPENS THE JOB. His words: "just got the alert on the umbra
+   phone... not sure exactly what to do from this process with our system.. this all needs to be easier on the
+   umbra side too".
+     · EVERY push about one job carries ONE link: that job's page on his phone (ownerlink.js), "Open the job". It is
+       the only link a push ever carries (R25 kept the customer's links, and every other link, out; it still does).
+       Still no customer name in any push (CONTRACTS C4): the page carries the name.
+     · THE ARRIVAL PUSH RINGS until he acknowledges it or opens the job (priority 2, every 2 minutes), to the
+       15-minutes-left mark or 9 PM, whichever comes first. The acknowledgement records seen-at; opening the job
+       cancels the ring by tag; neither moves the reply-by time. From 9 PM to 7 AM the arrival push is quiet
+       (priority -1) and the ring starts at 7 AM (the 7 AM summary rings, and opens the job — or the board).
+     · HIS TABLE is unchanged — every slot at its minute, at its priority — and each slot now carries the drafted
+       reply (draft.js, with "[name]" where the name goes) and the link.
+     · HIS REPLY STOPS IT. A reply from the job page (text or "I called") is a stop, like the quote going out.
+     · THE HOLDING TEXT stays the only automatic text and goes only when every guard passes (runHolding below):
+       no reply, no call, no quote, texting allowed and asked for, not "still wet", no "Don't auto-text", not on the
+       opt-out list, no holding text before, and the desk's and the phone's send records both read fresh. When a
+       guard blocks it, "LATE · U-9601 · call them now" rings him until acknowledged (to 9 PM). */
 
 import { getRecord, putRecord, listRecords, addEvent } from './store.js';
 import { sendAlert, cancelPushoverTag, CHANNELS } from './notify.js';
@@ -50,11 +68,14 @@ import {
   bizAdvance, bizMinutes, replyDue, isOpen, nextOpen, openOf, clock, chicagoDay, chicagoParts,
 } from './biztime.js';
 import { newToken } from './util.js';
-import { quoteWentOut, markOnce, markSet } from './booklock.js';
+import { quoteWentOut, markOnce, markSet, markGet } from './booklock.js';
 import {
-  usNumber, holdingText, ttlFor, secondsToClose, hasKey, postHolding, getHoldingState,
-  MIN_TTL, SENDING_STALE_MS, DELIVERY_GRACE_MS, DONE_STATES, FAILED_STATES,
+  usNumber, holdingText, ttlFor, secondsToClose, hasKey, postHolding, getHoldingState, langOf,
+  MIN_TTL, MAX_TTL, SENDING_STALE_MS, DELIVERY_GRACE_MS, DONE_STATES, FAILED_STATES,
 } from './holding.js';
+import { jobLink, boardLink } from './ownerlink.js';
+import { replyText, promiseBy, reachOf, isWetNow, jobWords } from './draft.js';
+import { optedOut, validUntilFor } from './outbox.js';
 
 export const URGENT_AFTER = 15;            /* business minutes — the ALERTS-01 ladder, for older records */
 export const REPEAT_EVERY = 30;
@@ -111,6 +132,11 @@ function serviceOf(f) {
   return String(Array.isArray(f.service) ? f.service.join(', ') : (f.service || 'Request')).replace(/\s+/g, ' ').trim();
 }
 
+/** lane P: their words as a push may carry them (inbound.js: "U-9601 replied: …"). */
+export function cleanForPush(s, rec) {
+  return cleanWords(s, rec);
+}
+
 /** Their words with any link, email address or phone number taken out, and no name (R25). */
 function cleanWords(s, rec) {
   return withoutName(String(s).replace(/\s+/g, ' ').trim()
@@ -158,13 +184,19 @@ function dueOf(rec) {
 }
 
 /** road W: "NEW JOB · U-9601 · reply by 9:00 AM" · "Drywall & Paint — Two fist-sized holes in the ceiling…".
-    The job id and the reply-by time, never a name (R25); the priority is unchanged. */
-export function buildIntake(rec) {
-  return {
-    title: `NEW JOB · ${rec.id} · reply by ${clock(dueOf(rec))}`,
-    message: firstLine(rec),
-    priority: 1,
-  };
+    The job id and the reply-by time, never a name (R25).
+    lane P (UMBRA-SIDE-01): it RINGS until acknowledged — priority 2, every 2 minutes — to the 15-minutes-left mark or
+    9 PM, whichever comes first (Pushover's own cap is 3 hours); inside the last two minutes of the day it goes as
+    priority 1, as every ring does. From 9 PM to 7 AM it is quiet (priority -1); the ring starts at 7 AM. */
+export const RING_UNTIL_LEFT = 15;             /* business minutes before the reply-by time */
+export const RING_RETRY_S = 120;
+export function buildIntake(rec, nowMs = Date.now()) {
+  const msg = { title: `NEW JOB · ${rec.id} · reply by ${clock(dueOf(rec))}`, message: firstLine(rec) };
+  if (!isOpen(nowMs)) return { ...msg, priority: -1 };
+  const mark = bizAdvance(Date.parse(rec.received_at), CLOCK_MIN - RING_UNTIL_LEFT);
+  const expire = Math.min(10800, Math.round((mark - nowMs) / 1000), secondsToClose(nowMs));
+  if (!(expire >= NO_REPEAT_UNDER_S)) return { ...msg, priority: 1 };
+  return { ...msg, priority: 2, retry: RING_RETRY_S, expire, expireCap: 10800, tags: [tagOf(rec.id)] };
 }
 
 function buildUrgent(rec) {
@@ -232,7 +264,7 @@ export function endOf(rec) {
     the repeat says what is left to do: "QUOTE READY · U-9601 · tap Send · 50 min left". The message is ONE line, never
     cut mid-word: the job type and the first line of their words, as on the arrival push (the second clock names its
     promise first). */
-function buildSlot(rec, slot, ready = false, price = null) {
+function buildSlot(rec, slot, ready = false, price = null, next = null) {
   const second = rec.alerts.table.clock === 2;
   const left = CLOCK_MIN - slot;
   /* road MW (2026-09-26): QUOTE READY says what he needs and nothing else — "QUOTE READY · U-9601 · $225 · text ready ·
@@ -248,10 +280,22 @@ function buildSlot(rec, slot, ready = false, price = null) {
   }
   return {
     title: `STILL OPEN · ${rec.id} · ${left} min left`,
-    message: (second ? `Holding text went · quote by ${clock(endOf(rec))} · ` : '') + firstLine(rec),
+    message: (second ? `Holding text went · quote by ${clock(endOf(rec))} · ` : '') + firstLine(rec) + (next ? '\n' + next : ''),
     priority: prioritySlot(slot),
     ...(prioritySlot(slot) === 2 ? { tags: [tagOf(rec.id)] } : {}),
   };
+}
+
+/** lane P · what the slot says he can do right now: the drafted reply (one tap and one confirm on the job page), with
+    "[name]" where their name goes — or, when texting is out for this request, that he calls. `opt` is the opt-out
+    entry for the number, if any (read by the caller). */
+export function nextLine(rec, nowMs, opt) {
+  if (rec.alerts && rec.alerts.table && rec.alerts.table.clock === 2) return 'Call them: the holding text already went.';
+  const why = holdingWouldBlock(rec, opt);
+  if (why) return `Call them: ${WHY[why]}.`;
+  if (!isOpen(nowMs)) return null;
+  const d = replyText(rec, promiseBy(nowMs), nowMs, { forPush: true });
+  return d.text ? `Ready to send: "${d.text}"` : null;
 }
 
 /** The last word on a request: he picks up the phone. Never anything after it. */
@@ -260,6 +304,43 @@ function buildCallThem(rec, why) {
     title: `CALL THEM NOW · ${rec.id} — ${why}`,
     message: whatLine(rec) + '\nThe ladder ends here. Nothing more will fire for this request.',
     priority: 2,
+    tags: [tagOf(rec.id)],
+  };
+}
+
+/* lane P · WHY THE HOLDING TEXT DID NOT GO, in his words */
+export const WHY = {
+  no_consent: 'they did not tick the texts box',
+  reach_call: 'they asked for a call',
+  wet: "it's still wet — the cause gets fixed first",
+  no_auto: 'you turned the auto-text off',
+  opted_out: 'they said no texts',
+  replied: 'you already replied',
+  no_number: 'no US number on the request',
+};
+
+/** The request's own reason the holding text may not go (null when it may). The book, the marks and the clock are
+    read by runHolding itself; this is what the record says. `opt` = the opt-out entry for the number, if any. */
+export function holdingWouldBlock(rec, opt) {
+  if (rec.replied_at) return 'replied';
+  if (!(rec.consent && rec.consent.smsService === true)) return 'no_consent';
+  if (reachOf(rec) !== 'text') return 'reach_call';
+  if (isWetNow(rec)) return 'wet';
+  if ((rec.alerts && rec.alerts.no_auto_text_at) || rec.no_auto_text_at) return 'no_auto';
+  if (opt || rec.sms_opt_out) return 'opted_out';
+  return null;
+}
+
+/** lane P · "LATE · U-9601 · call them now" — a guard stopped the holding text: his phone rings until he acknowledges
+    it (or opens the job), until 9 PM at the latest. Never a name; the reason in his words. */
+function buildLate(rec, why, nowMs) {
+  return {
+    title: `LATE · ${rec.id} · call them now`,
+    message: `No auto-text: ${WHY[why] || why}. The reply was due ${clock(dueOf(rec))}.\n` + firstLine(rec),
+    priority: 2,
+    retry: RING_RETRY_S,
+    expire: Math.min(10800, secondsToClose(nowMs)),
+    expireCap: 10800,
     tags: [tagOf(rec.id)],
   };
 }
@@ -290,10 +371,11 @@ function nightSafe(msg, nowMs) {
   if (Number(msg.priority) !== 2) return msg;
   const left = secondsToClose(nowMs);
   if (left < NO_REPEAT_UNDER_S) {
-    const { tags, ...rest } = msg;
+    const { tags, retry, expire, expireCap, ...rest } = msg;
     return { ...rest, priority: 1, downgraded: true };
   }
-  return { ...msg, expire: Math.min(1800, left) };
+  /* lane P: a ring built to last longer (expireCap) keeps its own expire, still never past 9 PM */
+  return { ...msg, expire: Math.min(msg.expireCap || 1800, left, msg.expire || Infinity) };
 }
 
 /* ------------------------------------------------------------ the clock */
@@ -383,10 +465,15 @@ function stamp(rec, step, msg, results, nowIso, attempts = 1) {
 
 /* The keys a step decides for itself. On HIS TABLE the step also owns the table block and the holding
    block, because the run just moved them on. */
-const STEP_KEYS = ['stage', 'next_at', 'urgent_at', 'overdue_at', 'retry'];
+const STEP_KEYS = ['stage', 'next_at', 'urgent_at', 'overdue_at', 'retry', 'quiet_at'];
 const TABLE_KEYS = ['table', 'holding', 'second_clock_started_at', 'call_push_at'];
 
 async function deliver(env, rec, step, msg, nowIso, only, attempts) {
+  /* lane P: every push about one job opens that job on his phone */
+  if (msg && msg.url === undefined) {
+    const link = await jobLink(env, rec.id);
+    if (link) msg = { ...msg, url: link, url_title: 'Open the job' };
+  }
   /* AMENDMENT 1 D: one retry chain at a time. Before a priority-2 push goes out, this request's own tag
      is cancelled, so six overlapping chains can never ring at once. */
   if (isTable(rec) && Number(msg.priority) === 2) {
@@ -425,7 +512,19 @@ export async function sendIntakeAlert(env, id, claim, nowIso) {
   const nowMs = Date.parse(nowIso);
   rec.alerts.stage = 'ladder';
   rec.alerts.next_at = isTable(rec) ? nextTableAt(rec, nowMs) : nextStepAfter(rec, nowMs);
-  return deliver(env, rec, 'intake', buildIntake(rec), nowIso, CHANNELS, 1);
+  return deliver(env, rec, 'intake', buildIntake(rec, nowMs), nowIso, CHANNELS, 1);
+}
+
+/** lane P · a request that lands 9 PM–7 AM: ONE quiet push now (priority -1, no sound), and nothing else until the
+    7 AM summary, which rings. The record stays `held`; the quiet push changes no step of the ladder. */
+export async function sendQuietArrival(env, id, nowIso) {
+  const rec = await getRecord(env, id);
+  if (!rec || !rec.alerts || rec.alerts.stage !== 'held' || rec.alerts.quiet_at) return null;
+  const nowMs = Date.parse(nowIso);
+  if (isOpen(nowMs)) return null;
+  rec.alerts.quiet_at = nowIso;                        /* a step key: deliver() writes it with the push's own stamp */
+  /* Pushover only: a Telegram message cannot arrive quietly */
+  return deliver(env, rec, 'quiet_arrival', buildIntake(rec, nowMs), nowIso, ['pushover'], 1);
 }
 
 /* ------------------------------------------------------------ the claim */
@@ -465,6 +564,7 @@ function nextTableAt(rec, nowMs) {
  */
 export async function stopReason(env, rec) {
   if (rec.quoted_at) return 'quoted';
+  if (rec.replied_at) return 'replied';                /* lane P: a reply from the job page, by text or "I called" */
   if (rec.status !== 'received') return 'status:' + rec.status;
   if (rec.alerts.no_text_at) return 'no_text_tap';
   const b = await quoteWentOut(env, rec.id);
@@ -514,6 +614,13 @@ async function callThemNow(env, rec, why, nowIso, nowMs, out) {
   out.sent.push(await deliver(env, rec, 'call_them', nightSafe(buildCallThem(rec, why), nowMs), nowIso, CHANNELS, 1));
 }
 
+/** lane P · a guard stopped the holding text: ONE "LATE · call them now" ring, and the ladder is over. */
+async function lateRing(env, rec, why, nowIso, nowMs, out) {
+  rec.alerts.call_push_at = nowIso;
+  endLadder(rec, 'late:' + why, nowIso);
+  out.sent.push(await deliver(env, rec, 'late', nightSafe(buildLate(rec, why, nowMs), nowMs), nowIso, CHANNELS, 1));
+}
+
 /** One push about the holding text itself (never its words, never the number). */
 async function holdingPush(env, rec, kind, nowIso, nowMs, out) {
   out.sent.push(await deliver(env, rec, 'holding:' + kind, nightSafe(buildHolding(rec, kind), nowMs), nowIso, CHANNELS, 1));
@@ -529,10 +636,14 @@ async function holdingPush(env, rec, kind, nowIso, nowMs, out) {
 async function runHolding(env, rec, nowIso, nowMs, out) {
   const a = rec.alerts;
 
-  /* §5 · no texts tick: no text and no second clock, one push, the ladder ends */
-  if (!(rec.consent && rec.consent.smsService === true)) {
-    a.holding = { at: nowIso, state: 'skipped', why: 'no_consent' };
-    return callThemNow(env, rec, 'no texts tick', nowIso, nowMs, out);
+  /* lane P · THE GUARDS the record answers: no reply or call, texts ticked, they did not ask for a call, not still wet,
+     no "Don't auto-text", not on the opt-out list. Any one blocks the text: no text, no second clock, and his phone
+     rings "LATE · call them now" until he acknowledges it. (§5, the texts tick, is the second of these.) */
+  const num = usNumber(rec.fields && rec.fields.phone);
+  const block = holdingWouldBlock(rec, num.e164 ? await optedOut(env, num.e164) : null);
+  if (block) {
+    a.holding = { at: nowIso, state: 'skipped', why: block };
+    return lateRing(env, rec, block, nowIso, nowMs, out);
   }
   /* §6 · no phone, or a number that is not a US one */
   const n = usNumber(rec.fields && rec.fields.phone);
@@ -547,8 +658,9 @@ async function runHolding(env, rec, nowIso, nowMs, out) {
     endLadder(rec, 'no_key', nowIso);
     return holdingPush(env, rec, 'nokey', nowIso, nowMs, out);
   }
-  /* AMENDMENT 1 A · the words, filled. A text still holding a brace never leaves. */
-  const words = holdingText(rec, nowMs);
+  /* AMENDMENT 1 A · the words, filled. A text still holding a brace never leaves. lane P: the new words name the job's
+     place ("your ceiling"), from what they tapped. */
+  const words = holdingText(rec, nowMs, jobWords(rec, langOf(rec)).area);
   if (words.error) {
     a.holding = { at: nowIso, state: 'skipped', why: words.error };
     endLadder(rec, 'bad_text:' + words.error, nowIso);
@@ -574,6 +686,15 @@ async function runHolding(env, rec, nowIso, nowMs, out) {
     endLadder(rec, 'book_sent', nowIso);
     await putRecord(env, rec);
     out.stopped.push({ id: rec.id, why: 'book_sent' });
+    return null;
+  }
+  /* lane P · THE PHONE'S OWN SEND RECORD, read fresh too: a reply from the job page takes its mark in the BOOK before
+     it posts, so a reply in flight at this very minute is seen here and the holding text stays home. */
+  const replyMark = await markGet(env, 'reply:' + rec.id).catch(() => null);
+  if (replyMark) {
+    endLadder(rec, 'replied', nowIso);
+    await putRecord(env, rec);
+    out.stopped.push({ id: rec.id, why: 'replied' });
     return null;
   }
 
@@ -615,11 +736,11 @@ async function runHolding(env, rec, nowIso, nowMs, out) {
   /* SEAT FIX (1Supe7, 2026-09-25, review B1): the record no longer says "sending" in KV before the call — the BOOK's
      mark already does, the admin page reads clock 1 for the second the call takes, and one fewer write to the same
      key inside one second is one fewer 429. A run that dies inside the call is the stale-mark case above. */
-  const r = await postHolding(env, { id: gid, e164: n.e164, text: words.text, ttl });
+  const r = await postHolding(env, { id: gid, e164: n.e164, text: words.text, validUntil: validUntilFor(nowMs, Math.min(MAX_TTL, ttl)) });
   const settledIso = new Date().toISOString();
   await markSet(env, key, r.state, r.gateway_id || null, settledIso, 'http ' + r.status);
   a.holding = {
-    at: nowIso, gateway_id: r.gateway_id || gid, state: r.state, ttl, lang: words.lang, parts: words.parts,
+    at: nowIso, gateway_id: r.gateway_id || gid, state: r.state, ttl, valid_until: validUntilFor(nowMs, Math.min(MAX_TTL, ttl)), lang: words.lang, parts: words.parts,
     status: r.status, ...(r.state === 'accepted' ? { gateway_state: r.gateway_state } : { settled_at: nowIso }),
   };
   addEvent(rec, 'holding_text', { state: r.state, gateway: a.holding.gateway_id, status: r.status }, nowIso);
@@ -648,6 +769,7 @@ const TERMINAL_MARK = new Set(['accepted', 'refused', 'unknown']);
 function kvStop(rec) {
   if (!rec || !rec.alerts) return null;
   if (rec.quoted_at) return 'quoted';
+  if (rec.replied_at) return 'replied';
   if (rec.status !== 'received') return 'status:' + rec.status;
   if (rec.alerts.no_text_at) return 'no_text_tap';
   if (rec.alerts.table && rec.alerts.table.ended_at) return rec.alerts.table.end_reason || 'ended';
@@ -766,7 +888,7 @@ async function runTable(env, rec, owed, nowIso, nowMs, out) {
   if (owed.intake) {
     rec.alerts.stage = 'ladder';
     rec.alerts.next_at = nextTableAt(rec, nowMs);
-    out.sent.push(await deliver(env, rec, 'intake', buildIntake(rec), nowIso, CHANNELS, 1));
+    out.sent.push(await deliver(env, rec, 'intake', buildIntake(rec, nowMs), nowIso, CHANNELS, 1));
     return;
   }
 
@@ -798,7 +920,10 @@ async function runTable(env, rec, owed, nowIso, nowMs, out) {
        not answer reads as not ready, so the push is the plain one) */
     const went = await quoteWentOut(env, rec.id);
     const ready = Boolean(went.ready);
-    out.sent.push(await deliver(env, rec, 'slot:' + owed.slot, nightSafe(buildSlot(rec, owed.slot, ready, ready ? went.price : null), nowMs), nowIso, CHANNELS, 1));
+    /* lane P: the slot carries the drafted reply (or "call them"), read against the opt-out list fresh */
+    const n = usNumber(rec.fields && rec.fields.phone);
+    const next = ready ? null : nextLine(rec, nowMs, n.e164 ? await optedOut(env, n.e164) : null);
+    out.sent.push(await deliver(env, rec, 'slot:' + owed.slot, nightSafe(buildSlot(rec, owed.slot, ready, ready ? went.price : null, next), nowMs), nowIso, CHANNELS, 1));
     return;
   }
 
@@ -848,6 +973,17 @@ async function runSummary(env, all, nowMs, nowIso) {
   const lastDue = Math.max(...waiting.map(dueOf));
   const visit = visitsBefore(all, waiting, nowMs, lastDue);
   const msg = buildSummary(waiting, nowMs, visit);
+  /* lane P · THE RING STARTS AT 7 AM for the requests that came in overnight on his table: the summary rings until he
+     acknowledges it or opens the job, to the first one's 15-minutes-left mark (never past 9 PM, never over 3 hours),
+     and opens that job — or, with more than one, the board. */
+  const owedNow = waiting.filter((r) => isTable(r) && !r.replied_at);
+  if (owedNow.length) {
+    const mark = Math.min(...owedNow.map((r) => bizAdvance(Date.parse(r.received_at), CLOCK_MIN - RING_UNTIL_LEFT)));
+    const expire = Math.min(10800, Math.round((mark - nowMs) / 1000), secondsToClose(nowMs));
+    if (expire >= NO_REPEAT_UNDER_S) Object.assign(msg, { priority: 2, retry: RING_RETRY_S, expire, expireCap: 10800, tags: waiting.map((r) => tagOf(r.id)) });
+  }
+  const link = waiting.length === 1 ? await jobLink(env, waiting[0].id) : await boardLink(env);
+  if (link) Object.assign(msg, { url: link, url_title: waiting.length === 1 ? 'Open the job' : 'Open all jobs' });
   const results = await sendAlert(env, msg, CHANNELS);
   const receipt = (results.find((r) => r.receipt) || {}).receipt;
   if (receipt) await rememberReceipt(env, receipt, waiting.map((r) => r.id));
@@ -890,7 +1026,7 @@ function planFor(rec, nowMs) {
   const plan = { retry: retryDue ? a.retry : null, step: null, msg: null, next_at: a.next_at, stage: a.stage };
   if (stepDue) {
     if (a.stage === 'intake' || a.stage === 'held') {
-      plan.step = 'intake'; plan.msg = buildIntake(rec); plan.stage = 'ladder';
+      plan.step = 'intake'; plan.msg = buildIntake(rec, nowMs); plan.stage = 'ladder';
       plan.next_at = nextStepAfter(rec, nowMs);
     } else if (dueOf(rec) <= nowMs) {
       plan.step = 'overdue'; plan.msg = buildOverdue(rec); plan.stage = 'done'; plan.next_at = null;
@@ -904,7 +1040,7 @@ function planFor(rec, nowMs) {
 }
 
 /**
- * The scheduled body. Every 5 minutes. Returns what it did, for the log and the tests.
+ * The scheduled body. Every minute (UMBRA-SIDE-01; it was every 5). Returns what it did, for the log and the tests.
  * Two ladders run side by side: HIS TABLE for records born with one, and ALERTS-01's own for the
  * records that were already on it when this round landed.
  */
@@ -1037,6 +1173,8 @@ export async function acknowledge(env, id, by, nowIso = new Date().toISOString()
   }
   rec.alerts.ack_at = nowIso;
   rec.alerts.ack_by = by;
+  /* lane P: the first time HE acknowledged it (Pushover's button or the admin page) — seen is not a reply */
+  if ((by === 'pushover' || by === 'seen') && !rec.alerts.seen_at) rec.alerts.seen_at = nowIso;
   if (table) {
     rec.alerts.acks = (rec.alerts.acks || 0) + 1;
   } else {
@@ -1067,6 +1205,31 @@ export async function noTextByHand(env, id, nowIso = new Date().toISOString()) {
     if (!c.ok && !c.skipped) console.error('cancel_by_tag failed for', rec.id, c.status);
   }
   return { id, ok: true, table: isTable(rec), no_text_at: rec.alerts.no_text_at };
+}
+
+/**
+ * lane P · HIS REPLY, from the job page: a text that the work phone took, or "I called". It is the reply the two-hour
+ * promise asked for, so it stops the clock and the ladder exactly as the quote going out does, and the ring stops.
+ * `reply` = { how: 'text'|'call', at, by, promised_by?, gateway_id?, state?, lang?, parts?, text? }. Once: a second
+ * call finds the reply there and changes nothing. Answers { ok, already }.
+ */
+export async function recordReply(env, id, reply, nowIso) {
+  const rec = await getRecord(env, id);
+  if (!rec) return { ok: false };
+  if (rec.replied_at) return { ok: true, already: true };
+  rec.reply = { ...reply };
+  rec.replied_at = reply.at || nowIso;
+  addEvent(rec, 'replied', {
+    how: reply.how, by: reply.by || 'phone',
+    ...(reply.promised_by ? { promised_by: reply.promised_by } : {}),
+    ...(reply.gateway_id ? { gateway: reply.gateway_id, state: reply.state } : {}),
+  }, nowIso);
+  if (rec.alerts && isTable(rec) && !rec.alerts.table.ended_at) endLadder(rec, 'replied', nowIso);
+  if (rec.alerts) rec.alerts.claim = null;
+  await putRecord(env, rec);
+  const c = await cancelPushoverTag(env, tagOf(rec.id));
+  if (!c.ok && !c.skipped) console.error('cancel_by_tag failed for', rec.id, c.status);
+  return { ok: true, already: false };
 }
 
 /** Pushover's callback: the receipt must be one we issued. Anything else is a 404 with nothing written. */

@@ -14,6 +14,7 @@
    Readings are returned with their actual values for the round's close. */
 
 import { chicagoWall } from '../src/biztime.js';
+import crypto from 'node:crypto';
 
 export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep }) {
   const R = {};
@@ -65,8 +66,12 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
   const tap = (id, type, at, extra = {}) => json(`${W}/api/job/${id}/event?k=${ADMIN_KEY}`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, at, ...extra }),
   });
+  /* P moves (UMBRA-SIDE-01, lane P): every push about one job carries ONE link — that job's page on his phone,
+     /j/<U-id>.<key>, the key made from ADMIN_KEY. It is read on its own (jobLink below); every other link is still a leak. */
+  const jobLink = (id) => `${W}/j/${id}.${crypto.createHmac('sha256', ADMIN_KEY).update('umbra-owner|' + id).digest('base64url')}`;
+  const OWN_LINK = new RegExp(W.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/j/U-\\d{4,6}\\.[A-Za-z0-9_-]{43}', 'g');
   const leaks = (c) => {
-    const t = text(c) + '\n' + (c.p ? [...c.p.entries()].filter(([k]) => k !== 'callback' && k !== 'token' && k !== 'user').map(([, v]) => v).join('\n') : JSON.stringify(c.j));
+    const t = (text(c) + '\n' + (c.p ? [...c.p.entries()].filter(([k]) => k !== 'callback' && k !== 'token' && k !== 'user').map(([, v]) => v).join('\n') : JSON.stringify(c.j))).replace(OWN_LINK, '<his job page>');
     const found = [];
     if (/https?:\/\/|www\./i.test(t)) found.push('link');
     if (t.includes(ADMIN_KEY)) found.push('admin key');
@@ -102,9 +107,12 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     eq(po.length, 1, 'exactly 1 Pushover call');
     eq(tg.length, 0, 'road FW · one app: Pushover took it, so no Telegram call at all');
     const p = po[0] && po[0].p;
-    eq(p && p.get('priority'), '1', 'priority 1 (normal)');
+    /* P moves: the arrival push RINGS until acknowledged (priority 2, every 2 minutes, to the 15-minutes-left mark) */
+    eq(p && p.get('priority'), '2', 'P moves · priority 2: it rings until acknowledged');
     eq(p && p.get('title'), `NEW JOB · ${alice.id} · reply by 9:28 AM`, 'the title as written (road W: C4)');
-    eq(p && p.get('url'), null, 'no url parameter');
+    /* P moves: ONE link, his job page, "Open the job" */
+    eq(p && p.get('url'), jobLink(alice.id), 'P moves · its one link is his job page');
+    eq(p && p.get('url_title'), 'Open the job', 'P moves · "Open the job"');
     ok(po[0] && leaks(po[0]).length === 0, 'no link, no admin key, no secret, no phone, address or email in the push', po[0] && leaks(po[0]).join(','));
     /* road FW: what a Telegram message may carry is read in (9), where Telegram carries the push */
     const r = await row(alice.id);
@@ -281,13 +289,14 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     eq(per.map((x) => x.pushes).join(','), '1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0', 'one push at each of his twelve rungs, one at +121, then none');
     eq(per.slice(0, 12).map((x) => x.priority).join(','), '1,1,1,1,2,2,2,2,2,2,2,2', 'priority 1 through minute 60, priority 2 from minute 70');
     eq(per.map((x) => (x.title.match(/(\d+) min left/) || [])[1]).slice(0, 12).join(','), '105,90,75,60,50,40,30,25,20,15,10,5', 'each rung says the minutes left');
-    ok(per[12].title.startsWith('CALL THEM NOW · ' + larry.id + ' — no texts tick'), 'at minute 120 with no texts tick: "call them now"', per[12].title);
+    /* P moves: a guard that stops the holding text rings "LATE · U-NNNN · call them now" (the brief's words, no name) */
+    ok(per[12].title === `LATE · ${larry.id} · call them now`, 'P moves · at minute 120 with no texts tick: "LATE · call them now"', per[12].title);
     eq(per[12].priority, '2', 'at priority 2');
     eq(per.slice(13).reduce((n, x) => n + x.pushes, 0), 0, 'silence for the rest of the day');
     const r = await row(larry.id);
     eq(r.alerts.stage, 'done', 'the ladder is finished');
     eq(r.alerts.next_at, null, 'with no next step');
-    eq(r.alerts.table.end_reason, 'call:no texts tick', 'and the record says why it ended');
+    eq(r.alerts.table.end_reason, 'late:no_consent', 'P moves · and the record says why it ended');
     R['8'] = { id: larry.id, received: t, due_at: r.alerts.due_at, runs: per, stage: r.alerts.stage, count: r.alerts.count, end_reason: r.alerts.table.end_reason };
   }
 
@@ -305,6 +314,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     eq(tg0.length, 1, 'Telegram was still sent');
     /* road FW: moved here from (2) — Telegram now goes only when Pushover did not take the push */
     ok(tg0[0] && leaks(tg0[0]).length === 0, 'road FW · no link, no admin key, no secret, no phone, address or email in the Telegram fallback', tg0[0] && leaks(tg0[0]).join(','));
+    ok(tg0[0] && String(tg0[0].j.text).endsWith('Open the job: ' + jobLink(fran.id)), 'P moves · the Telegram fallback carries the same one link, as plain text', tg0[0] && tg0[0].j.text);
     eq(tg0[0] && tg0[0].j.parse_mode, undefined, 'road FW · the Telegram fallback carries no parse_mode');
     eq(tg0[0] && tg0[0].j.reply_markup, undefined, 'road FW · and no buttons');
     stub.state.pushover = 'ok';
@@ -428,17 +438,20 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     nate = await submitAt(t, 'Night Nate');
     await sleep(3000);
     let po = about(PO(), nate.id).length, tg = about(TG(), nate.id).length;
-    eq(po + tg, 0, 'nothing at 10:15 PM');
+    /* P moves: 9 PM–7 AM the arrival push is QUIET (priority -1, Pushover only) and opens the job; the ring starts at 7 */
+    eq(po + tg, 1, 'P moves · one QUIET push at 10:15 PM');
+    eq(about(PO(), nate.id)[0] && about(PO(), nate.id)[0].p.get('priority'), '-1', 'P moves · priority -1: no sound');
     const quiet = [CT(...DAY_A, 22, 20), CT(...DAY_A, 23, 0), CT(...DAY_B, 2, 0), CT(...DAY_B, 6, 55)];
     const outs = [];
     for (const q of quiet) outs.push(await runAt(q));
-    eq(about(PO(), nate.id).length + about(TG(), nate.id).length, 0, 'nothing from the runs at 10:20 PM, 11:00 PM, 2:00 AM, 6:55 AM');
+    eq(about(PO(), nate.id).length + about(TG(), nate.id).length, 1, 'P moves · nothing from the runs at 10:20 PM, 11:00 PM, 2:00 AM, 6:55 AM (the quiet one stands alone)');
     const b = PO().length, bt = TG().length;
     const o7 = await runAt(CT(...DAY_B, 7, 0));
     const s = about(PO().slice(b), nate.id);
     eq(s.length, 1, 'at 7:00 one push names it');
     ok(s[0] && s[0].p.get('title').startsWith('MORNING SUMMARY'), 'the summary', s[0] && s[0].p.get('title'));
-    eq(s[0] && s[0].p.get('priority'), '1', 'normal priority (no visit on the calendar)');
+    eq(s[0] && s[0].p.get('priority'), '2', 'P moves · no visit on the calendar, and it rings: the ring starts at 7 AM');
+    eq(s[0] && s[0].p.get('url'), jobLink(nate.id), 'P moves · and it opens the job');
     eq(PO().slice(b).length, 1, 'and it is the only push at 7:00');
     eq(about(TG().slice(bt), nate.id).length, 0, 'road FW · one app: the summary does not also go to Telegram');
     const b5 = PO().length;
@@ -461,7 +474,7 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     const bc = PO().length;
     await runAt(CT(...DAY_C, 7, 0));
     const u = about(PO().slice(bc), ella.id);
-    eq(e0, 0, 'a 5:30 AM request is not pushed at 5:30');
+    eq(e0, 1, 'P moves · a 5:30 AM request gets one QUIET push at 5:30');
     eq(u.length, 1, 'at 7:00 one summary names it');
     eq(u[0] && u[0].p.get('priority'), '2', 'priority 2 because a visit is booked before its 9:00 AM due time');
     ok(u[0] && u[0].p.get('title').startsWith('QUOTE BEFORE YOU LEAVE'), '"quote before you leave"', u[0] && u[0].p.get('title'));
