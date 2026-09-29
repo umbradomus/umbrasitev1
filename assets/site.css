@@ -83,7 +83,11 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .brand img { width: 40px; height: 40px; }
 .brand .wm { height: 14px; width: auto; color: var(--white); }
 .call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--prussian); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
-.call:hover { color: var(--white); background: var(--black); }
+/* SITE-FIX-02 · CDO 6 · ONE BLUE FOR EVERY BUTTON. A hover flipped a Prussian button to
+   black, so the one Next a thumb was resting on read #000000 against #003153 everywhere
+   else (the CDO's 5b). The button keeps its blue and the hover is a ring of the same
+   blue — a mark, not a second colour. */
+.call:hover { color: var(--white); background: var(--prussian); box-shadow: 0 0 0 3px rgba(0,49,83,0.28); }
 .call svg { width: 18px; height: 18px; }
 .call .num { display: inline; font-size: .9rem; }
 .menu { grid-column: 1 / -1; display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0 -1.25rem; padding: 0 1.25rem 0.35rem; }
@@ -154,7 +158,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 
 /* ---------- buttons ---------- */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 54px; padding: 0.7rem 1.4rem; border-radius: var(--radius); background: var(--prussian); color: var(--white); text-decoration: none; font-weight: 600; font-size: 1.05rem; border: 2px solid var(--prussian); cursor: pointer; font-family: inherit; }
-.btn:hover { background: var(--black); border-color: var(--black); color: var(--white); }
+.btn:hover { background: var(--prussian); border-color: var(--prussian); color: var(--white); box-shadow: 0 0 0 3px rgba(0,49,83,0.28); }
 .btn.ghost { background: transparent; color: inherit; border-color: currentColor; }
 .btn.ghost:hover { background: rgba(255,255,255,0.08); color: inherit; }
 .btn.wide { width: 100%; }
