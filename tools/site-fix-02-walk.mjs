@@ -13,7 +13,9 @@ import zlib from 'node:zlib';
 import puppeteer from './../worker/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
 
 const ROOT = path.resolve('.');
-const OUT = 'C:/Users/andre/Umbra/Boss/Bridge/SITE-FIX-02/screens';
+/* SITEFIX02_OUT lets the very same walk be run against the BASE tree, so the pixel count
+   below is a reading and not a claim. Its pictures land somewhere else and are not the round's. */
+const OUT = process.env.SITEFIX02_OUT || 'C:/Users/andre/Umbra/Boss/Bridge/SITE-FIX-02/screens';
 const PORT = 4963, CPORT = 4964;
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -67,9 +69,9 @@ function pixels(file) {
     else if (tag === 'IEND') break;
     at += 12 + len;
   }
-  if (depth !== 8 || type !== 6) throw new Error(file + ': not 8-bit RGBA (' + depth + '/' + type + ')');
+  if (depth !== 8 || (type !== 6 && type !== 2)) throw new Error(file + ': not 8-bit RGB/RGBA (' + depth + '/' + type + ')');
   const raw = zlib.inflateSync(Buffer.concat(idat));
-  const bpp = 4, stride = w * bpp;
+  const bpp = type === 6 ? 4 : 3, stride = w * bpp;
   const out = Buffer.alloc(h * stride);
   let src = 0;
   for (let y = 0; y < h; y++) {
@@ -92,15 +94,15 @@ function pixels(file) {
       out[row + x] = r & 0xff;
     }
   }
-  return { w, h, data: out };
+  return { w, h, bpp, data: out };
 }
 /* how many pixels of this picture are EXACTLY one of the retired colours */
 const RETIRED = { '#B83622': [184, 54, 34], '#3A4E36': [58, 78, 54], '#000000': [0, 0, 0] };
 function retiredIn(file) {
   const im = pixels(file);
   const n = { '#B83622': 0, '#3A4E36': 0, '#000000': 0 };
-  for (let i = 0; i < im.data.length; i += 4) {
-    if (im.data[i + 3] < 250) continue;
+  for (let i = 0; i < im.data.length; i += im.bpp) {
+    if (im.bpp === 4 && im.data[i + 3] < 250) continue;
     const r = im.data[i], g = im.data[i + 1], b = im.data[i + 2];
     for (const k in RETIRED) { const c = RETIRED[k]; if (r === c[0] && g === c[1] && b === c[2]) n[k]++; }
   }

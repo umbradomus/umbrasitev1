@@ -1,7 +1,7 @@
 /* UMBRA DOMUS — one stylesheet, every page. No framework, no icon font, no hotlinked type.
    Palette: the official logo (2026-09-21) — Prussian #003153 for every fill and rule, black under the
    canopy, olive / purple / rust only as small marks. Type on a Prussian or black ground is --white
-   (13.43:1 on Prussian, 21:1 on black); a hover or an active state darkens Prussian to --black, the
+   (13.43:1 on Prussian, 21:1 on black); a hover or an active state keeps Prussian and adds a ring of it (SITE-FIX-02); the
    logo's own pair, and white on black reads 21:1. SITE-THEME-01, 2026-09-24: the three retired tokens
    left :root with the colour they named, and no rule names that colour any more. */
 @font-face {
@@ -16,17 +16,16 @@
 :root {
   --tyrian: #66023C;
   --ink: #0F0B1A;
-  --olive: #3A4E36;
+  /* SITE-FIX-02 (B58): the olive and the second black are retired. No hex on this page
+     is outside the logo palette and the card's kit. */
+  --crimson: #7A0215;
   --purple: #251736;
   --rust: #92310E;
-  --black: #000000;
   --green: #4FB87B;
   --prussian: #003153;
   --vermillion: #D9432B;
   /* the same red darkened until it carries white text and small caps at AA. Buttons and
      kickers use this; the logo colour above is unchanged. */
-  --vermillion-ink: #b83622;
-  --vermillion-ink-hover: #9c2d1c;
   --white: #FFFFFF;
   --paper: #F6F3EE;
   --paper-2: #ECE7DF;
@@ -84,9 +83,9 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .brand .wm { height: 14px; width: auto; color: var(--white); }
 .call { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--prussian); color: var(--white); text-decoration: none; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: 999px; min-height: 44px; white-space: nowrap; }
 /* SITE-FIX-02 · CDO 6 · ONE BLUE FOR EVERY BUTTON. A hover flipped a Prussian button to
-   black, so the one Next a thumb was resting on read #000000 against #003153 everywhere
-   else (the CDO's 5b). The button keeps its blue and the hover is a ring of the same
-   blue — a mark, not a second colour. */
+   a flat black, so the one Next a thumb was resting on read a black the site does not own
+   against Prussian everywhere else (the CDO's 5b). The button keeps its blue and the hover
+   is a ring of the same blue — a mark, not a second colour. */
 .call:hover { color: var(--white); background: var(--prussian); box-shadow: 0 0 0 3px rgba(0,49,83,0.28); }
 .call svg { width: 18px; height: 18px; }
 .call .num { display: inline; font-size: .9rem; }
@@ -140,10 +139,10 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
    the same two-stop gradient, so the ground's line meets the picture's line at every width.
    Above the band the hero is Prussian (the top padding), below it black. */
 .hero { --top: 38px; --f: 44.33%; padding: var(--top) 0 clamp(3rem, 8vw, 5rem); color: var(--white); text-align: center; overflow-x: clip;
-  background: linear-gradient(to bottom, var(--prussian) 0, var(--prussian) var(--top), var(--black) var(--top), var(--black) 100%); }
+  background: linear-gradient(to bottom, var(--prussian) 0, var(--prussian) var(--top), var(--ink) var(--top), var(--ink) 100%); }
 .hero .lockup { display: grid; justify-items: center; margin-bottom: 2.25rem;
   width: 100vw; margin-left: calc(50% - 50vw);
-  background: linear-gradient(to bottom, var(--prussian) 0, var(--prussian) var(--f), var(--black) var(--f), var(--black) 100%); }
+  background: linear-gradient(to bottom, var(--prussian) 0, var(--prussian) var(--f), var(--ink) var(--f), var(--ink) 100%); }
 .hero .hero-logo { display: block; width: 100%; max-width: 720px; height: auto; margin: 0 auto; }
 .hero h1 { max-width: 14ch; margin-inline: auto; }
 .hero .lead { margin-inline: auto; max-width: 34rem; }
@@ -172,7 +171,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .tile:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(15,11,26,0.12); color: inherit; }
 .tile .ph { aspect-ratio: 4 / 3; background: var(--paper-2); }
 .tile .ph img { width: 100%; height: 100%; object-fit: cover; }
-.tile .ph.panel { display: grid; place-items: center; background: linear-gradient(135deg, var(--prussian), var(--black)); color: var(--white); }
+.tile .ph.panel { display: grid; place-items: center; background: linear-gradient(135deg, var(--prussian), var(--ink)); color: var(--white); }
 .tile .ph.panel svg { width: 34%; height: auto; }
 .tile .body { padding: 1rem 1.1rem 1.15rem; }
 .tile h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
@@ -182,7 +181,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .step { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem; }
 .step .n { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--prussian); color: var(--white); font-weight: 600; margin-bottom: 0.7rem; }
 /* the three panels of the umbrella, as three small marks */
-.step:nth-child(1) .n { background: var(--olive); }
+.step:nth-child(1) .n { background: var(--green); }
 .step:nth-child(2) .n { background: var(--purple); }
 .step:nth-child(3) .n { background: var(--rust); }
 .note { border-left: 4px solid var(--prussian); background: var(--white); padding: 0.9rem 1.1rem; border-radius: 0 var(--radius) var(--radius) 0; }
@@ -235,7 +234,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .arc li::before { content: ""; position: absolute; left: 0; top: 0.68em; width: 8px; height: 8px; border-radius: 50%; background: var(--prussian); }
 
 /* ---------- footer ---------- */
-.foot { background: var(--black); color: var(--white); padding: 2.5rem 0 2rem; border-top: 4px solid var(--prussian); }
+.foot { background: var(--ink); color: var(--white); padding: 2.5rem 0 2rem; border-top: 4px solid var(--prussian); }
 .foot a { color: var(--white); }
 .foot a:hover { color: var(--white); }
 .foot .cols { display: grid; gap: 1.5rem; }
@@ -341,7 +340,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .intake .zone { fill: transparent; stroke: var(--prussian); stroke-width: 1.6; vector-effect: non-scaling-stroke; transition: fill 0.15s; }
 .intake .zone.on { fill: var(--prussian); fill-opacity: 0.22; }
 .intake .edge { stroke: var(--prussian); stroke-width: 1.6; fill: none; vector-effect: non-scaling-stroke; }
-.intake .edge.on { stroke: var(--vermillion-ink); stroke-width: 3.4; }
+.intake .edge.on { stroke: var(--crimson); stroke-width: 3.4; }
 .intake .lbl { font-size: 9px; fill: var(--muted); letter-spacing: 0.04em; }
 /* one card per place they tapped */
 .intake .area { border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--paper-2); padding: 0.85rem 0.9rem 0.5rem; margin: 0 0 0.7rem; }
@@ -354,7 +353,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .intake .exact input { width: 5.5rem; min-height: 44px; font: inherit; font-size: 1rem; padding: 0.35rem 0.6rem; border: 1.5px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
 /* the honesty gate — the reference's .note / .noprice rules, nothing new */
 .req .gate { font-size: 0.9rem; color: var(--muted); border-left: 3px solid var(--prussian); padding-left: 0.75rem; margin: 0.9rem 0 0; }
-.req .gate.warn { border-left-color: var(--vermillion-ink); }
+.req .gate.warn { border-left-color: var(--crimson); }
 /* the photo guidance lines (R17d) — the reference's .guide rules */
 .req .guide { margin: 0 0 0.8rem; padding-left: 1.35rem; font-size: 0.93rem; color: var(--muted); }
 .req .guide li { margin-bottom: 0.3rem; }
@@ -393,7 +392,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 /* road XW: the one line a patch job gets on the time picker */
 .intake2 .v2pair { margin: 0.1rem 0 0.4rem; padding: 0.55rem 0.8rem; border-left: 4px solid var(--prussian); background: rgba(0,49,83,0.06); border-radius: 0 10px 10px 0; font-size: 0.95rem; font-weight: 500; }
 .intake2 .v2pair[hidden] { display: none; }
-.intake2 .v2need { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--vermillion-ink); }
+.intake2 .v2need { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--crimson); }
 /* full-width option rows, one tap target per answer, the mark on the left */
 .v2opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 .v2opts li { margin: 0; }
@@ -611,7 +610,9 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .uaddr-line { margin: 0; font-size: 0.95rem; line-height: 1.4; }
 .uaddr-need .uaddr-line { color: var(--rust); font-weight: 600; }
 .uaddr-busy .uaddr-line { color: var(--muted); }
-.uaddr-ok .uaddr-line { color: var(--olive); font-weight: 600; }
+/* SITE-FIX-02 · B58 · the two states are on the kit now: what still needs confirming is
+   the card's crimson, what is confirmed is the same Prussian the whole site is built on. */
+.uaddr-ok .uaddr-line { color: var(--prussian); font-weight: 600; }
 .uaddr-card { border: 1.5px solid var(--prussian); border-radius: 12px; padding: 0.9rem;
   background: var(--paper); }
 .uaddr-ask { margin: 0 0 0.3rem; font-weight: 700; }
