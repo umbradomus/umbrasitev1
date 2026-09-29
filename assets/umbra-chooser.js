@@ -382,15 +382,23 @@
     var holder = el('div', 'ch-addr-host');
     holder.setAttribute('data-address-host', '1');
     addressStep.appendChild(holder);
-    addr = window.UmbraAddress.attach({
-      input: field, host: holder,
-      onChange: function () { syncFields(); drawReview(); }
-    });
+    /* SITE-FIX-02 · CDO 2 · ONE ADDRESS STATE AT A TIME. This line is put up by the
+       screen gate below when Next is tapped before "Yes, that's it". It used to stay up
+       after the tap, so the screen said confirmed AND not confirmed at once — the CDO's
+       screen 5b-address-confirmed-390. It is made BEFORE the card now, so the card's own
+       onChange can take it down the moment the address is confirmed. */
     var need = el('p', 'v2need ch-addr-need');
     need.setAttribute('role', 'alert');
     need.hidden = true;
     need.textContent = window.UmbraAddress.words.needMore;
     addressStep.appendChild(need);
+    addr = window.UmbraAddress.attach({
+      input: field, host: holder,
+      onChange: function (s) {
+        if (s && s.confirmed) need.hidden = true;
+        syncFields(); drawReview();
+      }
+    });
     /* THE HARD GATE: "afdsjohgaeojuhfhioasd" does not get past this screen. */
     addressStep.setAttribute('data-gate', 'address');
     window.UMBRA_ADDRESS_GATE = function () {
