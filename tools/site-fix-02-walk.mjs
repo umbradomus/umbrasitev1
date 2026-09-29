@@ -263,15 +263,26 @@ const WHO_ES = { name: 'Paseo Paloma', phone: '956 555 0144', address: '1200 E A
   await shot(page, '17b-menu-es-390.png');
   await page.evaluate(() => { const ctl = document.querySelector('[data-menu-toggle], .nav-d > summary'); if (ctl) ctl.click(); });
   await wait(80);
+  /* The CDO's screen 10. This used to be reached by hiding every other step by hand,
+     which meant the page's own show() never ran and the picture carried whatever was on
+     the screen before it — the privacy line among it. It is reached the page's own way
+     now: tick the hole tile so the ceiling screens are in the live order, then ask the
+     wizard to go there, exactly as the review's Edit does. */
+  await page.evaluate(() => {
+    for (const sel of ['input[name="tiles"][value="hole"]',
+                       'input[name="problem_area"][value="Ceiling"]']) {
+      const b = document.querySelector(sel);
+      b.checked = true; b.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  await wait(160);
   const scale = await page.evaluate(() => {
+    if (!window.UmbraIntake || !window.UmbraIntake.to('ceiling-size')) return null;
     const sec = document.querySelector('[data-fstep="ceiling-size"]');
-    if (!sec) return null;
-    for (const s of document.querySelectorAll('[data-fstep]')) s.hidden = (s !== sec);
-    sec.hidden = false;
     return { q: sec.querySelector('.v2q').textContent.trim(), words: [...sec.querySelectorAll('.v2opt span')].map((s) => s.textContent) };
   });
   say.push('  the Spanish size scale: ' + JSON.stringify(scale && scale.words));
-  await page.evaluate(() => { const s = document.querySelector('[data-fstep="ceiling-size"]'); s.scrollIntoView({ block: 'center', behavior: 'instant' }); });
+  if (!scale) throw new Error('the Spanish size scale was not reached');
   await wait(200);
   await shot(page, '10-size-scale-es-390.png');
   await page.close();
