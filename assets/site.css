@@ -78,7 +78,7 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 
 /* ---------- header ---------- */
 .top { background: var(--ink); color: var(--white); position: sticky; top: 0; z-index: 20; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.top .wrap { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.5rem 1rem; padding-block: 0.6rem; }
+.top .wrap { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0.5rem 1rem; padding-block: 0.6rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--white); text-decoration: none; min-height: 44px; }
 .brand img { width: 40px; height: 40px; }
 .brand .wm { height: 14px; width: auto; color: var(--white); }
@@ -91,6 +91,25 @@ section { padding: clamp(2.5rem, 6vw, 5rem) 0; }
 .menu a { color: rgba(255,255,255,0.86); text-decoration: none; padding: 0.4rem 0.7rem; border-radius: 8px; white-space: nowrap; font-weight: 500; }
 .menu a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
 .menu a[aria-current="page"] { color: var(--white); background: rgba(255,255,255,0.14); }
+
+/* SITE-FIX-02 · CDO 1 · THE MENU ON A PHONE. At 390 the eight links ran off the right
+   edge and the last of them read "Sustainab…" / "Planes de C…" — the first thing a stranger
+   screenshots. Below 760 the list is now tucked behind one button and opens as a column, so
+   every item's box is whole inside the screen. No JavaScript and no library: the button is a
+   label, the state is a checkbox. From 760 up the button is gone and the row is what it was. */
+.nav-box { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.nav-btn { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px;
+  padding: 0.5rem 0.85rem; border: 1.5px solid rgba(255,255,255,0.28); border-radius: 999px;
+  color: var(--white); font-weight: 600; font-size: 0.9rem; cursor: pointer; white-space: nowrap; }
+.nav-btn svg { width: 18px; height: 18px; }
+.nav-box:focus-visible + .nav-btn { box-shadow: 0 0 0 4px rgba(102,2,60,0.45); }
+@media (max-width: 759px) {
+  .menu { display: none; }
+  .nav-box:checked ~ .menu { display: grid; gap: 0.15rem; padding-top: 0.35rem; }
+  .nav-box:checked ~ .menu a { padding: 0.6rem 0.7rem; }
+}
+@media (min-width: 760px) { .nav-btn, .nav-box { display: none; } }
+
 @media (min-width: 760px) {
   .top .wrap { grid-template-columns: auto 1fr auto; padding-block: 0.8rem; }
   .brand img { width: 48px; height: 48px; }
