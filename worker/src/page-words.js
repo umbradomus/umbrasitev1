@@ -76,7 +76,8 @@ export const WORDS = {
     small_pair: 'Accepting books both visits at the price above. Questions? Reply to my text.',
     h_taken_pair: 'One of those days was just booked.',
     taken_other_pair: 'These days are still open:',
-    booked_done: 'Nothing else to do.',
+    /* CONFIRM-01: the website now sends the confirmation text itself, and the page says what comes next */
+    booked_done: "Nothing else to do. I'll text you the day before.",
     booked_small: 'Need to move it, or have a question? Reply to my text.',
     /* SITE-FIX-03: the end of the booked line. The FLUX sends that text (FLUX-FIX-16), never this page —
        the page only promises it. road XW's one voice: Drew speaking, as "Reply to my text." above does. */
@@ -159,7 +160,7 @@ export const WORDS = {
     small_pair: 'Al aceptar, quedan programadas las dos visitas al precio de arriba. ¿Preguntas? Responda a nuestro mensaje de texto.',
     h_taken_pair: 'Uno de esos días ya se ocupó.',
     taken_other_pair: 'Estos días siguen disponibles:',
-    booked_done: 'No tiene que hacer nada más.',
+    booked_done: 'No tiene que hacer nada más. Le escribimos el día anterior.',
     booked_small: '¿Necesita cambiarla o tiene preguntas? Responda a nuestro mensaje de texto.',
     booked_promise: 'Le enviaremos un mensaje de texto el día anterior.',
     /* road XW (2026-09-26): the same new lines, for his reviewer. The Spanish page keeps its own voice ("nosotros"). */
