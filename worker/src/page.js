@@ -33,7 +33,9 @@
    URL would leave the site (and form-action 'self' would block the next post), and Response.redirect() throws
    on a relative one in workerd. So: new Response(null, { status: 303, headers: { Location: '/q/' + code } }). */
 
-import { viewByCode, bookByCode, markNone, codeHash, windowStartMs, answerChangeByCode, readYear, noteYearByCode, stampAfterYear } from './quotes.js';
+import { viewByCode, bookByCode, markNone, codeHash, windowStartMs, answerChangeByCode, readYear, noteYearByCode, stampAfterYear, claimConfirmationEmail, noteConfirmationEmail } from './quotes.js';
+import { forwardToFormSubmit } from './forward.js';
+import { confirmationEmail } from './booking-email.js';
 import { chicagoWall } from './biztime.js';
 import { NOTICE_53255 } from './notices.js';
 import { getRecord } from './store.js';
@@ -603,6 +605,54 @@ export function bookedSummary(window, price, lang) {
   return parts.join(' — ');
 }
 
+/** SITE-FIX-03 · THE ONE EMAIL A BOOKING SENDS. On 10-01 Jose booked here and his inbox stayed empty: the
+    website's only email was the request copy at the form. This sends the other half, on the booking, when
+    the customer gave an address on the request form — never otherwise, and never twice: the stamp in the
+    record is CLAIMED FIRST (quotes.js claimConfirmationEmail), so a second tap, a reload or a retry finds
+    it taken and sends nothing.
+
+    The road is the one the request copy already rides: FormSubmit's `_autoresponse` is the customer's own
+    copy, exactly as assets/umbra-sent.js sends it at the form. No `job_id` and no `status_link` go with it
+    — the status link carries the quote code and the code is the secret.
+
+    The day, the window and the price are written by this file's own lineDay/spanOf/money, so the inbox and
+    the booked screen spell the same visit the same way; a fact the booking does not carry is dropped, as
+    bookedSummary drops it. The window is the booking's first visit, the arrival the screen names first.
+
+    THIS SENDS NO TEXT. Only the FLUX texts (FLUX-FIX-16) — one sender, or the customer hears twice.
+
+    Only the page road reaches here. A YES Drew marks by text goes through bookByJob and gets no email,
+    which is right: that customer is already in a text thread with him. */
+async function confirmByEmail(env, r, nowIso) {
+  if (!r || r.state !== 'booked' || !r.job_id) return;
+  const to = await claimConfirmationEmail(env, r.job_id, nowIso);
+  if (!to) return;
+  const lang = r.lang === 'es' ? 'es' : 'en';
+  const w = r.window;
+  const mail = confirmationEmail({
+    lang,
+    day: w && w.date ? lineDay(w.date, lang) : '',
+    span: w && w.start && w.end ? spanOf(w, lang) : '',
+    price: r.price != null && r.price !== '' && Number.isFinite(Number(r.price)) ? money(r.price) : '',
+    phone: env.BUSINESS_PHONE,
+  });
+  let out = null;
+  try {
+    out = await forwardToFormSubmit(env, [
+      /* the address FormSubmit answers the autoresponse to: the customer's own */
+      ['email', to],
+      ['_subject', mail.subject],
+      ['_autoresponse', mail.body],
+      ['_template', 'table'],
+      ['_captcha', 'false'],
+    ]);
+  } catch (err) {
+    console.error('confirmation email: send threw for', r.job_id, String(err && err.message || err));
+    out = { ok: false, status: 0 };
+  }
+  await noteConfirmationEmail(env, r.job_id, out, nowIso);
+}
+
 function bookedPage(v, code) {
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
@@ -833,6 +883,9 @@ export async function handleQuotePage(request, env, url, rest, method, nowIso) {
     const r = await bookByCode(env, code, v, win, 'page', nowIso);
     /* a booking stamps the record (the year with it); anything else, the year's own stamp */
     if (kept && kept.state === 'kept' && !(r && r.state === 'booked')) await stampAfterYear(env, kept.job_id, nowIso);
+    /* SITE-FIX-03: the booking's one confirmation email, when they gave an address. Awaited, so the record
+       carries its stamp before the 303 the browser follows back to the booked screen. */
+    if (r && r.state === 'booked') await confirmByEmail(env, r, nowIso);
     /* Two times offered and none chosen: back to the page, which asks again. Nothing was written. */
     if (r && r.state === 'choose_window') return seeOther(code, '?pick=1');
     /* Every other answer — booked, already_booked, taken, too_close, updating, replaced, withdrawn,

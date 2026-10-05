@@ -52,7 +52,9 @@ const NOT_A_DELIVERY = /unable to submit|activat(e|ion)|confirm your email|too m
 
 /**
  * @param {Array<[string, string|File]>} entries the submission verbatim, in order
- * @param {{job_id: string, status_link: string}} extra
+ * @param {{job_id: string, status_link: string}} [extra] the two named lines the REQUEST copy adds.
+ *   OMITTED by SITE-FIX-03's booking confirmation on purpose: that email carries no job number and no
+ *   status link, because a status link carries the quote code and the code is the secret.
  * @returns {Promise<{ok: boolean, status: number, location?: string, response?: {status:number, type:string, text:string}}>}
  */
 export async function forwardToFormSubmit(env, entries, extra) {
@@ -64,9 +66,10 @@ export async function forwardToFormSubmit(env, entries, extra) {
       fd.append(name, String(value));
     }
   }
-  /* The two extra lines. Named so they read plainly in the table template. */
-  fd.append('job_id', extra.job_id);
-  fd.append('status_link', extra.status_link);
+  /* The two extra lines. Named so they read plainly in the table template. A caller with nothing to add
+     (the booking confirmation) passes no `extra` and posts the entries alone. */
+  if (extra && extra.job_id) fd.append('job_id', extra.job_id);
+  if (extra && extra.status_link) fd.append('status_link', extra.status_link);
 
   const res = await fetch(forwardEndpoint(env), {
     method: 'POST',

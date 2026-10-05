@@ -314,51 +314,94 @@ try {
     }
   }
 
-  /* ============================================================ item 2 · THE CONFIRMATION EMAIL */
+  /* ============================================================ item 2 · THE CONFIRMATION EMAIL
+     The road is the one the request copy already rides, so the reading is the one run-all.mjs already
+     counts: every POST the mail stub caught whose url starts /formsubmit. `_autoresponse` is the field the
+     customer's own copy travels in (assets/umbra-sent.js writes it at the form); `_subject` is the subject
+     of the copy that lands in Drew's inbox. Both languages. NEVER A REAL ADDRESS — the stub only, and the
+     scratch records give sf03.scratch<n>@example.com. */
   if (want('2')) {
-    head('ITEM 2 · THE CONFIRMATION EMAIL — what the mail stub recorded on a booking');
-    const id = await scratchJob(CT(2026, 10, 5, 9, 30), 'Mail Mercer');
-    const c = await create(id, Q(1, [win('2026-11-17', '08:00', '10:00')], { sent_at: T10 }), T10);
-    const code = c.body && c.body.code;
-    ok(Boolean(code), 'the mail quote has a code', code || c.body);
-    await sentQ(id, 1, T10);
-    const before = forwards().length;
-    const page = await bookInBrowser(code, T10, 390, null);
-    ok((await stateOf(page)) === 'booked', 'the booking landed');
-    await page.close();
-    await sleep(600);
-    const after = forwards().slice(before).map(fieldsOf);
-    ok(after.length === 1, 'the mail stub recorded ONE email on the booking', after.length);
-    const rec = await record(id);
-    const stamp = rec.confirmation_email_at || (rec.accept && rec.accept.confirmation_email_at) || null;
-    ok(Boolean(stamp), 'the record carries the confirmation-email stamp', stamp);
-    const f = after[0] || {};
-    const txt = Object.values(f).join(' | ');
-    ok(/Nov 17|11\/17/.test(txt), 'the email carries the day', f._autoresponse || null);
-    ok(/8–10 AM|8-10 AM/.test(txt), 'the email carries the window');
-    ok(txt.includes('$395'), 'the email carries the price');
-    ok(/text you the day before/i.test(txt), 'the email promises the text the day before');
-    ok(/556-6438/.test(txt), 'the email carries the Umbra line the request copy carries');
-    ok(!new RegExp('\b' + id + '\b').test(String(f._subject || '')), 'no job id in the subject', f._subject || null);
-    ok(!/[A-Za-z0-9]{22}/.test(txt), 'no secret (no quote code) in the email', txt.match(/[A-Za-z0-9]{22}/) || null);
-    RESULT.item2_on_booking = {
-      emails_recorded: after.length, email_fields: after, record_stamp: stamp,
-      record_email: rec.fields && rec.fields.email,
+    head('ITEM 2 · THE CONFIRMATION EMAIL — what the mail stub recorded on a booking, both languages');
+    RESULT.item2_on_booking = {};
+    const MAIL = {
+      en: {
+        day: '2026-11-17', name: 'Mail Mercer',
+        dayRe: [/Tue/, new RegExp('(Nov 17|11/17)')],
+        spanRe: /Arriving 8[–-]10 AM/,
+        promise: /text you the day before/i,
+        umbra: /Questions\? Text or call \(956\) 556-6438\./,
+        subjectRe: /^You're booked — /,
+      },
+      es: {
+        day: '2026-11-19', name: 'Correo Cantu',
+        dayRe: [/jueves/i, /19 de noviembre/],
+        spanRe: /Llegada entre las 8 y las 10 a\.m\./,
+        promise: /mensaje de texto el día anterior/i,
+        umbra: /¿Preguntas\? Mande un mensaje de texto o llame al \(956\) 556-6438\./,
+        subjectRe: /^Su visita quedó programada — /,
+      },
     };
+    let lastCode = null, lastId = null;
+    for (const lang of ['en', 'es']) {
+      const L = MAIL[lang];
+      head('  ' + lang.toUpperCase() + ' — the one email a booking sends');
+      const id = await scratchJob(CT(2026, 10, 5, 9, 30), L.name);
+      const c = await create(id, Q(1, [win(L.day, '08:00', '10:00')], { sent_at: T10, lang }), T10);
+      const code = c.body && c.body.code;
+      ok(Boolean(code), lang + ': the mail quote has a code', code || c.body);
+      await sentQ(id, 1, T10);
+      const before = forwards().length;
+      const page = await bookInBrowser(code, T10, 390, null);
+      ok((await stateOf(page)) === 'booked', lang + ': the booking landed');
+      await page.close();
+      await sleep(600);
+      const after = forwards().slice(before).map(fieldsOf);
+      ok(after.length === 1, lang + ': the mail stub recorded ONE email on the booking', after.length);
+      const rec = await record(id);
+      const stamp = rec.confirmation_email_at || null;
+      const f = after[0] || {};
+      const body = String(f._autoresponse || '');
+      const subj = String(f._subject || '');
+      ok(Boolean(stamp), lang + ': the record carries confirmation_email_at', stamp);
+      ok(String(f.email || '') === String((rec.fields || {}).email || ''),
+        lang + ': the email goes to the address they gave on the form', f.email || null);
+      for (const re of L.dayRe) ok(re.test(body), lang + ': the email carries the day ' + re, body || null);
+      ok(L.spanRe.test(body), lang + ': the email carries the window', body || null);
+      ok(body.includes('$395'), lang + ': the email carries the price', body || null);
+      ok(L.promise.test(body), lang + ': the email promises the text the day before', body || null);
+      ok(L.umbra.test(body), lang + ': the email carries the Umbra line the request copy carries', body || null);
+      ok(L.subjectRe.test(subj), lang + ': the subject is in the customer\'s language', subj);
+      ok(!subj.includes(id), lang + ': no job id in the subject', subj);
+      ok(!body.includes(id) && !('job_id' in f) && !('status_link' in f),
+        lang + ': no job id and no status link anywhere in the send', Object.keys(f));
+      ok(!body.includes(code) && !subj.includes(code), lang + ': no secret (no quote code) in the email');
+      RESULT.item2_on_booking[lang] = {
+        emails_recorded: after.length, email_fields: after, record_stamp: stamp,
+        record_email: (rec.fields || {}).email || null,
+      };
+      lastCode = code; lastId = id;
+    }
 
-    /* the plant: a second booking tap on the same page sends nothing again */
+    /* THE PLANT: a second booking tap on the same page sends nothing again */
+    head('  PLANT — the same page booked twice');
     const before2 = forwards().length;
-    const re = await fetch(SITE + '/q/' + code, {
+    const re = await fetch(SITE + '/q/' + lastCode, {
       method: 'POST', redirect: 'manual',
       headers: { 'content-type': 'application/x-www-form-urlencoded', origin: SITE, 'sec-fetch-site': 'same-origin', 'x-umbra-test-now': T10 },
       body: 'v=1&w=1',
     });
     await sleep(600);
     const extra = forwards().length - before2;
-    ok(extra === 0, 'PLANT: booked twice on the same page → no second email', { second_post: re.status, extra_emails: extra });
-    RESULT.item2_plant_second_tap = { second_post_status: re.status, extra_emails: extra, total_emails: forwards().length };
+    ok(extra === 0, 'PLANT: booked twice on the same page → one email, not two', { second_post: re.status, extra_emails: extra });
+    const recAgain = await record(lastId);
+    RESULT.item2_plant_second_tap = {
+      second_post_status: re.status, extra_emails: extra, total_emails: forwards().length,
+      stamp_unchanged: (recAgain.confirmation_email_at || null) === (RESULT.item2_on_booking.es.record_stamp || null),
+    };
+    ok(RESULT.item2_plant_second_tap.stamp_unchanged, 'PLANT: the stamp is the first send\'s, unmoved', recAgain.confirmation_email_at);
 
     /* no email address given → no email */
+    head('  no address given');
     const id2 = await scratchJob(CT(2026, 10, 5, 9, 40), 'Noemail Nava', false);
     const c2 = await create(id2, Q(1, [win('2026-11-18', '08:00', '10:00')], { sent_at: T10 }), T10);
     await sentQ(id2, 1, T10);
@@ -370,7 +413,11 @@ try {
     const extra3 = forwards().length - before3;
     ok(extra3 === 0, 'no email address given → no email sent', extra3);
     const rec2 = await record(id2);
-    RESULT.item2_no_address = { emails: extra3, record_email: (rec2.fields && rec2.fields.email) || null };
+    ok(!rec2.confirmation_email_at, 'no address → no confirmation_email_at stamp', rec2.confirmation_email_at || null);
+    RESULT.item2_no_address = {
+      emails: extra3, record_email: (rec2.fields && rec2.fields.email) || null,
+      record_stamp: rec2.confirmation_email_at || null,
+    };
   }
 } finally {
   say('\n--------------------------------------------');

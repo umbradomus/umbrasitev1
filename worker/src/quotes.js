@@ -839,6 +839,70 @@ async function stampSafe(env, jobId, nowIso) {
   }
 }
 
+/* ------------------------------------------------- SITE-FIX-03 · the confirmation email's two stamps
+
+   The booking confirmation email is SENT by page.js (the words carry the business phone, which
+   page-words.js forbids, and quotes.js must never import page.js — page.js imports this file, so the
+   other direction is a cycle). But the RECORD is written here, where every other KV write of a booking
+   is written: page.js never writes KV and never pushes by itself, and these two functions keep that true.
+
+   `confirmation_email_at` is the field name — the Worker's own snake_case `<thing>_at` shape, as
+   `forwarded_at` and `accepted_at` are. The ignite asked for `confirmationEmailAt` "or the field the
+   Worker's own shape uses — name it"; this is it.
+
+   THE CLAIM COMES BEFORE THE SEND. A stamp taken first can only ever be taken once, so the website can
+   never send this email twice — a second booking tap, a reload, a retry, a reconcile, all find the stamp
+   already there and send nothing. The price of that order is the honest one: a send that fails leaves the
+   stamp standing and no email goes. The customer is not left in the dark by it — the screen said the day,
+   the window and the price the moment they booked, and the Flux still texts the day before (FLUX-FIX-16).
+
+   The read-modify-write is not atomic, and it does not need to be: the booking itself is serialised by the
+   QuoteBook durable object, which answers `already_booked` to every tap after the first (quotebook.js), so
+   only one request per booking ever reaches this claim. */
+
+/**
+ * Takes the right to send the one confirmation email for this job, or refuses.
+ * @returns {Promise<string|null>} the customer's address when this call took the stamp; null when the
+ *   stamp was already taken, when the customer gave no email, or when the record cannot be read.
+ */
+export async function claimConfirmationEmail(env, jobId, nowIso) {
+  let rec = null;
+  try { rec = await getRecord(env, jobId); } catch (err) {
+    console.error('confirmation email: record unreadable for', jobId, String(err && err.message || err));
+    return null;
+  }
+  if (!rec) return null;
+  if (rec.confirmation_email_at) return null;
+  const to = String((rec.fields || {}).email || '').trim();
+  if (!to) return null;
+  rec.confirmation_email_at = nowIso;
+  try { await putRecord(env, rec); } catch (err) {
+    console.error('confirmation email: claim could not be written for', jobId, String(err && err.message || err));
+    return null;
+  }
+  return to;
+}
+
+/** What the send answered, recorded beside the claim — the same ok/status shape index.js keeps for the
+    request copy (`forwarded_at` / `forward_failed`). Never fails the booking: the booking is already in
+    the book and on the screen. */
+export async function noteConfirmationEmail(env, jobId, result, nowIso) {
+  try {
+    const rec = await getRecord(env, jobId);
+    if (!rec) return null;
+    const ok = !!(result && result.ok);
+    if (ok) delete rec.confirmation_email_failed;
+    else rec.confirmation_email_failed = { at: nowIso, status: (result && result.status) || 0 };
+    addEvent(rec, ok ? 'confirmation_email' : 'confirmation_email_failed',
+      { to_given: true, status: (result && result.status) || 0 }, nowIso);
+    await putRecord(env, rec);
+    return rec;
+  } catch (err) {
+    console.error('confirmation email: note failed for', jobId, String(err && err.message || err));
+    return null;
+  }
+}
+
 /** Test hook only: a KV key the suite plants makes the next stamp for that job fail once. */
 async function testFailStamp(env, jobId) {
   if (String(env.ALLOW_TEST_HOOKS) !== 'true') return;
