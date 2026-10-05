@@ -1,0 +1,588 @@
+starting the Worker in Node from /home/claude/site/worker …
+the Worker is up (stand-in runtime: Node, not wrangler)
+
+UMBRA_ONLY=D,J,S,P — the other suites are skipped
+  ✓ the customer is redirected as always
+  ✓ the Pushover call arrived within 5 s (road FW: one app, Telegram only as the fallback)
+  ✓ exactly 1 Pushover call
+  ✓ road FW · one app: Pushover took it, so no Telegram call at all
+  ✓ P moves · priority 2: it rings until acknowledged
+  ✓ the title as written (road W: C4)
+  ✓ P moves · its one link is his job page
+  ✓ P moves · "Open the job"
+  ✓ no link, no admin key, no secret, no phone, address or email in the push
+  ✓ the record says alerts.count = 1
+  ✓ the run at +16 sends exactly one push for it
+  ✓ priority 1 (his table: priority 1 through minute 60)
+  ✓ no retry — a priority-1 push does not repeat
+  ✓ and no expire
+  ✓ and it says the minutes left
+  ✓ the message itself carries no link and no secret
+  ✓ the run at +17 sends nothing to Pushover
+  ✓ and nothing to Telegram
+  ✓ the run at +71 sends exactly one push, not four
+  ✓ priority 2 (the repeating kind), from minute 70
+  ✓ retry 120
+  ✓ expire at most 1800
+  ✓ tag req_<id>
+  ✓ callback = PUBLIC_BASE_URL + /hooks/pushover/<HOOK_SECRET>
+  ✓ and it says fifty minutes left
+  ✓ the skipped rungs are marked fired, so they never fire late
+  ✓ a wrong secret is a 404
+  ✓ and nothing was written
+  ✓ an unknown receipt is a 404
+  ✓ and nothing was written
+  ✓ neither called cancel_by_tag
+  ✓ the stored receipt is accepted
+  ✓ ack_at is set
+  ✓ by Pushover
+  ✓ cancel_by_tag was called once
+  ✓ for req_<id>
+  ✓ a second callback with the same receipt cancels nothing more
+  ✓ the ladder is not ended by the acknowledgement
+  ✓ the minute-80 rung still fires after the ack
+  ✓ saying forty minutes left
+  ✓ after the no-text tap, later runs push nothing for it
+  ✓ and send no Telegram
+  ✓ Tony got his minute-15 push at 7:56
+  ✓ the Quoted tap is accepted
+  ✓ the tap set ack_at
+  ✓ by the Quoted tap
+  ✓ and called cancel_by_tag once
+  ✓ for req_U-0004
+  ✓ POST /admin/seen without the admin key is a 401
+  ✓ and with a wrong key
+  ✓ nothing was written
+  ✓ with the key it is accepted
+  ✓ ack_at is set
+  ✓ by /admin/seen
+  ✓ cancel_by_tag called once
+  ✓ later runs are silent for Tony — his quote went out
+  ✓ but not for Sam: an acknowledgement is not a quote
+  ✓ the no-text tap does stop him
+  ✓ one push at each of his twelve rungs, one at +121, then none
+  ✓ priority 1 through minute 60, priority 2 from minute 70
+  ✓ each rung says the minutes left
+  ✓ P moves · at minute 120 with no texts tick: "LATE · call them now"
+  ✓ at priority 2
+  ✓ silence for the rest of the day
+  ✓ the ladder is finished
+  ✓ with no next step
+  ✓ P moves · and the record says why it ended
+  ✓ Pushover was tried once at intake
+  ✓ and answered 500
+  ✓ Telegram was still sent
+  ✓ road FW · no link, no admin key, no secret, no phone, address or email in the Telegram fallback
+  ✓ P moves · the Telegram fallback carries the same one link, as plain text
+  ✓ road FW · the Telegram fallback carries no parse_mode
+  ✓ road FW · and no buttons
+  ✓ the next run (+5 min) retries Pushover once
+  ✓ and it goes
+  ✓ Telegram is not sent again
+  ✓ the run after that sends nothing
+  ✓ the +16 push is tried
+  ✓ and answered 400
+  ✓ Telegram carries that step
+  ✓ the 400 is never retried (+21, +26: nothing)
+duplicate submission folded into U-0008 after 180 s
+duplicate submission folded into U-0008 after 240 s
+  ✓ the second post lands on the same request number
+  ✓ with the same status link
+  ✓ EMAIL-SUBJECT-01: a resend whose only difference is the stamped subject is the same request
+  ✓ one record
+  ✓ one push
+  ✓ road FW · one app: no Telegram message (Pushover took it)
+  ✓ one email fallback
+  ✓ the same words 11 minutes later are a new request
+  ✓ two runs together: exactly one push
+  ✓ one run sent it; the other did not
+  ✓ three runs on three due records: one push each
+  ✓ both runs claimed it: still exactly one push
+  ✓ one run sent, the other lost the claim
+  ✓ P moves · one QUIET push at 10:15 PM
+  ✓ P moves · priority -1: no sound
+  ✓ P moves · nothing from the runs at 10:20 PM, 11:00 PM, 2:00 AM, 6:55 AM (the quiet one stands alone)
+  ✓ at 7:00 one push names it
+  ✓ the summary
+  ✓ P moves · no visit on the calendar, and it rings: the ring starts at 7 AM
+  ✓ P moves · and it opens the job
+  ✓ and it is the only push at 7:00
+  ✓ road FW · one app: the summary does not also go to Telegram
+  ✓ the 7:05 run adds nothing
+  ✓ P moves · a 5:30 AM request gets one QUIET push at 5:30
+  ✓ at 7:00 one summary names it
+  ✓ priority 2 because a visit is booked before its 9:00 AM due time
+  ✓ "quote before you leave"
+  ✓ naming the visit time
+  ✓ tagged so an ack cancels it
+  ✓ 7:28 AM → due 2026-09-24 9:28 AM
+  ✓ 7:28 AM: quoted at the due time reads YES — 120 business min
+  ✓ 8:30 PM → due 2026-09-25 8:30 AM
+  ✓ 8:30 PM: quoted at the due time reads YES — 120 business min
+  ✓ 10:15 PM → due 2026-09-25 9:00 AM
+  ✓ 10:15 PM: quoted at the due time reads YES — 120 business min
+  ✓ Sat 31 Oct 8:30 PM → due 2026-11-01 8:30 AM
+  ✓ Sat 31 Oct 8:30 PM: quoted at the due time reads YES — 120 business min
+  ✓ a quote one minute past due reads NO — 121 business min
+  ✓ (1) the request lands
+  ✓ (1) minute 0: the arrival push, as before
+  ✓ (1) and it names the due time (road W: C4)
+  ✓ (1) twelve pushes, at exactly his twelve minutes, and none between
+  ✓ (1) priority 1 through minute 60, priority 2 from 10:10
+  ✓ (1) each push says the minutes left
+  ✓ (1) every priority-2 push carries an expire of at most 1800
+  ✓ (1) no link, no key, no number, no address, no text words in any of them
+  ✓ (1) and the gateway is never called before minute 120
+  ✓ (1) road FW · one app: Pushover took all thirteen, so none went to Telegram
+  ✓ (2) a quote is created for the job
+  ✓ (2) "I sent it" at 9:37 answers 200
+  ✓ (2) /sent: nothing fires after the stop
+  ✓ (2) /sent: and no holding text at 11:00
+  ✓ (2) the Quoted tap answers 200
+  ✓ (2) the Quoted tap: nothing fires after the stop
+  ✓ (2) the Quoted tap: and no holding text at 11:00
+  ✓ (2b) the Scheduled tap at 9:37 answers 200
+  ✓ (2b) the Scheduled tap: nothing fires after the stop
+  ✓ (2b) the Scheduled tap: and no holding text at 11:00
+  ✓ (2c) no-text is 401 without the admin key
+  ✓ (2c) and 200 with it
+  ✓ (2c) the no-text tap: nothing fires after the stop
+  ✓ (2c) the no-text tap: and no holding text at 11:00
+  ✓ (2d) quoted_at is gone from the KV record
+  ✓ (2d) and the record says "received" again
+  ✓ (2d) the BOOK is asked fresh, so NO POST to the gateway
+  ✓ (2d) and the ladder ended on the book's word
+  ✓ (3) the 10:10 push went
+  ✓ (3) at priority 2
+  ✓ (3) and Pushover issued a receipt for it
+  ✓ (3) the callback is accepted
+  ✓ (3) cancel_by_tag called exactly once
+  ✓ (3) the record is marked acknowledged
+  ✓ (3) and the ladder is NOT ended
+  ✓ (3) the 10:20 push still fires
+  ✓ (4) exactly ONE POST to the gateway
+  ✓ (4) POST /3rdparty/v1/messages
+  ✓ (4) with basic auth
+  ✓ (4) the fake pair's username (the password is never logged)
+  ✓ (4) and the password is nowhere in the body
+  ✓ (4) id <U-id>-hold
+  ✓ (4) phoneNumbers is one E.164 US number
+  ✓ (4) withDeliveryReport true
+  ✓ (4) P moves · validUntil = 11:00 AM + 3600 s = 12:00 PM (min(3600, seconds to 9 PM))
+  ✓ (4) P moves · validUntil, not ttl
+  ✓ (4) no brace is left anywhere in the words
+  ✓ (4) GSM-7: no curly quote, no long dash, no a/i/o/u-acute
+  ✓ (4) the words, byte for byte
+  ✓ (4) the record's holding block says accepted
+  ✓ (4) with the gateway's own id
+  ✓ (4) in the request's language
+  ✓ (4) and the second clock has started
+  ✓ (4) one "HOLDING TEXT QUEUED" push
+  ✓ (4) naming the job id and nothing else
+  ✓ (4) no push carries the number, the key or the text's words
+  ✓ (7) the second clock walks his table again
+  ✓ (7) with the same priorities
+  ✓ (7) the phone reported the text delivered, once
+  ✓ (7) by one GET of its state
+  ✓ (7) ONE "CALL THEM NOW" push at 1:00 PM
+  ✓ (7) in his words
+  ✓ (7) at priority 2
+  ✓ (7) then nothing at 1:05, 1:30 or the next day
+  ✓ (7) and no gateway call either
+  ✓ (7) the ladder is ended for good
+  ✓ (4b) exactly ONE POST to the gateway
+  ✓ (4b) POST /3rdparty/v1/messages
+  ✓ (4b) with basic auth
+  ✓ (4b) the fake pair's username (the password is never logged)
+  ✓ (4b) and the password is nowhere in the body
+  ✓ (4b) id <U-id>-hold
+  ✓ (4b) phoneNumbers is one E.164 US number
+  ✓ (4b) withDeliveryReport true
+  ✓ (4b) P moves · validUntil = 11:00 AM + 3600 s = 12:00 PM (min(3600, seconds to 9 PM))
+  ✓ (4b) P moves · validUntil, not ttl
+  ✓ (4b) no brace is left anywhere in the words
+  ✓ (4b) GSM-7: no curly quote, no long dash, no a/i/o/u-acute
+  ✓ (4b) the words, byte for byte
+  ✓ (4b) the record's holding block says accepted
+  ✓ (4b) with the gateway's own id
+  ✓ (4b) in the request's language
+  ✓ (4b) and the second clock has started
+  ✓ (4b) one "HOLDING TEXT QUEUED" push
+  ✓ (4b) naming the job id and nothing else
+  ✓ (4b) no push carries the number, the key or the text's words
+  ✓ (6) the record says the box was not ticked
+  ✓ (6) no POST to the gateway at minute 120
+  ✓ (6) P moves · ONE "LATE · call them now" push
+  ✓ (6) P moves · in the brief's words
+  ✓ (6) P moves · naming the reason
+  ✓ (6) at priority 2
+  ✓ (6) and nothing at all after it
+  ✓ (6) the record marks the holding text skipped
+  ✓ (6) and no second clock started
+  ✓ (6b) no POST to the gateway
+  ✓ (6b) ONE push instead
+  ✓ (6b) in the brief’s own words
+  ✓ (6b) at priority 2
+  ✓ (6b) and the ladder ends there
+  ✓ (6b) the record says why
+  ✓ (6b) and the holding text is marked skipped
+  ✓ (8) two runs in the same minute, against a slow gateway → ONE POST
+  ✓ (8) the fake never had to answer 409 — the id left once
+  ✓ (8) one holding block, accepted
+  ✓ (8) with the one id
+  ✓ (8) and the BOOK holds exactly one mark for this job
+  ✓ (8) keyed hold:<U-id>
+  ✓ (8) in state accepted
+  ✓ (9) 401 → holding.state refused
+  ✓ (9) 401 → one "HOLDING TEXT DID NOT GO … call them" push
+  ✓ (9) 401 → at priority 2
+  ✓ (9) 401 → no second clock
+  ✓ (9) 401 → ONE POST across eleven runs, never a retry
+  ✓ (9) 401 → the ladder ends there
+  ✓ (9) 401 → and nothing after
+  ✓ (9) 500 → holding.state unknown
+  ✓ (9) 500 → one "HOLDING TEXT DID NOT GO … call them" push
+  ✓ (9) 500 → at priority 2
+  ✓ (9) 500 → no second clock
+  ✓ (9) 500 → ONE POST across eleven runs, never a retry
+  ✓ (9) 500 → the ladder ends there
+  ✓ (9) 500 → and nothing after
+  ✓ (9b) the call ends on its own twenty-second deadline
+  ✓ (9b) holding.state unknown
+  ✓ (9b) one "DID NOT GO … call them" push
+  ✓ (9b) ONE request reached the gateway, across eleven runs
+  ✓ (9b) and no second clock
+  ✓ (9b) the ladder ends there
+  ✓ (5) nothing pushed at 9:00 PM, 11 PM, 2 AM or 6:55 AM
+  ✓ (5) and nothing reached the gateway
+  ✓ (5) and no priority-2 push of the evening could still be ringing at 9:00 PM
+  ✓ (5) one POST each on the first run at or after 7:00 AM
+  ✓ (5) and both promise 9:00 AM (P moves: the new words)
+  ✓ (5) P moves · with validUntil 8:00 AM — min(3600, seconds to 9 PM) at 7 AM
+  ✓ (5b) in Central Standard Time the text goes at 8:30 PM
+  ✓ (5b) P moves · with validUntil 9:00 PM — exactly the seconds left to 9 PM
+  ✓ (5b) and the holding block is stamped 8:30 PM Central
+  ✓ (5c) the minute-115 slot falls at 8:59 PM and fires
+  ✓ (5c) as priority 1, not 2 — 60 seconds of the day are left
+  ✓ (5c) so Pushover is given no expire and no retry at all
+  ✓ (10) zero pushes with a Chicago hour of 21:00–06:59, across 48 hours
+  ✓ (10) and zero gateway calls in those hours
+  ✓ (10) every priority-2 push: sent_at + expire is at or before 9:00 PM
+  ✓ (10) and any push inside the last two minutes went as priority 1
+  ✓ (11) the register has a `holding_sent_at` row
+  ✓ (11) the register has a `holding_state` row
+  ✓ (11) the register has a `second_clock_started_at` row
+  ✓ (11) the register has a `call_push_at` row
+  ✓ (11) holding_sent_at carries the moment the text went
+  ✓ (11) holding_state says accepted
+  ✓ (11) second_clock_started_at is filled
+  ✓ (11) call_push_at is filled
+  ✓ (11) and the register never prints the E.164 number
+  ✓ (11) nor the holding text's own words
+  ✓ (11) the quoted request still reads YES — 37 business min
+  ✓ (11) and its four new columns are blank, as every unfilled slot is
+  ✓ (1) the request lands
+  ✓ (1) one POST at 11:00
+  ✓ (1) one QUEUED push at 11:00
+  ✓ (1) KV says accepted
+  ✓ (1) KV is on clock 2
+  ✓ (1) KV bent back to clock 1, no holding block
+  ✓ (1) the BOOK still says accepted
+  ✓ (1) 11:05 — the run adopted the mark
+  ✓ (1) no second POST to the gateway
+  ✓ (1) one more QUEUED push (two in all: the real one and the adopted one)
+  ✓ (1) KV now says accepted
+  ✓ (1) with the gateway id from the mark
+  ✓ (1) and says it was adopted
+  ✓ (1) the second clock is on
+  ✓ (1) anchored at the mark's own minute (11:00)
+  ✓ (1) 11:10 — adopted once, not again
+  ✓ (1) and no third QUEUED push
+  ✓ (1) 11:15 — the second clock's first rung fires
+  ✓ (1) with 105 minutes left
+  ✓ (1) still one POST
+  ✓ (2) KV says refused after the 401
+  ✓ (2) the ladder ended
+  ✓ (2) one DID NOT GO push
+  ✓ (2) 11:05 — adopted
+  ✓ (2) no second POST
+  ✓ (2) one more DID NOT GO push
+  ✓ (2) KV now says refused
+  ✓ (2) the ladder is ended again
+  ✓ (2) and nothing after
+  ✓ (3) the tap is accepted at 11:00:01
+  ✓ (3) NO POST to the gateway
+  ✓ (3) no push for this request
+  ✓ (3) the tap is still on the record
+  ✓ (3) and the ladder ended on it
+  ✓ (3) no second clock
+  ✓ (3) 11:05 — still no POST
+  ✓ (4) 8:50 PM — the minute-115 push was tried
+  ✓ (4) and Pushover answered 500
+  ✓ (4) it carried expire 600 (ten minutes to close)
+  ✓ (4) 8:55 PM — retried once
+  ✓ (4) with expire cut to the five minutes left, not the stored 600
+  ✓ (4) still priority 2
+  ✓ (4) nothing at or after 9 PM
+  ✓ (5) one 429, then one more try
+  ✓ (5) after waiting about a second
+  ✓ (5) a second 429 is not tried a third time
+  ✓ (5) and the error stands
+  ✓ (5) any other error is not retried
+  ✓ (5) and stands
+  ✓ (6) hooks off: the override is ignored and the real host is used
+  ✓ (6) hooks on, 127.0.0.1: the override is honoured
+  ✓ (6) hooks on but not 127.0.0.1: ignored
+  ✓ (7) the text is built
+  ✓ (7) and carries the name as typed
+  ✓ (7) with no brace left
+  ✓ (2) the request lands
+  ✓ (2) the title stays "NEW JOB · U-NNNN · reply by h:mm" — the job id, never a name
+  ✓ (2) url = that job's page on his phone (/j/<U-id>.<key>, the key made from the Worker's secret)
+  ✓ (2) url_title "Open the job" (CONTRACTS C4: no name in a push; the name is on the page)
+  ✓ (2) it rings: priority 2
+  ✓ (2) every 2 minutes (retry 120)
+  ✓ (2) until the 15-minutes-left mark: 10:45 AM, 6300 s after a 9:00 AM landing
+  ✓ (2) tagged with the job, so any tap can cancel it by tag
+  ✓ (2) with the callback that records his acknowledgement
+  ✓ (2) the name is nowhere in the push (title, message, link title)
+  ✓ (2) Pushover issued a receipt for the ring
+  ✓ (2) his Acknowledge reaches the Worker (the callback)
+  ✓ (2) the ack records seen-at on the job (9:02 AM)
+  ✓ (2) …and the register row the collector copies carries seen_at
+  ✓ (2) …and the reply-by time did not move
+  ✓ (2) opening the job page answers 200
+  ✓ (2) opening the job cancels the ring, by tag (once)
+  ✓ (2) …and writes nothing: the record is byte-identical, the reply-by time with it
+  ✓ (1) GET /j/<U-id>.<key> → 200
+  ✓ (1) a page
+  ✓ (1) noindex, nofollow (header)
+  ✓ (1) …and in the page
+  ✓ (1) no-store
+  ✓ (1) CSP: nothing but its own images and inline styles, no script
+  ✓ (1) no <script> anywhere
+  ✓ (1) the first name, big, at the top
+  ✓ (1) the job in a few words ("Ceiling patch")
+  ✓ (1) the reply clock: "Reply by 11:00 AM · 1 h 55 m left"
+  ✓ (1) their 2 photos
+  ✓ (1) their words, uncut (all 267 characters)
+  ✓ (1) what they picked
+  ✓ (1) the address, "Typed — check it", and a Maps link
+  ✓ (1) the phone, with Text and Call
+  ✓ (1) ONE primary button
+  ✓ (1) …named for the next thing: "Text Willow: price by 11:15 AM"
+  ✓ (1) the buttons are 56 and 48 px tall (≥ 44)
+  ✓ (1) sized for the phone
+  ✓ (1) amber at ≤ 60 minutes left ("55 m left")
+  ✓ (1) red at ≤ 30 minutes left ("25 m left")
+  ✓ (1) a wrong key, another job's key, no key, a bare key, a job that is not there → 404
+  ✓ (1) …all four the same page, and it shows nothing of the job
+  ✓ (1) no GET changes anything: page, confirm, photo, board → the record byte-identical
+  ✓ (1) their photo, byte for byte, behind the same key
+  ✓ (1) …and not with another job's key
+  ✓ (1) a confirmed address: ✓, and no "check it"
+  ✓ (1) the "while we're there" lines, when the request carries them
+  ✓ (1) two things in two places: "Holes and cracks · ceiling and walls"
+  ✓ (1) no photos, no photo block
+  ✓ (1) the board: GET /j/board/<key> → 200
+  ✓ (1) every open job, each one link to its page
+  ✓ (1) "2 need a reply"
+  ✓ (1) a wrong board key → 404
+  ✓ (1) the board is noindex too
+  ✓ (3) the one confirm shows the drafted text, exactly
+  ✓ (3) …who it goes to and from which phone
+  ✓ (3) …and one "Send"
+  ✓ (3) Send → 303 back to the job
+  ✓ (3) exactly ONE POST to the work phone's outbox (SMSGate)
+  ✓ (3) the text that went is the text he saw, byte for byte
+  ✓ (3) with its own id
+  ✓ (3) to their number
+  ✓ (3) through the work phone's own key
+  ✓ (3) validUntil = 10:06 AM (an hour, and never past 9 PM)
+  ✓ (3) validUntil, not ttl
+  ✓ (3) the send records replied-at on the job
+  ✓ (3) a text…
+  ✓ (3) …promising the price by 11:15 AM
+  ✓ (3) …"Pending", as the phone's outbox answered
+  ✓ (3) the register row carries replied_at and reply (never the number)
+  ✓ (3) the clock stops: "Replied 9:06 AM · price by 11:15 AM"
+  ✓ (3) no reply button any more
+  ✓ (3) "Texted Willow 9:06 AM · from the work phone", the text folded under it
+  ✓ (3) the board row stops too
+  ✓ (3) the ladder stops: no push from 9:10 to 11:10
+  ✓ (3) and no holding text at 11:00
+  ✓ (3) the record says why: replied
+  ✓ (3) a second Send sends nothing (one reply per request)
+  ✓ (2b) one push at 10:15 PM
+  ✓ (2b) quiet: priority -1
+  ✓ (2b) no ring (no retry, no expire)
+  ✓ (2b) and it opens the job
+  ✓ (2b) "reply by 9:00 AM" — two business hours from 7:00
+  ✓ (2b) nothing at 2:00 AM or 6:55 AM
+  ✓ (2b) at 7:00 AM one push
+  ✓ (2b) the 7 AM push names the overnight job
+  ✓ (2b) and it RINGS (priority 2)
+  ✓ (2b) to the 15-minutes-left mark: 8:45 AM
+  ✓ (2b) and opens the job
+  ✓ (3b) Spanish: the research's words, "antes de las 11:00 a. m."
+  ✓ (3b) …and that is what went
+  ✓ (3b) they asked for a call: the button is "Call Carl" (tel:)
+  ✓ (3b) …with "I called" under it
+  ✓ (3b) …and no text button
+  ✓ (3b) a reply posted anyway sends nothing
+  ✓ (3b) "I called" → 303
+  ✓ (3b) "I called" records replied-at, as a call
+  ✓ (3b) the clock: "Called 9:04 AM"
+  ✓ (3b) the ladder stops
+  ✓ (3b) no texts ticked: no text button — "Call Nora"
+  ✓ (3b) …and says why in one line
+  ✓ (3b) a reply posted anyway sends nothing
+  ✓ (3b) a Send from another site → 403
+  ✓ (3b) Sec-Fetch-Site: cross-site → 403
+  ✓ (3b) …and nothing went
+  ✓ (3b) words that are not the ones he saw → back to the confirm
+  ✓ (3b) a confirm whose promise has passed sends nothing
+  ✓ (3b) …it goes back to a fresh confirm
+  ✓ (3b) 9 PM–7 AM the button says "Texts go from 7 AM" and does nothing
+  ✓ (3b) a Send at 9:05 PM sends nothing
+  ✓ (3c) the twelve rows
+  ✓ (3c) "4:30 PM today"
+  ✓ (3c) "7:15 AM tomorrow"
+  ✓ (3c) "hoy antes de la 1:15 p. m."
+  ✓ (4) his table, unchanged: twelve reminders
+  ✓ (4) at his minutes
+  ✓ (4) each opens the job
+  ✓ (4) 15, 10 and 5 minutes left
+  ✓ (4) 15 minutes left: the drafted reply, "[name]" where the name goes, "by 12:45 PM"
+  ✓ (4) 10 and 5 minutes left: the draft as it would go then ("by 1:00 PM")
+  ✓ (4) every reminder carries it
+  ✓ (4) and none carries the name
+  ✓ (4) a call-only request: the reminder says "Call them: they asked for a call."
+  ✓ (5) a bad signature, no signature, a stale timestamp → 401
+  ✓ (5) …and nothing was written, texted or pushed
+  ✓ (5) a signed STOP → 200
+  ✓ (5) ONE confirmation text
+  ✓ (5) in the brief's words
+  ✓ (5) within five minutes (validUntil 9:10 AM)
+  ✓ (5) the job says they texted STOP
+  ✓ (5) his phone: "U-NNNN replied: STOP"
+  ✓ (5) …with the link
+  ✓ (5) then the reply route refuses the number
+  ✓ (5) the page: "They texted STOP 9:05 AM — call them." and the button is Call
+  ✓ (5) a second STOP: no second confirmation
+  ✓ (5) …and his phone hears it once
+  ✓ (5) and the holding text refuses it at 11:00
+  ✓ (5) …his phone rings "LATE · call them now" instead
+  ✓ (5) the register row carries sms_opt_out (the Flux's send routes must read it)
+  ✓ (5b) END, UNSUBSCRIBE, CANCEL, QUIT, ALTO, BASTA, STOP — each opts the number out, with one confirmation
+  ✓ (5b) ALTO and BASTA are answered in Spanish
+  ✓ (5b) "No texts" → 303
+  ✓ (5b) the number is off texts, by his tap
+  ✓ (5b) no confirmation for a tap, and the reply route refuses the number
+  ✓ (5b) any other text → 200
+  ✓ (5b) it lands on the job, whole
+  ✓ (5b) not an opt-out
+  ✓ (5b) one push
+  ✓ (5b) "U-NNNN replied: <their words>" — the name taken out
+  ✓ (5b) with the link
+  ✓ (5b) the page shows their reply
+  ✓ (5b) a STOP at 10:30 PM: off texts, and no text at night (the job says so)
+  ✓ (6) at 11:00, ONE text
+  ✓ (6) the brief's words, the new promise two business hours on
+  ✓ (6) validUntil 12:00 PM (an hour, never past 9 PM)
+  ✓ (6) validUntil, not ttl
+  ✓ (6) never a second automatic text…
+  ✓ (6) …the second clock ends in ONE "CALL THEM NOW" ring for him
+  ✓ (6) the page: late, the holding text sent, the new promise
+  ✓ (6) …and the one button is "Call Holly"
+  ✓ (6) the Worker's timer ticks every minute (wrangler.toml crons)
+  ✓ (6b) he replied by text: the holding text did NOT go
+  ✓ (6b) …the ladder ended on his reply
+  ✓ (6b) he called: the holding text did NOT go
+  ✓ (6b) the desk sent the quote: the holding text did NOT go
+  ✓ (6b) still wet: the holding text did NOT go
+  ✓ (6b) still wet: "LATE · U-0071 · call them now" instead
+  ✓ (6b) still wet: ringing until acknowledged (priority 2, every 2 minutes, 3 hours — before 9 PM)
+  ✓ (6b) still wet: saying why: "it's still wet"
+  ✓ (6b) still wet: with the link
+  ✓ (6b) "Don't auto-text" → 303
+  ✓ (6b) he tapped "Don't auto-text": the holding text did NOT go
+  ✓ (6b) he tapped "Don't auto-text": "LATE · U-0072 · call them now" instead
+  ✓ (6b) he tapped "Don't auto-text": ringing until acknowledged (priority 2, every 2 minutes, 3 hours — before 9 PM)
+  ✓ (6b) he tapped "Don't auto-text": saying why: "you turned the auto-text off"
+  ✓ (6b) he tapped "Don't auto-text": with the link
+  ✓ (6b) they texted STOP: the holding text did NOT go
+  ✓ (6b) they texted STOP: "LATE · U-0073 · call them now" instead
+  ✓ (6b) they texted STOP: ringing until acknowledged (priority 2, every 2 minutes, 3 hours — before 9 PM)
+  ✓ (6b) they texted STOP: saying why: "they said no texts"
+  ✓ (6b) they texted STOP: with the link
+  ✓ (6b) no texts ticked: the holding text did NOT go
+  ✓ (6b) no texts ticked: "LATE · U-0074 · call them now" instead
+  ✓ (6b) no texts ticked: ringing until acknowledged (priority 2, every 2 minutes, 3 hours — before 9 PM)
+  ✓ (6b) no texts ticked: saying why: "they did not tick the texts box"
+  ✓ (6b) no texts ticked: with the link
+  ✓ (6b) they asked for a call: the holding text did NOT go
+  ✓ (6b) they asked for a call: "LATE · U-0075 · call them now" instead
+  ✓ (6b) they asked for a call: ringing until acknowledged (priority 2, every 2 minutes, 3 hours — before 9 PM)
+  ✓ (6b) they asked for a call: saying why: "they asked for a call"
+  ✓ (6b) they asked for a call: with the link
+  ✓ (6b) his reply in flight at the minute: the holding text did NOT go (the phone's send record, read fresh)
+  ✓ (6b) …his reply went, once
+  ✓ (6b) no holding text before on this request: J (8) and (6) above — one POST, ever
+  ✓ (6c) the timer fires every 1 min: twelve reminders
+  ✓ (6c) each within 60 s of its own minute
+  ✓ (6c) the holding text at the reply-by minute (3:32 PM), not after it
+  ✓ (7) before 1978: exactly one line
+  ✓ (7) not sure: one line
+  ✓ (7) 1978 or later: no line
+  ✓ (7) a job that is not paint or holes: no line
+  ✓ (7) their quote page (built before 1978): one link to the EPA's Renovate Right
+  ✓ (7) their quote page (1978 or later): none
+
+================ RESULTS ================
+PASS  D · (2) a request at 7:28 AM pushes within 5 s 10 passed, 0 failed
+PASS  D · (4) +16: the minute-15 push at priority 1; +17: nothing; +71: priority 2, with its receipt 16 passed, 0 failed
+PASS  D · (5) Pushover's Acknowledge callback — it cancels that push, not the clock 16 passed, 0 failed
+PASS  D · (6) the QUOTED tap, and POST /admin/seen/<id> 16 passed, 0 failed
+PASS  D · (8) his table end to end, then "call them now", then silence 9 passed, 0 failed
+PASS  D · (9) Pushover 500 → Telegram still goes, one retry; 400 → never retried 15 passed, 0 failed
+PASS  D · (10) the same submission twice in 10 minutes 8 passed, 0 failed
+PASS  D · (11) two runs at once on one due record → one push 5 passed, 0 failed
+PASS  D · (7) 10:15 PM: nothing until one 7:00 AM summary 16 passed, 0 failed
+PASS  D · (3) the due-time table, and (12) the register counts business minutes 9 passed, 0 failed
+PASS  J · (1) his table — every 15, then every 10, then every 5 10 passed, 0 failed
+PASS  J · (2) the quote going out stops it — and three other stops 18 passed, 0 failed
+PASS  J · (3) an acknowledgement cancels that push, not the clock 8 passed, 0 failed
+PASS  J · (4) the holding text at two hours, in English 20 passed, 0 failed
+PASS  J · (7) the second clock, and then he calls    10 passed, 0 failed
+PASS  J · (4b) the same in Spanish                   20 passed, 0 failed
+PASS  J · (6) a customer who did not tick the texts box 9 passed, 0 failed
+PASS  J · (6b) §6: a request whose number is not a US number 7 passed, 0 failed
+PASS  J · (8) one POST, however the runs land        7 passed, 0 failed
+PASS  J · (9) 401 and 500 — never a retry            14 passed, 0 failed
+PASS  J · (9b) the gateway never answers: twenty seconds, then over 6 passed, 0 failed
+PASS  J · (5) the last ten minutes of the day, and the morning 12 passed, 0 failed
+PASS  J · (10) forty-eight hours, three requests, nothing after 9 PM 4 passed, 0 failed
+PASS  J · (11) the register's four new columns       12 passed, 0 failed
+PASS  S · (1) B1: KV behind an ACCEPTED mark — the next run adopts it, once, and never a second POST 20 passed, 0 failed
+PASS  S · (2) B1: KV behind a REFUSED mark — the next run adopts it: one "did not go" push, the ladder ends 9 passed, 0 failed
+PASS  S · (3) S2: a No-text tap between the run's listing and its claim is kept — no POST, no push 7 passed, 0 failed
+PASS  S · (4) S1: a priority-2 push retried after a 5xx is cut to the seconds left before 9 PM 7 passed, 0 failed
+PASS  S · (5) B1: putRecord waits out KV's one-write-per-key-per-second rule once 6 passed, 0 failed
+PASS  S · (6) N4: a push base override is honoured only with the test hooks on AND a 127.0.0.1 address 3 passed, 0 failed
+PASS  S · (7) N5: a first name holding "$&" reaches the text as letters 3 passed, 0 failed
+PASS  P · (2) the arrival push opens the job, rings until acknowledged, and names no one 18 passed, 0 failed
+PASS  P · (1) the job page on his phone              35 passed, 0 failed
+PASS  P · (3) the reply is one tap and one confirm — nothing typed 24 passed, 0 failed
+PASS  P · (2b) 9 PM–7 AM: the arrival push is quiet, and the ring starts at 7 AM 11 passed, 0 failed
+PASS  P · (3b) in Spanish, by call, with no texts ticked, from another site 21 passed, 0 failed
+PASS  P · (3c) "by <time>" = the tap + 2 business hours, rounded up to the quarter hour (12 rows) 4 passed, 0 failed
+PASS  P · (4) with no reply, every reminder carries the drafted reply and the link 9 passed, 0 failed
+PASS  P · (5) STOP: the signed webhook, one confirmation, and every send refuses 16 passed, 0 failed
+PASS  P · (5b) every stop word, alone or in a sentence; "No texts" is one tap; any other text lands on the job 13 passed, 0 failed
+PASS  P · (6) the holding text: the only automatic text, when every guard passes 9 passed, 0 failed
+PASS  P · (6b) one reading per guard — each proves the holding text did NOT go 33 passed, 0 failed
+PASS  P · (6c) at the Worker's own timer, no step of his table and no holding text more than 60 s late 3 passed, 0 failed
+PASS  P · (7) built before 1978 or "not sure": one line on his page, and the EPA link on their quote page 6 passed, 0 failed
+-----------------------------------------
+TOTAL 534 passed, 0 failed   (runtime: Node stand-in, not wrangler — see test/lib/node-worker.mjs)

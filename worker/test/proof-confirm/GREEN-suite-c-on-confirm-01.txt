@@ -1,0 +1,101 @@
+starting the Worker in Node from /home/claude/site/worker …
+the Worker is up (stand-in runtime: Node, not wrangler)
+
+UMBRA_ONLY=C — the other suites are skipped
+  ✓ the tap on Accept & confirm answers 303 back to the page
+  ✓ exactly ONE POST reached the fake SMSGate for this booking
+  ✓ to the customer's own number, E.164
+  ✓ the message id is <U-id>-confirm-v1, minted once
+  ✓ the words: "You're booked with Umbra Domus: Mon Nov 9, 8-10 AM. Price $395 flat. We'll text the day before and when we're on the way. Reply STOP to opt out. - Drew"
+  ✓ under 320 characters (151)
+  ✓ never "licensed" or "bonded" (R33)
+  ✓ with the SMSGATE_AUTH pair, as every text (the fake logs the user only)
+  ✓ validUntil no later than 9:00 PM that day
+  ✓ GET /admin/quote/<id> → confirmation.state = sent
+  ✓ confirmation.id = the gateway message id
+  ✓ confirmation.sha = sha256 of the words
+  ✓ confirmation.at = the booking's moment
+  ✓ and on the booked version itself
+  ✓ /api/jobs carries confirmation.state = sent
+  ✓ with the version it belongs to
+  ✓ the booking is scheduled
+  ✓ one `confirmation` event on the record
+  ✓ the markdown export says "Confirmation text · sent by the website"
+  ✓ the customer's page: "You're booked." · Mon 11/9 · $395 · "I'll text you the day before."
+  ✓ still exactly one POST after the next cron ticks (never a second send)
+  ✓ the same tap again writes nothing and sends nothing
+  ✓ no push to his phone carries the name, number or address
+  ✓ POST /admin/quote/<id>/accept (a texted YES) → 200
+  ✓ booked
+  ✓ the answer carries confirmation.state = sent
+  ✓ exactly ONE POST for the texted YES too
+  ✓ the words name Tue Nov 10, 1-3 PM ("You're booked with Umbra Domus: Tue Nov 10, 1-3 PM. Price $3…")
+  ✓ state sent
+  ✓ booked at 9:01 PM
+  ✓ nothing reached the fake SMSGate at once
+  ✓ confirmation.state = queued
+  ✓ send_at = 7:00 AM tomorrow, Central
+  ✓ /api/jobs says queued
+  ✓ nothing at 9:05 PM, 11 PM, 3 AM or 6:59 AM
+  ✓ ONE POST at the 7:00 AM tick
+  ✓ the same minted id
+  ✓ state sent
+  ✓ at 7:00 AM
+  ✓ queued_at keeps the booking's own moment (9:01 PM)
+  ✓ /api/jobs says sent (the same run stamped it)
+  ✓ still one after 7:01 and 7:05
+  ✓ booked
+  ✓ no POST reached the fake SMSGate
+  ✓ confirmation.state = no_consent
+  ✓ /api/jobs says no_consent (the Flux shows "they didn't opt in to texts — call them")
+  ✓ the booking itself is scheduled
+  ✓ and nothing goes later either
+  ✓ the export says they did not opt in
+  ✓ their STOP reached the webhook
+  ✓ and was read as a STOP
+  ✓ the booking still goes through
+  ✓ no confirmation POST for an opted-out number
+  ✓ no POST of any kind since the booking
+  ✓ confirmation.state = no_consent
+  ✓ why = stop
+  ✓ nothing at 7:00 AM either
+  ✓ booked, though the text failed
+  ✓ exactly one POST was made
+  ✓ confirmation.state = failed
+  ✓ with the gateway's status
+  ✓ the booking is scheduled on the record
+  ✓ with its day
+  ✓ /api/jobs says failed
+  ✓ no second POST on the next cron ticks — a failed text is never retried
+  ✓ booked
+  ✓ one POST
+  ✓ the Spanish words, folded to GSM-7 (quedo, dia)
+  ✓ no English in it
+  ✓ under 320 characters (185)
+  ✓ confirmation.lang = es
+  ✓ the Spanish page says "Le escribimos el día anterior."
+  ✓ and no English promise on it
+  ✓ a two-visit option lists each visit on its own line
+  ✓ queued at 10 PM
+  ✓ withdrawn at 10:30 PM
+  ✓ no text at 7:00 AM for a booking that was freed
+  ✓ booked
+  ✓ no call reached the gateway at all
+  ✓ confirmation.state = no_key
+  ✓ his phone got one push
+  ✓ titled "Booking U-xxxx: no texting key on the website — confirm them yourself"
+  ✓ and it carries no name, number or address
+  ✓ /api/jobs says no_key
+  ✓ still no call after the next tick
+
+================ RESULTS ================
+PASS  C · (1) a daytime booking: ONE text to the customer, the right words, sent on the state, the page says so 29 passed, 0 failed
+PASS  C · (2) a booking at 9:01 PM: queued, nothing until 7:00 AM, then ONE text 13 passed, 0 failed
+PASS  C · (3) no consent: no text, no_consent on the state 7 passed, 0 failed
+PASS  C · (4) STOP on file: no text                  8 passed, 0 failed
+PASS  C · (5) the gateway answers 500: failed, the booking stands, never a retry 8 passed, 0 failed
+PASS  C · (6) a Spanish quote: Spanish words         9 passed, 0 failed
+PASS  C · (8) a booking cancelled while its text waits for 7:00: nothing goes at 7:00 3 passed, 0 failed
+PASS  C · (7) no SMSGATE_AUTH on the Worker: no call, no_key, his phone is told 8 passed, 0 failed
+-----------------------------------------
+TOTAL 85 passed, 0 failed   (runtime: Node stand-in, not wrangler — see test/lib/node-worker.mjs)

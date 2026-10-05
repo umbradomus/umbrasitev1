@@ -1,0 +1,138 @@
+{
+  "1": {
+    "page": {
+      "job": "U-0003",
+      "posts": 1,
+      "text": "You're booked with Umbra Domus: Mon Nov 9, 8-10 AM. Price $395 flat. We'll text the day before and when we're on the way. Reply STOP to opt out. - Drew",
+      "chars": 151,
+      "to": [
+        "+19565550301"
+      ],
+      "id": "U-0003-confirm-v1",
+      "state": {
+        "state": "sent",
+        "at": "2026-11-02T16:05:00.000Z",
+        "id": "U-0003-confirm-v1",
+        "sha": "8a893c0722d0278188c0a1007ae34e672020aaaa29841b522046da1909038747",
+        "lang": "en",
+        "parts": 1,
+        "status": 202
+      },
+      "kv": {
+        "state": "sent",
+        "at": "2026-11-02T16:05:00.000Z",
+        "id": "U-0003-confirm-v1",
+        "sha": "8a893c0722d0278188c0a1007ae34e672020aaaa29841b522046da1909038747",
+        "lang": "en",
+        "parts": 1,
+        "status": 202,
+        "version": 1
+      }
+    },
+    "text_yes": {
+      "job": "U-0004",
+      "posts": 1,
+      "text": "You're booked with Umbra Domus: Tue Nov 10, 1-3 PM. Price $395 flat. We'll text the day before and when we're on the way. Reply STOP to opt out. - Drew"
+    },
+    "gate_posts_before": 0
+  },
+  "2": {
+    "job": "U-0005",
+    "booked_at": "2026-11-03T03:01:00.000Z",
+    "queued": {
+      "state": "queued",
+      "at": "2026-11-03T03:01:00.000Z",
+      "queued_at": "2026-11-03T03:01:00.000Z",
+      "send_at": "2026-11-03T13:00:00.000Z"
+    },
+    "sent": {
+      "queued_at": "2026-11-03T03:01:00.000Z",
+      "state": "sent",
+      "at": "2026-11-03T13:00:00.000Z",
+      "id": "U-0005-confirm-v1",
+      "sha": "3828429d91099f3639cf8b49356069f6c91c05baefa9b4e17be3242c4dd3f28b",
+      "lang": "en",
+      "parts": 1,
+      "status": 202
+    },
+    "posts": 1,
+    "reconcile_at_seven": [
+      {
+        "queued_at": "2026-11-03T03:01:00.000Z",
+        "state": "sent",
+        "at": "2026-11-03T13:00:00.000Z",
+        "id": "U-0005-confirm-v1",
+        "sha": "3828429d91099f3639cf8b49356069f6c91c05baefa9b4e17be3242c4dd3f28b",
+        "lang": "en",
+        "parts": 1,
+        "status": 202
+      }
+    ]
+  },
+  "3": {
+    "job": "U-0006",
+    "state": {
+      "state": "no_consent",
+      "at": "2026-11-02T17:00:00.000Z",
+      "why": "no_consent"
+    },
+    "posts": 0
+  },
+  "4": {
+    "job": "U-0007",
+    "state": {
+      "state": "no_consent",
+      "at": "2026-11-02T17:10:00.000Z",
+      "why": "stop"
+    },
+    "stop": {
+      "ok": true,
+      "matched": true,
+      "stop": true,
+      "confirmation": "accepted"
+    }
+  },
+  "5": {
+    "job": "U-0008",
+    "state": {
+      "state": "failed",
+      "at": "2026-11-02T17:20:00.000Z",
+      "id": "U-0008-confirm-v1",
+      "sha": "cdc43c1875e7f9de8b2e4e18eddf8c636aa82fbc701bbbaedb6270af394aa8ee",
+      "lang": "en",
+      "parts": 1,
+      "status": 500,
+      "why": "unknown"
+    },
+    "posts": 1,
+    "record_status": "scheduled"
+  },
+  "6": {
+    "job": "U-0009",
+    "text": "Su cita con Umbra Domus quedo confirmada: mar 17 nov, 2-4 p.m. Precio $395 fijo. Le escribimos el dia anterior y cuando vayamos en camino. Responda STOP para no recibir mensajes. - Drew",
+    "two_visit": {
+      "job": "U-0010",
+      "text": "You're booked with Umbra Domus:\nWed Nov 18, 8-10 AM\nThu Nov 19, 11 AM-1 PM\nPrice $395 flat. We'll text the day before and when we're on the way. Reply STOP to opt out. - Drew"
+    }
+  },
+  "7": {
+    "job": "U-0801",
+    "state": {
+      "state": "no_key",
+      "at": "2026-11-02T18:00:00.000Z",
+      "why": "no_key",
+      "pushed": [
+        {
+          "channel": "pushover",
+          "ok": true,
+          "status": 200
+        }
+      ]
+    },
+    "push_title": "Booking U-0801: no texting key on the website — confirm them yourself"
+  },
+  "8": {
+    "job": "U-0011",
+    "posts": 0
+  }
+}

@@ -1,0 +1,22 @@
+== npm install (worker/) — 2026-10-05T01:01:31Z ==
+npm error code E403
+npm error 403 403 Forbidden - GET https://registry.npmjs.org/zod/-/zod-3.25.76.tgz
+npm error 403 In most cases, you or one of your dependencies are requesting
+npm error 403 a package version that is forbidden by your security policy, or
+npm error 403 on a server you do not have access to.
+npm error A complete log of this run can be found in: /home/claude/.npm/_logs/2026-10-05T01_01_32_116Z-debug-0.log
+
+== direct probe of the registry ==
+HTTP/2 403 
+x-deny-reason: host_not_allowed
+content-length: 105
+
+== node test/run-all.mjs == (Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer-core' — the devDependencies could not be installed, see above)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v22.22.0
