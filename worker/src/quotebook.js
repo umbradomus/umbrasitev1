@@ -39,7 +39,14 @@
    ever made on a job whose quote is booked; the customer OKs it on its own page with their name typed as the signature
    (kept here with the time), or says no thanks. Like a quote row it is keyed by sha256(code), moves its state_version on
    every change, and carries its own push (CHANGE OK / CHANGE NO) through the same claim-once machinery. A job with no
-   change has no row here, and every answer about it reads exactly as before. */
+   change has no row here, and every answer about it reads exactly as before.
+
+   THE CONFIRMATION TEXT (CONFIRM-01, 2026-10-04). A booking gets ONE text from the website itself (confirm.js). The
+   booking's own quote row carries where that stands — `confirm_json` (state sent | queued | failed | no_consent | no_key,
+   with the time, the gateway's message id and the words' sha256), `confirm_due` (set by book() the moment a booking lands,
+   kept while the text waits for 7:00 AM, NULL once it is settled), and a claim (`confirm_claim`, `confirm_claim_at`) so two
+   senders never both send it. Four columns added the additive way; a row an older Worker wrote reads NULL in all of them
+   and is never touched. A booking withdrawn clears its due text, so nothing goes at 7:00 for a time that was freed. */
 
 import { DurableObject } from 'cloudflare:workers';
 
@@ -145,6 +152,12 @@ const ADDED_COLUMNS = [
   /* road XW: the year their house was built, typed on the quote page (NULL on every row until they give one) */
   ['quotes', 'year_built', 'INTEGER'],
   ['quotes', 'year_at', 'TEXT'],
+  /* CONFIRM-01: the booking's confirmation text — where it stands, whether one is still owed, and who holds the right
+     to send it this minute */
+  ['quotes', 'confirm_json', 'TEXT'],
+  ['quotes', 'confirm_due', 'TEXT'],
+  ['quotes', 'confirm_claim', 'TEXT'],
+  ['quotes', 'confirm_claim_at', 'TEXT'],
 ];
 
 /* A claimed push that never reported back (the Worker died mid-send) is released after this long. */
@@ -162,7 +175,9 @@ function parseRow(r) {
      way) offers each of its windows as a one-visit option — exactly what it always offered. */
   o.options = o.options_json ? JSON.parse(o.options_json) : o.windows.map((w) => [w]);
   o.push_retry = o.push_retry_json ? JSON.parse(o.push_retry_json) : null;
-  delete o.body_json; delete o.windows_json; delete o.push_retry_json; delete o.options_json;
+  /* CONFIRM-01: the confirmation text's state (null on a row that never had a booking, and on every older row) */
+  o.confirmation = o.confirm_json ? JSON.parse(o.confirm_json) : null;
+  delete o.body_json; delete o.windows_json; delete o.push_retry_json; delete o.options_json; delete o.confirm_json;
   return o;
 }
 
@@ -363,8 +378,10 @@ export class QuoteBook extends DurableObject {
         const clash = this._clash(win, row.token_hash);
         if (clash) return { state: 'taken', row, clash };
       }
+      /* CONFIRM-01: the booking owes the customer ONE confirmation text, by page or by texted YES alike (confirm_due);
+         confirm.js decides and sends it, and clears this when it is settled */
       this._bump(row.token_hash,
-        "status = 'accepted', accepted_at = ?, accepted_by = ?, accepted_window = ?, push_due = ?",
+        "status = 'accepted', accepted_at = ?, accepted_by = ?, accepted_window = ?, push_due = ?, confirm_due = 'confirm'",
         [nowIso, by, n, by === 'page' ? 'accept' : null]);
       visits.forEach((win, i) => {
         if (i === 0) {
@@ -403,7 +420,8 @@ export class QuoteBook extends DurableObject {
       /* road W: a two-visit booking frees every day it held */
       const days = this._bookingDays(jobId).filter((b) => b.token_hash === row.token_hash);
       if (days.length) this.sql.exec('DELETE FROM booking_days WHERE token_hash = ?', row.token_hash);
-      this._bump(row.token_hash, "status = 'withdrawn', cancelled_at = ?, push_due = NULL, push_retry_json = NULL", [nowIso]);
+      /* CONFIRM-01: a text still waiting for 7:00 AM for this booking is owed no longer — the time was freed */
+      this._bump(row.token_hash, "status = 'withdrawn', cancelled_at = ?, push_due = NULL, push_retry_json = NULL, confirm_due = NULL, confirm_claim = NULL, confirm_claim_at = NULL", [nowIso]);
       return { state: 'withdrawn', freed: booking, freed_days: days, row: this._row(row.token_hash) };
     });
   }
@@ -600,6 +618,51 @@ export class QuoteBook extends DurableObject {
         delivered ? 1 : 0, nowIso, delivered ? 1 : 0, kind, tokenHash,
       );
       return { ok: true, delivered, retry: again };
+    });
+  }
+
+  /* ------------------------------------------------------------ CONFIRM-01 · the booking's confirmation text */
+
+  /** Every booked row still owed its confirmation text (queued overnight, or a first try that never finished). */
+  confirmationsDue() {
+    return this.sql.exec("SELECT token_hash FROM quotes WHERE confirm_due IS NOT NULL AND status = 'accepted'").toArray().map((r) => r.token_hash);
+  }
+
+  /**
+   * Takes the right to send this row's confirmation text, so two senders never both send it. null when nothing is owed,
+   * when the booking is gone, or when another sender holds the claim. A claim older than `staleMs` never came back:
+   * the call's end is unknown, so the row is written `failed` (never a second POST) and null is answered.
+   */
+  claimConfirm(tokenHash, claim, nowIso, staleMs) {
+    return this.ctx.storage.transactionSync(() => {
+      const row = this._row(tokenHash);
+      if (!row || !row.confirm_due || row.status !== 'accepted') return null;
+      if (row.confirm_claim) {
+        if (Date.parse(nowIso) - Date.parse(row.confirm_claim_at) < staleMs) return null;
+        const prior = row.confirmation || {};
+        const failed = { ...prior, state: 'failed', at: nowIso, why: 'stale_sending', claimed_at: row.confirm_claim_at };
+        this._bump(tokenHash, 'confirm_json = ?, confirm_due = NULL, confirm_claim = NULL, confirm_claim_at = NULL', [JSON.stringify(failed)]);
+        return null;
+      }
+      this.sql.exec('UPDATE quotes SET confirm_claim = ?, confirm_claim_at = ? WHERE token_hash = ?', claim, nowIso, tokenHash);
+      return { row };
+    });
+  }
+
+  /**
+   * How the step ended, written by the one holder of the claim: the confirmation as the Flux will read it, and whether a
+   * text is still owed (`stillDue`: queued for 7:00 AM). Every terminal state clears the due mark for good. `force` is
+   * for the one caller that could not finish normally (an error before or inside the step) and writes without a claim.
+   */
+  finishConfirm(tokenHash, claim, confirmation, stillDue, force = false) {
+    return this.ctx.storage.transactionSync(() => {
+      const row = this._row(tokenHash);
+      if (!row) return { ok: false };
+      if (!force && row.confirm_claim !== claim) return { ok: false };
+      if (force && row.confirmation && !row.confirm_due) return { ok: false };     /* settled already: never overwrite a sent */
+      this._bump(tokenHash, 'confirm_json = ?, confirm_due = ?, confirm_claim = NULL, confirm_claim_at = NULL',
+        [JSON.stringify(confirmation), stillDue ? 'confirm' : null]);
+      return { ok: true, row: this._row(tokenHash) };
     });
   }
 
