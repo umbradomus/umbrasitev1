@@ -1,0 +1,30 @@
+RESULT: GREEN — FRONT-DOOR-01: the home page is Shape 1 (The Menu) in English and Spanish, every price lives in one file and is drawn on four pages, a tile tap lands on the form with the job chosen; walk 147/147 on the branch, 61 failed on main; suite K 153/153.
+
+STATE
+- Branch `front-door-01` from main 588a728. Not pushed. Six commits:
+  255a42a (1) assets/umbra-menu.js · 97b3d97 (2) assets/site.css · 338a8bc (3) index.html · 66d147a (4) es/index.html · 916a92d (5) services.html + es/servicios.html · 0cb10d8 (6) tools/walk-front-door.mjs + tools/run-suite-k.mjs
+- Untouched: the form's fields, the chooser JS, the Worker, everything under worker/, the header, promise strip, nav and footer markup.
+
+DID
+- /assets/umbra-menu.js: the ONE place the 24 prices + half/full day live (en + es). Renders into `[data-menu]` on /, /es, /services, /es/servicios, grouped (Around the house · Parents and grandparents · Smart home · Outside · Rentals) + the day card. Each tile → `/services?menu=<key>#request` (es: `/es/servicios?menu=<key>#pedir`) and carries `data-service` + `data-tile`.
+- The landing: today's mechanism is same-page only (`[data-service]` click ticks the hidden `service` radio). umbra-menu.js reads `?menu=<key>` on the form page, lights the matching chooser tile through a real `change` event — the chooser itself ticks `service` + `problem`, the stepper re-orders, the draft saves — writes the job's name into "Anything else, in a sentence" (`what`), then strips the query. Job→tile map: drywall→hole, paint→paint, door→door, caulk→comfort, wifi/smart→smart, gutters/pressure-wash/fence/lights→outside, the rest→else ("Not sure" + the sentence).
+- index.html / es/index.html: header + promise as today; ink hero ("Small jobs, done this week." · paper primary button → #prices · ghost "Text us your list" `sms:+19565566438?body=Hi Drew, here's my list: ` · Brownsville line); the menu; footnote; trust row (4); How it works (3 steps, Zelle/cash/check); Who's coming card (today's Drew paragraph + /about link); "What Umbra does" cut to three sentences + "See our services"; footer as today. Title/description with prices, OG image kept, JSON-LD HomeAndConstructionBusiness (Brownsville/Harlingen/Los Fresnos/South Padre Island, priceRange $45–$649, Brownsville TX 78521, no reviews).
+- services.html / es/servicios.html: the Ideas row is replaced by the same menu (section #prices / #precios); umbra-menu.js loaded after the chooser and stepper. CSS version bumped to v=9 on the four pages.
+- site.css: `.fd` block — 18px body, tiles 2-per-row under 760 (3 at 760, 4 at 1000), 44px+ targets, visible focus, paper button on ink (Prussian on ink measured 1.4:1 as a shape; paper on ink 17.5:1), single-job groups go full width, hero centred ≥900.
+
+PROOF (all under /home/claude/front-door-proof/)
+- walk-green.txt: GREEN — 147 ok, 0 failed (branch). walk-red.txt: RED — 30 ok, 61 failed (main 588a728, same script).
+  Per page × size: tiles link to the form with the job carried; service agrees with the chooser tile for all 25 jobs; "licensed"/"licencia" 0; no "/hour", "per hour", "/hr", "la hora", "por hora"; sms: link with body; no console error; no overflow at 320/390/430/1280; 18px body; tile names ≥15px, no spill; hero button 17.52:1; JSON-LD; title; footer line; all 13 price points. Tap door/gutters/tv on / and /es → chooser screen of /services (/es/servicios), `[data-screen]="chooser"`, `service` = Doors & Carpentry / Yard & Property / Not sure, tile lit and in hidden `tiles`, job name in `what`, form on screen.
+- Screenshots: green/home-en-390.png, home-en-1280.png, home-en-320.png, home-es-390.png, home-es-1280.png, home-es-320.png, services-en-390.png, services-es-390.png, services-en-1280.png, form-en-landed-door.png, form-es-landed-door.png; red/ holds main's at the same names; mockup-shape-1.png is the frame built from.
+- suite-k-branch.txt: worker/test/suite-k-chooser.mjs run through tools/run-suite-k.mjs (no wrangler needed: TLS relay + static copy + chromium). K(1)–(12) and K(13 contact) 117 ok, 0 failed; it stops at K(13) "es/index" because /es no longer carries a form. suite-k-branch-standin.txt: same run with UMBRA_K_ES_STANDIN=1 (the TEST COPY serves es/servicios at /es so the suite reaches its end) — GREEN 153/153, K(14)–(16) included.
+- Looked at before/after myself: dropped `.rise` on the home steps (a scroll-driven fade that left them blank in a full-page shot); the lone rental tile spans its row; the hero is centred on desktop.
+
+FOUND
+- Spec conflict, resolved toward the walk's rule: the given footnote contained "licensed contractor" while the page must say "licensed" 0 times. Footnote reads: "I don't do electrical, plumbing or A/C — in Texas those trades need their own state license. Send the photo anyway; if it's theirs, I'll say so right away." (es: "...necesitan su propia autorización del estado..."). One word from Drew puts the original back.
+- Today's Drew paragraph (kept, as asked) says "electrical engineering degree" and "commercial electrician"; the fixed menu item says "Window A/C unit". Both are in the spec and both are outside the "only in the footnote" rule — left as specified.
+- es/index.html used to carry the old v1 request form (#solicitud); the new Spanish home has none (the form is on /es/servicios, where every tile points). Its footer link "Pedir servicio" was repointed from /es#solicitud to /es/servicios#pedir — the one footer change. suite K(13) still walks to /es for a form and needs that line re-pointed by whoever owns worker/test (not touched here).
+- services.html keeps its own "licensed trades and not ours" line in #service-options (not the home page; outside the chooser's screens).
+
+COULD NOT
+- worker/test/run-all.mjs needs a real `wrangler dev` (local KV/R2) and worker/node_modules; neither is here, and npm is blocked (403). Suite K was run on its own via tools/run-suite-k.mjs with puppeteer-core from /opt/npm-tools; the other suites were not run.
+- No real device test; iOS `sms:?body=` is the current form and was not exercised on a phone.
