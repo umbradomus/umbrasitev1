@@ -599,7 +599,13 @@ export function bookedSummary(window, price, lang) {
   const l = lang === 'es' ? 'es' : 'en';
   const parts = [];
   if (window && window.date) parts.push(lineDay(window.date, l));
-  if (window && window.start && window.end) parts.push(spanOf(window, l));
+  /* English says the span bare — "8–10 AM" stands on its own between the dashes. Spanish does not: "las 8 y
+     las 10 a.m." alone is not a phrase, so it takes the ticket's own word below it, "Llegada entre {span}".
+     No new word is minted for this line in either language. */
+  if (window && window.start && window.end) {
+    const span = spanOf(window, l);
+    parts.push(l === 'es' ? fill(WORDS.es.ticket_arrive, { span }) : span);
+  }
   if (price != null && price !== '' && Number.isFinite(Number(price))) parts.push(money(price));
   parts.push(WORDS[l].booked_promise);
   return parts.join(' — ');

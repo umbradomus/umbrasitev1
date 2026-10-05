@@ -1079,24 +1079,29 @@ new_sqlite_classes = ["QuoteBook"]
        QUOTE-WORDS-01 re-pins the four pages that offer one time (their second button now reads "This time doesn't work").
        road W (2026-09-26) re-pins sixteen: every quote page's look changed (the folded step list, the cards, the days and
        the hold in his texts' style, Accept right under the choice, the notices below it); NOT VALID and FORBIDDEN, the two
-       bilingual sections, are unchanged. The new values are this reading's own, run on road W's src. */
+       bilingual sections, are unchanged. The new values are this reading's own, run on road W's src.
+       SITE-FIX-03 (2026-10-04) re-pins the same sixteen: the booked screen's new line (the day, the window, the
+       price and the promise of the text) sits on the two BOOKED pages, and its one style rule (.qsay) is in the
+       stylesheet every whole English page carries — so every whole page's bytes move by design. NOT VALID and
+       FORBIDDEN, the two bilingual sections, are unchanged again, and their two hashes below are untouched.
+       These sixteen are the first full-suite run on SITE-FIX-03's tip (worker/test, 2026-10-04). */
     const EN_BASE = {
-      "OPEN · both notices (NOTICE_53255 \"true\")": '8c3b55ba35649a07e7d3fba55364fa646da5b393b505f5ec8f3dec1dab03161a',
-      "OPEN · one time": '199f9a31b075c3020aec3b1f781938371a12678c5c361e37535c6da695741a14',
-      "OPEN · two times, one across noon": 'eda147c90122546a8ce8fad3a2e568c1149ca0f1d9ee6ef60e0869d6974d4640',
-      "OPEN · from 12 and from 1, hold at 1 PM": 'adfc2382f37bd1e11a7b9072223a8099ecb61d3b8e1080e0e77b5ec27f85d973',
-      "OPEN · no time picked (?pick=1)": '0e45b8f6ddbf06346c7f4629d177a191b060b1c520c11921b58717ffefead5e2',
-      "HOLD ENDED · one time": 'd51dfc33afc94a8ca6b13fb291daffb280b6225a0108a9840273401161aedbfb',
-      "HOLD ENDED · two times": 'd5658be37e966e3aa9465bed5f146a8ac09dc5d16c9879f7115067e22613b832',
-      "TOO CLOSE": '8892e5e783b9a9282274bcff5cd446f4f55a04e916daa48028bed6f9cbbffc7e',
-      "TAKEN · one time free": '335a4e5b039b446a09a0860202aab3f8fa688c3928f10132ce9881ca5e161dc9',
-      "TAKEN · no time free": '5e05109d0d23fc2ab4b3b7bf38cb16e354502bc320feda93f1feb74a2a412896',
-      "BOOKED · one time": '03609b13cb37ee0a81c7371a2b954499b8180ae70585f3f1c1de5f0c12f70d9b',
-      "BOOKED · the second of two, across noon": 'bc6b2215ffef978411c7689ab4b7ac598314489cb3c1da8c8ee18a344830fbaf',
-      "UPDATING": 'd72ffa8a72fc22ebd674c472344262d6abcb4dccffc80d2200ddd7ffd83770ea',
-      "REPLACED": '5441d266648ab8e317d9d9e1d02566740e836e6bcc64d8baaae1f8d288c6b981',
-      "RECEIVED": 'fdbe75daf335614762dbf59620ce5e596d09751fa7b2ba675de2ac6ef6b27188',
-      "WITHDRAWN": '5f34a46f63d9d40a71d10e745319dd104709e40d493dc2a407f7238e9963033d',
+      "OPEN · both notices (NOTICE_53255 \"true\")": '481a61b7f0da944b394a282081d3ec681c20d33b551fe3aed55b8d563452d833',
+      "OPEN · one time": '2346b1dca8df262a245c69999d90bab074299b7c480e9fba3bc2b4b060c458b0',
+      "OPEN · two times, one across noon": 'bf96063d28fe5fe40ef6db9c751e81bc479c5e26f97dec6e817f309362f3e121',
+      "OPEN · from 12 and from 1, hold at 1 PM": '58e6078d26cb29daf976b51a42fb6c99a2843612c5a5a9ae13fd6c26d6d364e9',
+      "OPEN · no time picked (?pick=1)": 'cebede8c8b615a279e57cee8f89eae11ecf2b1f8c95a732b5958a245eb5e1700',
+      "HOLD ENDED · one time": 'fbfbd1a245286755da9e499b8228c6b68716268ed6ca6f60f86bebf8c1ff6e4e',
+      "HOLD ENDED · two times": '22fd4bbe8b56d8136c1e9d0570db022a23813197328a2d56a68119ac9bbd480c',
+      "TOO CLOSE": '8ba4874f0753588f470334207429a7ab0a20383dd357a1524dc9392cd19e52e6',
+      "TAKEN · one time free": 'd80265c39b91049510514ac2cf63acb73ccf0ea3b314cac32052a617afe2a99f',
+      "TAKEN · no time free": 'bb3713d1d88e438c842c4d29997ad708777eb65e801ae23b0b7213b23980b507',
+      "BOOKED · one time": '15fa5b577bd183cb21abb12405c0a59835d04c6cfa94bdc6b9cd5263874bd20c',
+      "BOOKED · the second of two, across noon": '76ef6ca338091a88c0df08b1859417b346cf96fd07df43c6f5313ab97ca523a5',
+      "UPDATING": 'fb25c53275d56920a6fc2c4e7835d22b32f72beadc7503ba8fde4dcfc5041cff',
+      "REPLACED": '4b7030af6bb2018c19bb806d63e794519748d2b2828233b8293c66883ca775bb',
+      "RECEIVED": '52311879b2edd8a768e8c30cb6b3241eafacf18d43b2831e17584d93753d8d99',
+      "WITHDRAWN": 'dd243beac79c1219eff4b365be3959394f8440f57341aecc1a9eda03317812f3',
       "NOT VALID · the English section": '138000509adc7aa28e633ed18b2acea71fabadac9edf01dfb0c5e5f455b8bd30',
       "FORBIDDEN · the English section": '469ce356233913d669a7349f17b212818d5e950eb22cc96ee6f61a32c46aa181',
     };
@@ -1530,7 +1535,7 @@ new_sqlite_classes = ["QuoteBook"]
     await postQ(esPair.code, { v: 1 }, at(20, 26));
     pages['BOOKED · two days'] = (await getQ(esPair.code, at(20, 27))).text;
     eq(stateOf(pages['BOOKED · two days']), 'booked', 'road W: the one-choice quote of two days, accepted → BOOKED');
-    expectIn('BOOKED · two days', pages['BOOKED · two days'], ['h_booked', 'lbl_visits', 'ticket_then', 'booked_done', 'booked_small']);
+    expectIn('BOOKED · two days', pages['BOOKED · two days'], ['h_booked', 'lbl_visits', 'ticket_then', 'booked_done', 'booked_small', 'booked_promise']);
     expectIn('BOOKED · two days', pages['BOOKED · two days'], ['ticket_arrive'], { span: 'las 8 y las 10 a.m.' });
     const enParts = [];
     for (const [k, v] of Object.entries(E)) for (const s of [].concat(v)) for (const x of String(s).split(/\{\w+\}/)) if (x.trim().length > 3) enParts.push([k, x.trim()]);
