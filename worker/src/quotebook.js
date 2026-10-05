@@ -448,6 +448,15 @@ export class QuoteBook extends DurableObject {
         if (price === was) return { state: 'already', from: row.body.price_was, to: was, row };
         return { state: 'spent', from: row.body.price_was, to: was, row };
       }
+      /* A change order carries the price he booked at inside its own `base`, with `total = base + price`, and
+         nothing ever recomputes them — his side sent those numbers and the customer has already been shown them
+         on the change's own page. Lowering underneath one would leave the OLD price on a page the customer still
+         holds ("Your quote was $70") and a stale total on /api/job, which is exactly what this round forbids. So
+         while a change order stands — open, OK'd or declined, anything but withdrawn — the lowering is refused.
+         A withdrawn change shows no price at all (changePage returns the withdrawn words before the ticket, and
+         customerChanges drops it), so it does not stand in the way. */
+      const standing = this._changes(jobId).map((c) => ({ n: c.n, state: this._changeState(c) })).filter((c) => c.state !== 'withdrawn');
+      if (standing.length) return { state: 'change_order', standing, row };
       if (typeof was !== 'number' || !Number.isFinite(was)) return { state: 'no_price', row };
       if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return { state: 'not_positive', row };
       if (price >= was) return { state: 'not_lower', was, row };

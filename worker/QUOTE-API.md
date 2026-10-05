@@ -474,19 +474,30 @@ POST /admin/quote/U-0015/reprice?k=<ADMIN_KEY>
 | the call | the answer |
 |---|---|
 | `price` equal to or above the version's price | `422 {"error":"invalid","reason":"price must be LOWER than the booked price (70); a price that adds is a change order","price":70}` |
-| `price` not a positive number (0, −5, `"45"`, missing) | `422 {"error":"invalid","reason":"price must be a positive number of dollars, lower than the booked price"}` |
+| `price` not a positive number (0, −5, `"45"`, missing) | `422 {"error":"invalid","reason":"price must be a positive number of dollars"}` |
+| the job holds a **change order** that is not withdrawn | `422 {"error":"invalid","reason":"this job holds a change order (1) that still carries the booked price; withdraw it first, then lower","changes":[{"n":1,"state":"open"}]}` |
 | the version is not the accepted one (open, sent, withdrawn) | `409 {"error":"not_accepted","reason":"…this one is <standing>","standing":"open"}` |
 | an unknown job, or a version this job never had | `404 {"error":"not_found"}` |
 | **the identical call again** | `200 {"state":"repriced","version":1,"already":true,"price":50,"price_was":70}` — **and not one write** |
 | a *different* second lowering (45 on the one already at 50) | `422 {"error":"invalid","reason":"this price was already lowered once, from 70 to 50; it is lowered once","price":50,"price_was":70}` |
 
 **What it moves.** In the book, that version's `price` becomes P and the price he booked at is kept beside it as
-**`price_was`** (with `repriced_at`), inside `body_json` — no new column, nothing the Flux or the Job Sync reads. The KV
+**`price_was`** (with `repriced_at`), inside `body_json` — no new column, and nothing the Flux or the Job Sync already
+reads is *renamed or dropped*; `price_was` and `repriced_at` are added beside what is there, and the price fields below
+move to P as this section says. The KV
 record is re-stamped through the one mirror every other write uses, so **`quote_amount`**, **`accept.price`** and
 `quote.price` all read P, with exactly one event **`repriced {version, from, to}`** (derived from the book, so a stamp,
 a failed stamp and the 5-minute reconcile all write it once). `GET /admin/quote/<id>` (§5) carries the new `price` and
 **`price_was`** on that version and on `current` — **his side only: no customer payload and no customer page carries the
 old price.** The customer's `/q/` page and his status page simply read the new price, in both languages.
+
+**Why a change order blocks it.** A change order (§12) carries the price he booked at inside its own `base`, with
+`total = base + price`; those are the numbers his side sent, the customer has already been shown them on the change's
+own page, and nothing recomputes them. Lowering underneath one would leave the old price on a page the customer still
+holds — *"Your quote was $70" / "Su cotización era de $70"* — and a stale `total` on `/api/job`. That is why the
+lowering is refused while any change order stands (open, OK'd or declined). A **withdrawn** change shows the customer
+no price at all and is dropped from `/api/job`, so it does not stand in the way. To lower a price under a change
+order: withdraw the change order (§12 `/cancel`), lower, then raise the change order again against the new price.
 
 **What it never does.** No text, no push, no email — the version and its `accepted_at` do not move, so nothing is
 "fresh" and no confirmation, acknowledgement or reminder is minted. The booking, its visit windows, its confirmation

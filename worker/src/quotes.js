@@ -449,6 +449,12 @@ export async function repriceQuote(env, jobId, version, price, nowIso) {
   if (r.state === 'not_accepted') {
     return { status: 409, body: { error: 'not_accepted', reason: 'a price is lowered on the version the customer booked; this one is ' + r.standing, standing: r.standing } };
   }
+  if (r.state === 'change_order') {
+    const ns = r.standing.map((c) => c.n).join(', ');
+    return { status: 422, body: { error: 'invalid',
+      reason: 'this job holds a change order (' + ns + ') that still carries the booked price; withdraw it first, then lower',
+      changes: r.standing } };
+  }
   if (r.state === 'no_price') return { status: 422, body: { error: 'invalid', reason: 'this version carries no price to lower' } };
   if (r.state === 'not_positive') return { status: 422, body: { error: 'invalid', reason: 'price must be a positive number of dollars' } };
   if (r.state === 'not_lower') {
