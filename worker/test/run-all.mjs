@@ -28,6 +28,8 @@ import { suiteSeat } from './suite-s-seat.mjs';
 /* SITE-FIX-01: the chooser "Fix something" lands on. Site-only; it reads no Worker. */
 import { suiteChooser } from './suite-k-chooser.mjs';
 import { suitePhone } from './suite-p-phone.mjs';
+/* CONFIRM-01: the booking confirmation text the website sends itself. */
+import { suiteConfirm } from './suite-c-confirm.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = path.resolve(HERE, '..');
@@ -1043,6 +1045,19 @@ async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, 
     } catch (err) {
       suite('P · the suite ran to its end');
       ok(false, 'suite P stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
+    }
+  }
+
+  /* ====================================================================== C */
+  /* CONFIRM-01 (2026-10-04): the booking confirmation text — one text on every booking, queued 9 PM–7 AM, consent and
+     STOP honoured, never a retry, `confirmation` on the state. Readings go to .tmp/confirm-readings.json. */
+  if (want('C')) {
+    try {
+      const readings = await suiteConfirm({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSGATE_AUTH, FAKE_WEBHOOK_KEY, suite, ok, eq, json, sleep, SITE, PORT, TMP, WORKER_DIR, wlogRef });
+      fs.writeFileSync(path.join(TMP, 'confirm-readings.json'), JSON.stringify(readings, null, 2));
+    } catch (err) {
+      suite('C · the suite ran to its end');
+      ok(false, 'suite C stopped early — every reading after this point did NOT run', String(err && err.stack || err).slice(0, 600));
     }
   }
 
