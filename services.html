@@ -10,7 +10,7 @@
 <link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios">
 <link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/services">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=8">
+<link rel="stylesheet" href="/assets/site.css?v=9">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
 <!-- SITE-FIX-01 · the key's one place. Ships EMPTY; only Drew fills it in. -->
@@ -28,6 +28,10 @@
 <!-- road W: what they gave, carried to the thank-you page in this tab's own memory; before the email leg, always -->
 <script src="/assets/umbra-sent.js?v=1" defer></script>
 <script src="/assets/umbra-two-channels.js?v=3" defer></script>
+<!-- FRONT-DOOR-01 · the menu: the same priced tiles as the home page, drawn into [data-menu] below,
+     and ?menu=<key> on this address lands the customer with that job already chosen. Runs AFTER
+     the chooser and the stepper, on purpose: it goes through their own events. -->
+<script src="/assets/umbra-menu.js?v=1" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
@@ -144,21 +148,12 @@
     </div>
   </section>
 
-  <section id="ideas" style="padding-top:0">
+  <section class="fd fd-menu" id="prices" style="padding-top:0">
     <div class="wrap">
-      <h2>Ideas: the kind of jobs people call us for.</h2>
-      <p class="lead narrow" style="margin-bottom:.4rem">Tap one and it picks that service on the form below.</p>
-      <p class="fine" style="margin:0 0 1.2rem">Sample photos, not our jobs yet. Real ones land here as we finish them.</p>
-      <div class="grid three">
-        <a class="tile rise" href="#request" data-service="Drywall &amp; Paint"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-01-640.webp?v=1 640w, /assets/img/ideas-01-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-01-640.jpg?v=1" srcset="/assets/img/ideas-01-640.jpg?v=1 640w, /assets/img/ideas-01-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A fresh coat, one room" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A fresh coat, one room</h3><p class="fine">Drywall &amp; Paint</p></div></a>
-        <a class="tile rise" href="#request" data-service="Drywall &amp; Paint"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-02-640.webp?v=1 640w, /assets/img/ideas-02-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-02-640.jpg?v=1" srcset="/assets/img/ideas-02-640.jpg?v=1 640w, /assets/img/ideas-02-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Grey walls, white trim, done right" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Grey walls, white trim, done right</h3><p class="fine">Drywall &amp; Paint</p></div></a>
-        <a class="tile rise" href="#request" data-service="Doors &amp; Carpentry"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-03-640.webp?v=1 640w, /assets/img/ideas-03-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-03-640.jpg?v=1" srcset="/assets/img/ideas-03-640.jpg?v=1 640w, /assets/img/ideas-03-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="A door that won't latch and trim gone soft" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">A door that won't latch and trim gone soft</h3><p class="fine">Doors, Trim &amp; Carpentry</p></div></a>
-        <a class="tile rise" href="#request" data-service="Yard &amp; Property"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-07-640.webp?v=1 640w, /assets/img/ideas-07-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-07-640.jpg?v=1" srcset="/assets/img/ideas-07-640.jpg?v=1 640w, /assets/img/ideas-07-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Gutters cleaned before the storms" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Gutters cleaned before the storms</h3><p class="fine">Yard &amp; Property Care</p></div></a>
-        <a class="tile rise" href="#request" data-service="Yard &amp; Property"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-08-640.webp?v=1 640w, /assets/img/ideas-08-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-08-640.jpg?v=1" srcset="/assets/img/ideas-08-640.jpg?v=1 640w, /assets/img/ideas-08-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Beds edged and mulched" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Beds edged and mulched</h3><p class="fine">Yard &amp; Property Care</p></div></a>
-        <a class="tile rise" href="#request" data-service="Comfort &amp; Efficiency"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-10-640.webp?v=1 640w, /assets/img/ideas-10-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-10-640.jpg?v=1" srcset="/assets/img/ideas-10-640.jpg?v=1 640w, /assets/img/ideas-10-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Shade over the west windows" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Shade over the west windows</h3><p class="fine">Comfort &amp; Efficiency</p></div></a>
-        <a class="tile rise" href="#request" data-service="Comfort &amp; Efficiency"><div class="ph panel ph-none" aria-hidden="true"></div><div class="body"><h3 style="font-size:1.02rem">Insulation topped up in the attic</h3><p class="fine">Comfort &amp; Efficiency</p></div></a>
-        <a class="tile rise" href="#request" data-service="Home Automation"><div class="ph"><picture><source type="image/webp" srcset="/assets/img/ideas-12-640.webp?v=1 640w, /assets/img/ideas-12-784.webp?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw"><img src="/assets/img/ideas-12-640.jpg?v=1" srcset="/assets/img/ideas-12-640.jpg?v=1 640w, /assets/img/ideas-12-784.jpg?v=1 784w" sizes="(min-width:1140px) 356px, (min-width:900px) 31vw, (min-width:600px) 46vw, 92vw" width="640" height="480" alt="Low-voltage lights on the steps" loading="lazy" decoding="async"></picture></div><div class="body"><h3 style="font-size:1.02rem">Low-voltage lights on the steps</h3><p class="fine">Home Automation</p></div></a>
-      </div>
+      <h2>Prices.</h2>
+      <p class="lead">Drive included. The price you tap is the price you pay, or we tell you otherwise before we start. Tap one and it is chosen on the form below.</p>
+      <!-- FRONT-DOOR-01 · the tiles are drawn here from /assets/umbra-menu.js — the one place a price lives -->
+      <div data-menu><noscript><p class="no-js">The price list needs JavaScript to show. Text <a href="sms:+19565566438">(956) 556-6438</a> and we send it.</p></noscript></div>
     </div>
   </section>
 
