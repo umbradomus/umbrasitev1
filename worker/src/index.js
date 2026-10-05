@@ -982,7 +982,10 @@ export default {
       const b = (await readJson(request)).body || {};
       for (const k of (Array.isArray(b.unset) ? b.unset : [])) delete rec[String(k)];
       Object.assign(rec, b.set && typeof b.set === 'object' ? b.set : {});
-      await putRecord(env, rec);
+      /* KV-FIX-01: ?raw=1 writes the job key straight to KV, past putRecord, so the ladder index is left
+         stale on purpose — that is the plant clause 2 reads. Test path only, behind testHookOk. */
+      if (url.searchParams.get('raw') === '1') await env.RECORDS.put(jobKey(m[1]), JSON.stringify(rec));
+      else await putRecord(env, rec);
       return json({ ok: true, id: m[1] });
     }
 
