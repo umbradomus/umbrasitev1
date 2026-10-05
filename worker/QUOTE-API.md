@@ -452,3 +452,42 @@ anterior.") · then "Nothing else to do." / "No tiene que hacer nada más." — 
 down the FormSubmit road the request copy rides (`worker/src/booking-email.js`, sent from page.js's POST, claimed on the
 record as `confirmation_email_at` before the send; a refused send gives the claim back). A texted YES gets no email.
 So a booking is ONE text (this section) and ONE email (that one) — never a second of either.
+
+---
+
+## 15 · `POST /admin/quote/<U-id>/reprice` — lowering a booked price, once (REPRICE-01, 2026-10-05)
+
+**Why it exists.** U-0015 was booked on the page on 10-01 at $70, and the price is $50 ("it is 50 dollars"). §1 answers
+**`409 accepted`** to a new version on a job that has one, and a change order (§12) can only **ADD** (`total = base + price`).
+Cancelling v1 (§4) would withdraw the link he already booked and free a visit now in the past. So there is one route, and
+it does one thing: **his side lowers the accepted version's price, once, and the customer is told nothing.**
+
+```
+POST /admin/quote/U-0015/reprice?k=<ADMIN_KEY>
+{ "version": 1, "price": 50 }
+
+200 { "state": "repriced", "version": 1, "already": false, "price": 50, "price_was": 70 }
+```
+
+**Only down, only the booked version, only once.**
+
+| the call | the answer |
+|---|---|
+| `price` equal to or above the version's price | `422 {"error":"invalid","reason":"price must be LOWER than the booked price (70); a price that adds is a change order","price":70}` |
+| `price` not a positive number (0, −5, `"45"`, missing) | `422 {"error":"invalid","reason":"price must be a positive number of dollars, lower than the booked price"}` |
+| the version is not the accepted one (open, sent, withdrawn) | `409 {"error":"not_accepted","reason":"…this one is <standing>","standing":"open"}` |
+| an unknown job, or a version this job never had | `404 {"error":"not_found"}` |
+| **the identical call again** | `200 {"state":"repriced","version":1,"already":true,"price":50,"price_was":70}` — **and not one write** |
+| a *different* second lowering (45 on the one already at 50) | `422 {"error":"invalid","reason":"this price was already lowered once, from 70 to 50; it is lowered once","price":50,"price_was":70}` |
+
+**What it moves.** In the book, that version's `price` becomes P and the price he booked at is kept beside it as
+**`price_was`** (with `repriced_at`), inside `body_json` — no new column, nothing the Flux or the Job Sync reads. The KV
+record is re-stamped through the one mirror every other write uses, so **`quote_amount`**, **`accept.price`** and
+`quote.price` all read P, with exactly one event **`repriced {version, from, to}`** (derived from the book, so a stamp,
+a failed stamp and the 5-minute reconcile all write it once). `GET /admin/quote/<id>` (§5) carries the new `price` and
+**`price_was`** on that version and on `current` — **his side only: no customer payload and no customer page carries the
+old price.** The customer's `/q/` page and his status page simply read the new price, in both languages.
+
+**What it never does.** No text, no push, no email — the version and its `accepted_at` do not move, so nothing is
+"fresh" and no confirmation, acknowledgement or reminder is minted. The booking, its visit windows, its confirmation
+and its hold are untouched. It cannot raise a price: that is still a change order (§12).

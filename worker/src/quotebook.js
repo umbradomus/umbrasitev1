@@ -426,6 +426,36 @@ export class QuoteBook extends DurableObject {
     });
   }
 
+  /* ------------------------------------------------------------ REPRICE-01 · the one lowering
+
+     His own words on U-0015 (D-CEO5-15): "it is 50 dollars". A booked quote is settled — QUOTE-API §1 refuses a
+     new version on it, and a change order can only ADD — so there was no way down but cancelling the booking,
+     which takes the customer's link and their time with it. This is the way down: the ACCEPTED version's price,
+     lowered ONCE, and nothing else on the row moved. The booking, its days, its windows, its hold, its cutoff,
+     its confirmation and anything still owed a push are left exactly as they stand.
+
+     The price he booked at is kept beside the new one INSIDE the body, as `price_was`: no column is added, so
+     nothing that reads a column changes, and the old price is on no customer payload. A version already lowered
+     is spent — the identical call again answers `already` and writes nothing. */
+  reprice(jobId, version, price, nowIso) {
+    return this.ctx.storage.transactionSync(() => {
+      const row = this._rowByJob(jobId, version);
+      if (!row) return { state: 'not_found' };
+      if (row.status !== 'accepted') return { state: 'not_accepted', standing: this._standing(row), row };
+      const was = row.body.price;
+      if (row.body.price_was != null) {
+        /* once. The same lowering asked twice is the same answer, and no write at all. */
+        if (price === was) return { state: 'already', from: row.body.price_was, to: was, row };
+        return { state: 'spent', from: row.body.price_was, to: was, row };
+      }
+      if (typeof was !== 'number' || !Number.isFinite(was)) return { state: 'no_price', row };
+      if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return { state: 'not_positive', row };
+      if (price >= was) return { state: 'not_lower', was, row };
+      this._bump(row.token_hash, 'body_json = ?', [JSON.stringify({ ...row.body, price, price_was: was, repriced_at: nowIso })]);
+      return { state: 'repriced', from: was, to: price, row: this._row(row.token_hash) };
+    });
+  }
+
   /* ------------------------------------------------------------ road CO · the change orders */
 
   /** A new change order for a job whose quote is booked. Its number must be newer than every change the job has had. */

@@ -432,6 +432,37 @@ export async function cancelQuote(env, jobId, version, nowIso) {
   return { status: 200, body: { state: 'withdrawn', version, already: Boolean(r.already), freed: r.freed ? freedOf(r.freed) : null, freed_windows: freedAll } };
 }
 
+/* ------------------------------------------------------------ REPRICE-01 · lowering a booked price, once */
+
+/** POST /admin/quote/<id>/reprice {version, price} — his side lowering the price of the version the customer
+    booked, once, WITH NO WORD TO THE CUSTOMER: no text, no push, no email. Nothing here sends, and the stamp
+    cannot either — the version and its accepted_at do not move, so there is no fresh booking to acknowledge
+    and no newly-sent version to announce.
+
+    The book is the truth, so the price moves there first; `stampSafe` then re-stamps the KV mirror through the
+    one path every other write uses, which is what carries P to `quote_amount`, `accept.price` and `quote.price`
+    and writes the single `repriced` event. A stamp that fails leaves the row ahead of the mirror and the
+    5-minute reconcile heals it, exactly as every other write on this road. */
+export async function repriceQuote(env, jobId, version, price, nowIso) {
+  const r = await book(env).reprice(jobId, version, price, nowIso);
+  if (r.state === 'not_found') return { status: 404, body: { error: 'not_found' } };
+  if (r.state === 'not_accepted') {
+    return { status: 409, body: { error: 'not_accepted', reason: 'a price is lowered on the version the customer booked; this one is ' + r.standing, standing: r.standing } };
+  }
+  if (r.state === 'no_price') return { status: 422, body: { error: 'invalid', reason: 'this version carries no price to lower' } };
+  if (r.state === 'not_positive') return { status: 422, body: { error: 'invalid', reason: 'price must be a positive number of dollars' } };
+  if (r.state === 'not_lower') {
+    return { status: 422, body: { error: 'invalid', reason: 'price must be LOWER than the booked price (' + r.was + '); a price that adds is a change order', price: r.was } };
+  }
+  if (r.state === 'spent') {
+    return { status: 422, body: { error: 'invalid', reason: 'this price was already lowered once, from ' + r.from + ' to ' + r.to + '; it is lowered once', price: r.to, price_was: r.from } };
+  }
+  /* the identical call again: the same answer, and not one write — no stamp, no event */
+  if (r.state === 'already') return { status: 200, body: { state: 'repriced', version, already: true, price: r.to, price_was: r.from } };
+  await stampSafe(env, jobId, nowIso);
+  return { status: 200, body: { state: 'repriced', version, already: false, price: r.to, price_was: r.from } };
+}
+
 /* ------------------------------------------------------------ road CO · the change orders, the admin side */
 
 /** The code of change n: made from the job's own secret when it has one (its status page can then open it), else drawn.
@@ -534,6 +565,9 @@ export async function quoteState(env, jobId, nowIso) {
     hold_until: r.hold_until, held: Date.parse(nowIso) < Date.parse(r.hold_until) && r.status === 'open',
     cutoff: r.cutoff, short_notice: r.short_notice, lang: r.lang,
     price: r.body.price, price_note: r.body.price_note, scope: r.body.scope, included: r.body.included,
+    /* REPRICE-01: the price the customer booked at, only on a version his side lowered. HIS side only —
+       no customer payload carries it (the status API serves quote_amount, the pages read body.price). */
+    ...(r.body.price_was != null ? { price_was: r.body.price_was, repriced_at: r.body.repriced_at || null } : {}),
     guarantee: r.body.guarantee, insurance: r.body.insurance,
     windows: r.windows_free.map((w) => ({ n: w.n, date: w.date, start: w.start, end: w.end, free: w.free, label: windowLabel(w) })),
     accepted_at: r.accepted_at, accepted_by: r.accepted_by, accepted_window: r.accepted_window,
@@ -813,6 +847,15 @@ export async function stampJob(env, jobId, nowIso) {
     if (rec.status === 'scheduled') rec.status = 'quoted';
     rec.scheduled_for = null;
     rec.scheduled_at = null;
+  }
+
+  /* 3b · REPRICE-01: a booked price his side lowered. Read off the book's own `price_was`, so one stamp, a
+     stamp that failed and then the reconcile all write this event exactly once, and `from` is always the
+     price the customer booked at. The price itself rode into accept.price and quote_amount above. */
+  for (const r of rows) {
+    if (r.body.price_was != null && !hasEvent('repriced', (e) => e.version === r.version)) {
+      addEvent(rec, 'repriced', { version: r.version, from: r.body.price_was, to: r.body.price }, r.body.repriced_at || nowIso);
+    }
   }
 
   /* 4 · the quote as the Flux Capacitor and the collector read it — the newest version. Never the code. */

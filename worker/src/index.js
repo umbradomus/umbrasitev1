@@ -63,7 +63,7 @@ import { renderJobMarkdown } from './export.js';
 import { bizMinutes } from './biztime.js';
 import { readAvailability, readConsent, windowsConfig } from './windows.js';
 import {
-  readQuoteBody, createQuote, markSent, cancelQuote, quoteState, bookByJob,
+  readQuoteBody, createQuote, markSent, cancelQuote, quoteState, bookByJob, repriceQuote,
   bookByCode, markNone, viewByCode, reconcile, bookDump, customerQuoteLink,
   readChangeBody, createChange, markChangeSent, cancelChange, customerChanges,
 } from './quotes.js';
@@ -797,6 +797,15 @@ async function handleAdminQuote(request, env, url, id, action, method) {
     return json(r.body, r.status);
   }
   if (!Number.isInteger(body.version) || body.version < 1) return json({ error: 'invalid', reason: 'version must be a whole number, 1 or more' }, 422);
+  /* REPRICE-01: his side lowering the booked price, once, with no word to the customer. Only the accepted
+     version, only a positive number under its price; the shape is refused here, the rest in the book. */
+  if (action === 'reprice') {
+    if (typeof body.price !== 'number' || !Number.isFinite(body.price) || body.price <= 0) {
+      return json({ error: 'invalid', reason: 'price must be a positive number of dollars, lower than the booked price' }, 422);
+    }
+    const r = await repriceQuote(env, id, body.version, body.price, now);
+    return json(r.body, r.status);
+  }
   if (action === 'sent') {
     if (body.sent_at != null && (typeof body.sent_at !== 'string' || isNaN(Date.parse(body.sent_at)))) return json({ error: 'invalid', reason: 'sent_at must be an ISO time' }, 422);
     const at = body.sent_at ? new Date(body.sent_at).toISOString() : now;
@@ -868,7 +877,7 @@ export default {
     if ((m = /^\/admin\/no-text\/(U-\d{4,6})$/.exec(path)) && method === 'POST') {
       return handleNoText(request, env, url, m[1]);
     }
-    if ((m = /^\/admin\/quote\/(U-\d{4,6})(?:\/(sent|accept|cancel))?$/.exec(path))) {
+    if ((m = /^\/admin\/quote\/(U-\d{4,6})(?:\/(sent|accept|cancel|reprice))?$/.exec(path))) {
       return handleAdminQuote(request, env, url, m[1], m[2] || null, method);
     }
     /* road W: the private status link, and the receipt kept (customer.js) */
