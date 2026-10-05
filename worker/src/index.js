@@ -917,6 +917,23 @@ export default {
       if (String(env.ALLOW_TEST_HOOKS) !== 'true' || !adminOk(env, url)) return adminDenied();
       const now = url.searchParams.get('now') || new Date().toISOString();
       const pause = Math.min(5000, parseInt(url.searchParams.get('pause') || '0', 10) || 0);
+      /* KV-FIX-01's instrument: `?count=1` runs the very same body against a counting stand-in for the
+         RECORDS binding and returns `kv_ops` beside the run's own answer. The free plan allows 1,000 KV
+         LIST operations a UTC day and the cron fires 840 times inside business hours, so the number of
+         LISTs one run spends is a reading the round has to be able to take. Test path only — `scheduled()`
+         never passes through here. */
+      if (url.searchParams.get('count') === '1') {
+        const ops = { list: 0, get: 0, put: 0, delete: 0 };
+        const real = env.RECORDS;
+        const counted = {
+          list: (...a) => { ops.list += 1; return real.list(...a); },
+          get: (...a) => { ops.get += 1; return real.get(...a); },
+          put: (...a) => { ops.put += 1; return real.put(...a); },
+          delete: (...a) => { ops.delete += 1; return real.delete(...a); },
+        };
+        const out = await runAlerts({ ...env, RECORDS: counted }, now, { pauseAfterReadMs: pause });
+        return json({ ...out, kv_ops: ops });
+      }
       return json(await runAlerts(env, now, { pauseAfterReadMs: pause }));
     }
 
@@ -944,6 +961,15 @@ export default {
       if (method !== 'POST' || !testHookOk(env, url)) return adminDenied();
       const raw = await env.RECORDS.get(jobKey(m[1]));
       return raw === null ? notFound() : new Response(raw, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+    }
+
+    /* KV-FIX-01's one test hook, the same gate: any KV key as stored, so a reading can show the alert
+       run's index key (idx:ladder) by eye. It answers a JSON envelope, never the record route's bytes. */
+    if (path === '/__kv-get' && method === 'POST') {
+      if (!testHookOk(env, url)) return adminDenied();
+      const key = String(url.searchParams.get('key') || '');
+      if (!key) return json({ error: 'key_required' }, 400);
+      return json({ key, value: await env.RECORDS.get(key) });
     }
 
     /* REMINDERS-01's one test hook, the same gate: bend a KV record by hand, so a reading can put the

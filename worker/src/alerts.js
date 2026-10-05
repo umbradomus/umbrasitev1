@@ -62,7 +62,10 @@
        opt-out list, no holding text before, and the desk's and the phone's send records both read fresh. When a
        guard blocks it, "LATE · U-9601 · call them now" rings him until acknowledged (to 9 PM). */
 
-import { getRecord, putRecord, listRecords, addEvent } from './store.js';
+import {
+  getRecord, putRecord, listRecords, addEvent,
+  inLadder, readLadderIndex, writeLadderIndex, getLadder,
+} from './store.js';
 import { sendAlert, cancelPushoverTag, CHANNELS } from './notify.js';
 import {
   bizAdvance, bizMinutes, replyDue, isOpen, nextOpen, openOf, clock, chicagoDay, chicagoParts,
@@ -952,17 +955,25 @@ function visitsBefore(all, included, fromMs, untilMs) {
   return times.length ? Math.min(...times) : null;
 }
 
-async function runSummary(env, all, nowMs, nowIso) {
-  const open7 = openOf(nowMs);
+/* KV-FIX-01: the summary's own filter and its own key, named once so the light path below and runSummary
+   itself cannot drift apart. A record this says yes to is always `inLadder` too. */
+const summaryKey = (nowMs) => 'alerts:summary:' + chicagoDay(nowMs);
+
+function summaryWaiting(rec, nowMs) {
+  if (rec.status !== 'received' || !rec.alerts) return false;
   /* On HIS TABLE an acknowledgement is not a stop, so what makes a request "still waiting" there is the
      ladder still being alive — not ack_at. Everything else about the 7 AM summary is unchanged. */
-  const stillWaiting = (r) => (isTable(r) ? !r.alerts.table.ended_at : !r.alerts.ack_at);
-  const waiting = all.filter((r) => r.status === 'received' && r.alerts && stillWaiting(r)
-    && ['held', 'intake', 'ladder'].includes(r.alerts.stage) && Date.parse(r.received_at) < open7)
+  const stillWaiting = isTable(rec) ? !rec.alerts.table.ended_at : !rec.alerts.ack_at;
+  return stillWaiting && ['held', 'intake', 'ladder'].includes(rec.alerts.stage)
+    && Date.parse(rec.received_at) < openOf(nowMs);
+}
+
+async function runSummary(env, all, nowMs, nowIso) {
+  const waiting = all.filter((r) => summaryWaiting(r, nowMs))
     .sort((a, b) => Date.parse(a.received_at) - Date.parse(b.received_at));
   if (!waiting.length) return null;
 
-  const key = 'alerts:summary:' + chicagoDay(nowMs);
+  const key = summaryKey(nowMs);
   if (await env.RECORDS.get(key)) return null;
   const claim = newToken();
   await env.RECORDS.put(key, JSON.stringify({ claim, at: nowIso }), { expirationTtl: 60 * 60 * 48 });
@@ -1052,9 +1063,35 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
   };
   if (!out.open) return out;                 /* 9 PM – 7 AM: nothing leaves — no push, no text */
 
-  let all = await listRecords(env);
+  /* KV-FIX-01 · THE CRON STOPS LISTING. A normal minute reads one index key and GETs the records it names
+     (store.js, `idx:ladder`). A FULL listRecords() runs — and rewrites the index, only if it differs — when
+       · Chicago's minute is :00, :15, :30 or :45, so a record written straight to KV by any other hand is
+         picked up within fifteen minutes whatever the index says;
+       · the index key is missing or unreadable, which is the only state that can hide a record outright;
+       · the 7 AM summary could fire, because it needs EVERY record for the visits it names.
+     56 LISTs a day from the cron instead of 840. Nothing about who is alerted, or when, moves. */
+  const fullOwed = chicagoParts(nowMs).mi % 15 === 0;
+  let ids = fullOwed ? null : await readLadderIndex(env);
+  let all;
+  if (ids !== null) {
+    all = await getLadder(env, ids);
+    /* the summary's gate, on the members only — a record it would name is always a member */
+    if (all.some((r) => summaryWaiting(r, nowMs)) && !(await env.RECORDS.get(summaryKey(nowMs)))) ids = null;
+  }
+  if (ids === null) {
+    all = await listRecords(env);
+    await writeLadderIndex(env, all.filter(inLadder).map((r) => r.id));
+  }
+  out.full_list = ids === null;
+
   out.summary = await runSummary(env, all, nowMs, nowIso);
-  if (out.summary) all = await listRecords(env);
+  if (out.summary) {
+    /* the summary wrote to every record it named, so the claim loop needs them fresh. The index was just
+       rewritten (the summary can only fire on the full path) and putRecord keeps it true, so this is GETs
+       and no second LIST — the old re-listing here was the 841st of the day. */
+    const back = await readLadderIndex(env);
+    all = back === null ? await listRecords(env) : await getLadder(env, back);
+  }
   /* test hook only (reached through /__run-alerts): hold between the read and the claim, so a test can
      make two runs read the same due record before either has claimed it */
   if (opts.pauseAfterReadMs) await sleep(opts.pauseAfterReadMs);
