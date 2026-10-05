@@ -850,11 +850,17 @@ async function stampSafe(env, jobId, nowIso) {
    `forwarded_at` and `accepted_at` are. The ignite asked for `confirmationEmailAt` "or the field the
    Worker's own shape uses — name it"; this is it.
 
-   THE CLAIM COMES BEFORE THE SEND. A stamp taken first can only ever be taken once, so the website can
-   never send this email twice — a second booking tap, a reload, a retry, a reconcile, all find the stamp
-   already there and send nothing. The price of that order is the honest one: a send that fails leaves the
-   stamp standing and no email goes. The customer is not left in the dark by it — the screen said the day,
-   the window and the price the moment they booked, and the Flux still texts the day before (FLUX-FIX-16).
+   THE CLAIM COMES BEFORE THE SEND, AND IS GIVEN BACK WHEN THE SEND DID NOT DELIVER. A stamp taken first
+   can only ever be taken once, so the website can never send this email twice — a second booking tap, a
+   reload, a retry, a reconcile, all find the stamp already there and send nothing. Taking it first was
+   not enough on its own: this send leaves from the Worker's own leg, and FormSubmit has answered that leg
+   429 on every request the Worker has ever taken (index.js, U-0003/4/5). A stamp left standing on a
+   refusal would be Jose's empty inbox again, and for good — no later tap could ever retry, because the
+   claim above refuses while a stamp is there. So noteConfirmationEmail below deletes the stamp when the
+   send did not deliver: the claim is held for the length of the send, which is all the never-twice
+   promise needs, and released if nothing went. A delivered send leaves it standing for good. Either way
+   the customer is not in the dark — the screen said the day, the window and the price the moment they
+   booked, and the Flux still texts the day before (FLUX-FIX-16).
 
    The read-modify-write is not atomic, and it does not need to be: the booking itself is serialised by the
    QuoteBook durable object, which answers `already_booked` to every tap after the first (quotebook.js), so
@@ -892,7 +898,11 @@ export async function noteConfirmationEmail(env, jobId, result, nowIso) {
     if (!rec) return null;
     const ok = !!(result && result.ok);
     if (ok) delete rec.confirmation_email_failed;
-    else rec.confirmation_email_failed = { at: nowIso, status: (result && result.status) || 0 };
+    else {
+      rec.confirmation_email_failed = { at: nowIso, status: (result && result.status) || 0 };
+      /* nothing went, so the claim goes back: a later tap may still send the one email (see above). */
+      delete rec.confirmation_email_at;
+    }
     addEvent(rec, ok ? 'confirmation_email' : 'confirmation_email_failed',
       { to_given: true, status: (result && result.status) || 0 }, nowIso);
     await putRecord(env, rec);

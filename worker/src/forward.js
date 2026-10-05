@@ -68,8 +68,10 @@ export async function forwardToFormSubmit(env, entries, extra) {
   }
   /* The two extra lines. Named so they read plainly in the table template. A caller with nothing to add
      (the booking confirmation) passes no `extra` and posts the entries alone. */
-  if (extra && extra.job_id) fd.append('job_id', extra.job_id);
-  if (extra && extra.status_link) fd.append('status_link', extra.status_link);
+  /* by presence, not by truth: a caller that hands these lines hands them whole, and an empty string is
+     a caller's defect to see in the copy, not a line this road silently drops. */
+  if (extra && 'job_id' in extra) fd.append('job_id', extra.job_id);
+  if (extra && 'status_link' in extra) fd.append('status_link', extra.status_link);
 
   const res = await fetch(forwardEndpoint(env), {
     method: 'POST',

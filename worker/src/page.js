@@ -630,7 +630,15 @@ export function bookedSummary(window, price, lang) {
     Only the page road reaches here. A YES Drew marks by text goes through bookByJob and gets no email,
     which is right: that customer is already in a text thread with him. */
 async function confirmByEmail(env, r, nowIso) {
-  if (!r || r.state !== 'booked' || !r.job_id) return;
+  /* `booked` is this tap's own booking. `already_booked` — a later tap on a booking this road already made
+     — is here for one reason: the send can be refused (FormSubmit has answered this Worker's own leg 429 on
+     every request it has ever taken, index.js), and a refusal gives the stamp back (quotes.js). Without this
+     line nobody could ever use the released claim and the one email would still be lost for good. What keeps
+     it to ONE email is the claim, not the state: a tap after a send that DID deliver finds the stamp standing
+     and sends nothing. A booking Drew marked by text is never emailed on either road — he and that customer
+     are already in a text thread — so only a page booking is re-offered the send. */
+  if (!r || !r.job_id) return;
+  if (r.state !== 'booked' && !(r.state === 'already_booked' && r.accepted_by === 'page')) return;
   const to = await claimConfirmationEmail(env, r.job_id, nowIso);
   if (!to) return;
   const lang = r.lang === 'es' ? 'es' : 'en';
@@ -891,7 +899,7 @@ export async function handleQuotePage(request, env, url, rest, method, nowIso) {
     if (kept && kept.state === 'kept' && !(r && r.state === 'booked')) await stampAfterYear(env, kept.job_id, nowIso);
     /* SITE-FIX-03: the booking's one confirmation email, when they gave an address. Awaited, so the record
        carries its stamp before the 303 the browser follows back to the booked screen. */
-    if (r && r.state === 'booked') await confirmByEmail(env, r, nowIso);
+    if (r && (r.state === 'booked' || r.state === 'already_booked')) await confirmByEmail(env, r, nowIso);
     /* Two times offered and none chosen: back to the page, which asks again. Nothing was written. */
     if (r && r.state === 'choose_window') return seeOther(code, '?pick=1');
     /* Every other answer — booked, already_booked, taken, too_close, updating, replaced, withdrawn,

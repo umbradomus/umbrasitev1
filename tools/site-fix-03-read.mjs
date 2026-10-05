@@ -418,6 +418,49 @@ try {
       emails: extra3, record_email: (rec2.fields && rec2.fields.email) || null,
       record_stamp: rec2.confirmation_email_at || null,
     };
+
+    /* R88's finding · THE STAMP IS GIVEN BACK WHEN THE SEND DOES NOT DELIVER. The claim is taken before the
+       send so two taps can never make two emails. Its price, until the second reader named it, was the worse
+       half: FormSubmit has answered the Worker's own leg `429` on every request the Worker has ever taken
+       (index.js, U-0003/4/5), and a refusal left the stamp standing — the one email lost for good, Jose's
+       empty inbox all over again. The stub is flipped to 'fail' to play that refusal. */
+    head('  the send refused — the stamp is given back');
+    const id4 = await scratchJob(CT(2026, 10, 5, 9, 50), 'Retry Reyna');
+    const c4 = await create(id4, Q(1, [win('2026-11-20', '08:00', '10:00')], { sent_at: T10 }), T10);
+    await sentQ(id4, 1, T10);
+    const before4 = forwards().length;
+    stub.state.mode = 'fail';
+    const p4 = await bookInBrowser(c4.body.code, T10, 390, null);
+    ok((await stateOf(p4)) === 'booked', 'the refused-send booking still landed');
+    await p4.close();
+    await sleep(600);
+    const tried = forwards().length - before4;
+    ok(tried === 1, 'the refused send was attempted once', tried);
+    const rec4 = await record(id4);
+    ok(!rec4.confirmation_email_at, 'the send refused → no stamp stands, so the email is not lost for good',
+      rec4.confirmation_email_at || null);
+    ok(Boolean(rec4.confirmation_email_failed), 'the record names the refusal', rec4.confirmation_email_failed || null);
+    stub.state.mode = 'ok';
+    const re4 = await fetch(SITE + '/q/' + c4.body.code, {
+      method: 'POST', redirect: 'manual',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', origin: SITE, 'sec-fetch-site': 'same-origin', 'x-umbra-test-now': T10 },
+      body: 'v=1&w=1',
+    });
+    await sleep(600);
+    const again = forwards().length - before4 - tried;
+    ok(again === 1, 'the next tap sends the email the refusal lost — once', { status: re4.status, sends: again });
+    const rec5 = await record(id4);
+    ok(Boolean(rec5.confirmation_email_at), 'and now the stamp stands', rec5.confirmation_email_at || null);
+    const body4 = String(fieldsOf(forwards()[forwards().length - 1])._autoresponse || '');
+    ok(/text you the day before/i.test(body4) && body4.includes('$395'),
+      'the send after the refusal is the whole confirmation, not a stub of one', body4.slice(0, 140));
+    RESULT.item2_refusal = {
+      sends_while_refusing: tried,
+      stamp_after_refusal: rec4.confirmation_email_at || null,
+      failure_noted: rec4.confirmation_email_failed || null,
+      sends_on_the_next_tap: again,
+      stamp_after_the_next_tap: rec5.confirmation_email_at || null,
+    };
   }
 } finally {
   say('\n--------------------------------------------');
