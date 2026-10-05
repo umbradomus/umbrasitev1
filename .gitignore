@@ -15,3 +15,4 @@ worker/DEPLOY-LOG.txt
 worker/node_modules/
 worker/.wrangler/
 worker/test/.tmp/
+worker/test/.tmp-local/
