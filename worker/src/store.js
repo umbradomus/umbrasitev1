@@ -67,7 +67,11 @@ async function writeKey(env, key, body) {
 
 export async function putRecord(env, rec) {
   await writeKey(env, jobKey(rec.id), JSON.stringify(rec));
-  await touchLadderIndex(env, rec);
+  /* R88 A-2 (second reading, 2026-10-05): the record itself is written and safe. The index behind it is a
+     cache — a refused write to it must not make this call look to its caller like a save that failed, or
+     a claim stamp would be rolled back over a record KV already holds. The next quarter hour lists in
+     full and rebuilds the index: late by fifteen minutes at the worst, never lost. */
+  try { await touchLadderIndex(env, rec); } catch (err) { /* the full list heals it */ }
 }
 
 /* --------------------------------------------------- the ladder index · KV-FIX-01, 2026-10-05

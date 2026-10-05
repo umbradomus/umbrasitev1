@@ -64,7 +64,7 @@
 
 import {
   getRecord, putRecord, listRecords, addEvent,
-  inLadder, readLadderIndex, writeLadderIndex, getLadder,
+  inLadder, readLadderIndex, writeLadderIndex, getLadder, LADDER_INDEX_KEY,
 } from './store.js';
 import { sendAlert, cancelPushoverTag, CHANNELS } from './notify.js';
 import {
@@ -1071,7 +1071,8 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
        · the 7 AM summary could fire, because it needs EVERY record for the visits it names.
      56 LISTs a day from the cron instead of 840. Nothing about who is alerted, or when, moves. */
   const fullOwed = chicagoParts(nowMs).mi % 15 === 0;
-  let ids = fullOwed ? null : await readLadderIndex(env);
+  const have = fullOwed ? null : await readLadderIndex(env);
+  let ids = have;
   let all;
   if (ids !== null) {
     all = await getLadder(env, ids);
@@ -1079,8 +1080,23 @@ export async function runAlerts(env, nowIso = new Date().toISOString(), opts = {
     if (all.some((r) => summaryWaiting(r, nowMs)) && !(await env.RECORDS.get(summaryKey(nowMs)))) ids = null;
   }
   if (ids === null) {
-    all = await listRecords(env);
-    await writeLadderIndex(env, all.filter(inLadder).map((r) => r.id));
+    const listed = await listRecords(env);
+    /* R88 A-1 (second reading, 2026-10-05): KV's LIST is eventually consistent — a record putRecord wrote,
+       and added to the index, seconds ago can be missing from this listing, while a GET by its key never
+       is. So the full run ADDS what the listing has not caught up to instead of erasing it: the id stays
+       in the index and the record is read straight, so THIS minute acts on it. Nothing is ever deleted
+       from KV here, so an id the listing cannot see yet is behind, never gone. */
+    const known = have === null ? await readLadderIndex(env) : have;
+    const seen = new Set(listed.map((r) => String(r.id)));
+    const behind = (known || []).filter((id) => !seen.has(id));
+    all = behind.length ? listed.concat(await getLadder(env, behind)) : listed;
+    /* R88 A-2: the index is a cache and must never take the minute's sends down with it. A refused write
+       here is logged and the run goes on; the next quarter hour lists again and rebuilds it. */
+    try {
+      await writeLadderIndex(env, all.filter(inLadder).map((r) => r.id), known);
+    } catch (err) {
+      out.failed.push({ id: LADDER_INDEX_KEY, error: String((err && err.message) || err).slice(0, 120) });
+    }
   }
   out.full_list = ids === null;
 
