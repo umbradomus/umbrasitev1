@@ -593,7 +593,8 @@ const bookedWindow = (v) => bookedVisits(v)[0];
     the price, then the promise of the text the day before — em-dash separated, in the customer's language.
     A fact the booking does not carry is DROPPED, never left as a blank dash: a record with a day but no
     window reads "Tue, Nov 10 — $395 — I'll text you the day before." The promise is a promise only: the
-    FLUX sends that text on its Job Sync tick (FLUX-FIX-16). This page never texts.
+    FLUX sends that day-before text on its Job Sync tick (FLUX-FIX-16). This page never texts; the booking's
+    own confirmation text is confirm.js's, sent once from finishBooking (CONFIRM-01).
     `window` is a visit ({date, start, end}); `price` is the accepted version's own price. */
 export function bookedSummary(window, price, lang) {
   const l = lang === 'es' ? 'es' : 'en';
@@ -625,7 +626,8 @@ export function bookedSummary(window, price, lang) {
     the booked screen spell the same visit the same way; a fact the booking does not carry is dropped, as
     bookedSummary drops it. The window is the booking's first visit, the arrival the screen names first.
 
-    THIS SENDS NO TEXT. Only the FLUX texts (FLUX-FIX-16) — one sender, or the customer hears twice.
+    THIS SENDS NO TEXT. The booking's one confirmation text already left from finishBooking (confirm.js,
+    CONFIRM-01) and the day-before text is the FLUX's (FLUX-FIX-16) — this road adds the one email, nothing else.
 
     Only the page road reaches here. A YES Drew marks by text goes through bookByJob and gets no email,
     which is right: that customer is already in a text thread with him. */

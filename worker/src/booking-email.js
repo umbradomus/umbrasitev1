@@ -7,8 +7,9 @@
    the same road `assets/umbra-sent.js` sends the request copy on). It carries the day, the window, the
    price, the promise of the text the day before, and the Umbra line the request copy ends with.
 
-   THE WEBSITE NEVER TEXTS. The text itself is the FLUX's (FLUX-FIX-16, on the Job Sync tick) — one sender,
-   or the customer is texted twice. This file only writes the promise of it.
+   THIS FILE SENDS NO TEXT. The day-before text is the FLUX's (FLUX-FIX-16, on the Job Sync tick); the one
+   booking confirmation TEXT is confirm.js's (CONFIRM-01, from finishBooking) — this file only writes the
+   email, and the promise of the day-before text.
 
    Kept out of page-words.js on purpose: that file's own rule is "No phone number, address or email of
    anyone" and Suite I greps every rendered page for its whole table. The phone number belongs in an email,

@@ -313,7 +313,9 @@ export async function suiteConfirm({ W, stub, gate, ADMIN_KEY, FAKE, FAKE_SMSGAT
     const c = await confirmationOf(a.id, at);
     eq(c && c.lang, 'es', 'confirmation.lang = es');
     const pg = textOf((await getPage(a.code, CT(...MON, 11, 31))).text);
-    ok(pg.includes('Le escribimos el día anterior.'), 'the Spanish page says "Le escribimos el día anterior."');
+    /* CONFIRM-02: the promise is SITE-FIX-03's booked line (booked_promise), said once; CONFIRM-01's own
+       "Le escribimos el día anterior." on booked_done gave way to it, so the screen does not say it twice */
+    ok(pg.includes('Le enviaremos un mensaje de texto el día anterior.'), 'the Spanish page says "Le enviaremos un mensaje de texto el día anterior."');
     ok(!pg.includes("I'll text you the day before."), 'and no English promise on it');
     /* a two-visit option: each visit on its own line */
     const two = await quoted(CT(...MON, 11, 40), 'Jory Quist', [win('2026-11-18', '08:00', '10:00')], { extra: { options: [{ windows: [win('2026-11-18', '08:00', '10:00'), win('2026-11-19', '11:00', '13:00')] }] } });

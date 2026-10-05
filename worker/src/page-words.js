@@ -76,11 +76,12 @@ export const WORDS = {
     small_pair: 'Accepting books both visits at the price above. Questions? Reply to my text.',
     h_taken_pair: 'One of those days was just booked.',
     taken_other_pair: 'These days are still open:',
-    /* CONFIRM-01: the website now sends the confirmation text itself, and the page says what comes next */
-    booked_done: "Nothing else to do. I'll text you the day before.",
+    /* CONFIRM-02: CONFIRM-01 put "I'll text you the day before." on this line; SITE-FIX-03's booked line (booked_promise,
+       drawn above this one on the screen) already ends with the same sentence, so the screen says it once, there. */
+    booked_done: 'Nothing else to do.',
     booked_small: 'Need to move it, or have a question? Reply to my text.',
-    /* SITE-FIX-03: the end of the booked line. The FLUX sends that text (FLUX-FIX-16), never this page —
-       the page only promises it. road XW's one voice: Drew speaking, as "Reply to my text." above does. */
+    /* SITE-FIX-03: the end of the booked line. CONFIRM-01: the website itself sends that text (confirm.js), on the
+       booking — the promise here is kept by the Worker. road XW's one voice: Drew speaking, as "Reply to my text." above does. */
     booked_promise: "I'll text you the day before.",
     /* road XW (2026-09-26): ONE VOICE — Drew speaking ("I", "my text") on every line of the English page; the step count
        the Flux's plan has (step_count), with the steps the list does not name counted in one line; each visit's length
@@ -160,7 +161,7 @@ export const WORDS = {
     small_pair: 'Al aceptar, quedan programadas las dos visitas al precio de arriba. ¿Preguntas? Responda a nuestro mensaje de texto.',
     h_taken_pair: 'Uno de esos días ya se ocupó.',
     taken_other_pair: 'Estos días siguen disponibles:',
-    booked_done: 'No tiene que hacer nada más. Le escribimos el día anterior.',
+    booked_done: 'No tiene que hacer nada más.',
     booked_small: '¿Necesita cambiarla o tiene preguntas? Responda a nuestro mensaje de texto.',
     booked_promise: 'Le enviaremos un mensaje de texto el día anterior.',
     /* road XW (2026-09-26): the same new lines, for his reviewer. The Spanish page keeps its own voice ("nosotros"). */

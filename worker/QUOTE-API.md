@@ -443,7 +443,12 @@ didn't opt in to texts — call them"**. No `SMSGATE_AUTH` on the Worker: no cal
 `<U-id>-confirm-v<version>` is also what the gateway itself refuses a repeat of, so a Flux send that reused it would be
 a 409, not a second text. A booking never fails because its text failed: the worst case is `failed` on the row.
 
-**The customer's page** after booking reads "You're booked." · the day and window · the price · **"Nothing else to do.
-I'll text you the day before."** (Spanish: "No tiene que hacer nada más. Le escribimos el día anterior.").
+**The customer's page** after booking reads "You're booked." · one line with the day, the window, the price and the
+promise — **"Tue, Nov 10 — 8–10 AM — $395 — I'll text you the day before."** (SITE-FIX-03's `bookedSummary`; Spanish:
+"Jueves 12 de noviembre — Llegada entre las 8 y las 10 a.m. — $395 — Le enviaremos un mensaje de texto el día
+anterior.") · then "Nothing else to do." / "No tiene que hacer nada más." — the promise is said once (CONFIRM-02).
 
-**Not in this round:** an email confirmation. The Worker has no transactional mailer (FormSubmit only mails him).
+**The email** (SITE-FIX-03, folded under CONFIRM-02): a page booking with an address also gets ONE confirmation email,
+down the FormSubmit road the request copy rides (`worker/src/booking-email.js`, sent from page.js's POST, claimed on the
+record as `confirmation_email_at` before the send; a refused send gives the claim back). A texted YES gets no email.
+So a booking is ONE text (this section) and ONE email (that one) — never a second of either.
