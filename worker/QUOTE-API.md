@@ -11,6 +11,12 @@ Everything here is in `src/quotes.js` (the Worker side) and `src/quotebook.js` (
 > `booking.windows` on the state (§5), `accept.windows` and `quote.options` in KV (§6), every day in the pushes (§8),
 > and two new routes: the private status link (§10) and the receipt (§11). Nothing an old caller sends or reads changed.
 
+> **CONFIRM-01, 2026-10-04 — the website confirms the booking itself.** U-0015 booked a time on the quote page at 07:46
+> on 2026-10-01 and got nothing: the confirmation text went only from the Flux on his tap, and nothing told him it was
+> waiting. Now **every booking — the page's tap and the texted YES (§3) alike — gets ONE confirmation text from the
+> Worker**, and where that stands is the new field **`confirmation`** on `GET /admin/quote/<id>` (§5), on `/accept`'s
+> answer (§3) and on the `/api/jobs` row (§6). **§14 has the whole of it.** Nothing an old caller sends or reads changed.
+
 ---
 
 ## The rules every route shares
@@ -140,10 +146,10 @@ POST /admin/quote/U-0014/sent?k=…   {"version":1,"sent_at":"2026-09-23T19:40:0
 
 **Body:** `{"version": 1, "option": 1}` (road W), or the old `{"version": 1, "window": 1}` — the same number: an old-shape quote's options are its windows. `option` wins when both are sent. It may be left out when the quote offers one option.
 
-This is **the same booking step the page uses**, with `accepted_by: "text"`. The time rules apply: the option must be one of those offered, and **no visit of it** may overlap a booking another job holds. Every visit of the option is booked in the same step, all or none: one booking row per visit. **The hold and the cutoff do not apply**, because a YES by text is his call. No push is sent, because he marked it himself.
+This is **the same booking step the page uses**, with `accepted_by: "text"`. The time rules apply: the option must be one of those offered, and **no visit of it** may overlap a booking another job holds. Every visit of the option is booked in the same step, all or none: one booking row per visit. **The hold and the cutoff do not apply**, because a YES by text is his call. No push is sent, because he marked it himself. **CONFIRM-01:** the customer's confirmation text goes from this step too (§14) — **the Flux does not send one of its own after a 200 here.**
 
 **Answers**
-- `200 {"state":"booked","job_id","version","window":{"n","date","start","end"},"option":n,"windows":[{date,start,end},…],"price","accepted_by":"text","accepted_at"}` — `window` stays the option's first visit, for old readers; `windows` is every visit booked.
+- `200 {"state":"booked","job_id","version","window":{"n","date","start","end"},"option":n,"windows":[{date,start,end},…],"price","accepted_by":"text","accepted_at","confirmation":{…}}` — `window` stays the option's first visit, for old readers; `windows` is every visit booked; `confirmation` (CONFIRM-01) is §14's block as it stands the moment the answer leaves (`sent`, or `queued` by night, or why not).
 - `200 {"state":"already_booked",…}`: this version is already booked. Nothing is written.
 - `404`: no such job or version.
 - `409 {"error":<state>,"reason":…}`, where `<state>` is one of:
@@ -205,6 +211,7 @@ This returns every version, newest last as `current`, plus the job's booking. **
   shape: one entry per option, its first visit.
 - **road W**, `booking.windows`: every visit the booking holds, in order; `booking.date/start/end` stay the first.
 - **`held`** is true while `now < hold_until` on an open quote. This is what the Flux Capacitor treats as "held for this quote" when two quotes offer the same window. The book does not block a second quote from offering a held time; the first YES wins.
+- **CONFIRM-01**, top-level **`confirmation`**: the booked version's confirmation text (§14), `null` while nothing is booked; every version also carries its own `confirmation` (`null` until booked).
 - An unknown job, or a job with no quote, answers `404`.
 
 **THE HOLD, as the Worker computes it:**
@@ -227,8 +234,9 @@ This returns every version, newest last as `current`, plus the job's booking. **
 
 - `quote`: the newest version as `{version, status, state, sent_at, hold_until, cutoff, short_notice, windows, price, none_at, views, last_view_at, sent_versions}`. It never carries the code. It is refreshed on create, sent, accept, none and cancel, and by the reconcile. **Views are counted only in the book.** A visit never writes KV, so `views` here is as of the last real change.
 - `accept`: `{at, by: "page"|"text", version, window {date, start, end}, windows [{date, start, end}, …], price}`, plus `cancelled_at` once withdrawn. `window` is the first visit (every old reader); `windows` (road W) is every visit booked. `quote.options` carries every option in the create route's shape.
+- **`confirmation`** (CONFIRM-01): §14's block plus `version`, mirrored from the booked row; `null` until a booking. One `confirmation` event per settled state (`sent`, `failed`, `no_consent`, `no_key` — never for `queued`).
 - `accepted_at`, `status` `scheduled`, `scheduled_for` (the window's start as a UTC instant), `scheduled_at` (the moment it was booked). The events `accepted`, `booking-cancelled`, `quote_sent` and `none_of_these_times` are added. If `quoted_at` was still null when a quote was accepted, it is set from the quote's `sent_at` (or `created_at`), with a `quoted` event whose `note` says so.
-- The markdown export (`/api/export/<id>.md`) has a section **E2 · ACCEPTED**: the day, the arrival window, the price, by page or text, and the version. A second visit adds **Day 2** and **Arrival window 2** rows.
+- The markdown export (`/api/export/<id>.md`) has a section **E2 · ACCEPTED**: the day, the arrival window, the price, by page or text, and the version. A second visit adds **Day 2** and **Arrival window 2** rows. CONFIRM-01 adds a **Confirmation text** row once there is one ("sent by the website · <at> · <id>", or why it did not go).
 - **The mirror is per job.** Every KV write rebuilds the job's whole projection from all its rows, then marks every row mirrored. A write that fails leaves the rows ahead, and the 5-minute run re-stamps them without needing a KV list.
 
 ---
@@ -244,6 +252,7 @@ The page calls only these three. Each is the whole step: the book call, then the
 - **`bookByCode(env, code, version, option, by, nowIso)`** returns `{state, …}`. (`option` was `window`; on an old-shape quote they are the same number.)
   - `state` is `booked` · `already_booked` (idempotent: the same code again writes nothing) · `not_found` · `updating` · `replaced` · `withdrawn` · `taken` · `too_close` · `choose_window` (two windows and no choice) · `no_such_window`.
   - `by: "page"` pushes his phone, 7 AM–9 PM Central only. Outside those hours the push waits for the first 5-minute run from 7:00.
+  - **CONFIRM-01:** a `booked` answer also carries `confirmation` (§14) — the customer's text went (or was queued, or why not) inside this same step, before the stamp and the push.
 - **`markNone(env, code, version, nowIso)`** returns `{state: "received", first: true|false}` or a standing refusal. It stamps `none_at` once per version. The first call pushes "none of the times work"; a second call does nothing.
 
 An unknown or malformed code answers `not_found` without reaching the book.
@@ -389,3 +398,52 @@ It is pushed to nobody. **The Flux reads it from `GET /admin/quote/<id>`: top-le
 `GET /receipt/<id>/print?v=` (or `?t=`): the same receipt with ONE script, pinned by its sha256 in that response's CSP
 (`script-src 'sha256-…'`, sandbox `allow-modals allow-scripts`, never same-origin, forms or top navigation), which opens
 the phone's Print (Save as PDF) once loaded. The bar never prints.
+
+## 14 · The booking's confirmation text — `confirmation` (CONFIRM-01, 2026-10-04)
+
+**His call (option A): the website confirms the booking itself, the moment it happens.** `src/confirm.js`, called from the one
+place every booking passes (`finishBooking` in `src/quotes.js`): the page's **Accept & confirm** (§7 `bookByCode`) and the
+texted YES (§3) alike.
+
+**What goes.** ONE text to the customer's number, through the same door every text leaves by (`holding.js postText`: the
+`SMSGATE_AUTH` pair, twenty seconds, never a retry), folded to GSM-7:
+
+> You're booked with Umbra Domus: Tue Sep 29, 8-10 AM. Price $395 flat. We'll text the day before and when we're on the
+> way. Reply STOP to opt out. - Drew
+
+Spanish when the quote's `lang` is `"es"` ("Su cita con Umbra Domus quedo confirmada: mar 29 sep, 8-10 a.m. Precio $395
+fijo. Le escribimos el dia anterior y cuando vayamos en camino. Responda STOP para no recibir mensajes. - Drew"). A
+two-visit option lists each visit on its own line. Under 320 characters (two segments). Never "licensed" or "bonded".
+
+**When.** 7 AM–9 PM Central, at once (and never inside the last ten minutes before 9 PM). **9 PM–7 AM it is queued** on the
+booking's own row in the book and the every-minute cron (`reconcile`) sends it with the **first run from 7:00 AM** — once.
+Whatever the gateway answers, it is **never retried**: a 4xx is `failed` (refused), a 5xx or a timeout is `failed`
+(unknown), and nothing is sent again. A booking withdrawn (§4) while its text waits sends nothing at 7:00.
+
+**Who.** Only a customer whose request ticked **"Text me about this request"** (the record's `consent.smsService === true`,
+the same word the holding text reads) and whose number is **not on the STOP list** (a STOP through SMSGate's webhook, or
+his "No texts" tap; `sms_opt_out` / `optout:` in KV). Without that: no text, state `no_consent` — the Flux shows **"they
+didn't opt in to texts — call them"**. No `SMSGATE_AUTH` on the Worker: no call at all, state `no_key`, and his phone gets
+**`Booking U-0015: no texting key on the website — confirm them yourself`** (the day and the price in the message, R25).
+
+**The field.** On the booked version (`GET /admin/quote/<id>` top-level `confirmation`, and on each version), on `/accept`'s
+`booked` answer, and on the `/api/jobs` row (with `version`):
+```json
+{ "state": "sent",                       // sent | queued | failed | no_consent | no_key
+  "at": "2026-10-01T12:46:03.000Z",      // when it was decided / sent (Central 7:46 AM)
+  "id": "U-0015-confirm-v1",             // SMSGate's message id — minted ONCE from the job and the version
+  "sha": "<sha256 of the words>",
+  "lang": "en", "parts": 2, "status": 202,
+  "queued_at": "…", "send_at": "…",      // only on a text that waited for 7:00 AM
+  "why": "stop" }                        // only on no_consent (no_consent | stop), no_key, failed (refused | unknown | …)
+```
+**THE RULE FOR THE FLUX: never a second send.** Read `confirmation` before sending anything of its own: `sent` or
+`queued` means the website has it — show "Confirmation sent ✓ 7:46 AM" (or "queued for 7:00 AM") from `at` and do nothing.
+`no_consent`, `no_key` and `failed` are the three that need him: show the reason and "call them". The message id
+`<U-id>-confirm-v<version>` is also what the gateway itself refuses a repeat of, so a Flux send that reused it would be
+a 409, not a second text. A booking never fails because its text failed: the worst case is `failed` on the row.
+
+**The customer's page** after booking reads "You're booked." · the day and window · the price · **"Nothing else to do.
+I'll text you the day before."** (Spanish: "No tiene que hacer nada más. Le escribimos el día anterior.").
+
+**Not in this round:** an email confirmation. The Worker has no transactional mailer (FormSubmit only mails him).
