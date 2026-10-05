@@ -35,13 +35,19 @@
    /q/ road, its code made from the job's secret like a quote's); /sent and /cancel take kind "change" too. The customer
    OKs it on its page with their name typed as the signature — or says no thanks — and his phone gets
    "CHANGE OK · U-9601 · $85" (the job number, never the name). The quote, its booking and its hold are never touched,
-   and GET /admin/quote/<id> gains a `changes` list only when the job has one. */
+   and GET /admin/quote/<id> gains a `changes` list only when the job has one.
+
+   THE CONFIRMATION TEXT (CONFIRM-01, 2026-10-04). U-0015 booked a time at 07:46 and heard nothing. Now every booking —
+   the page's tap and the texted YES alike, both through finishBooking below — gets ONE confirmation text from the website
+   itself (confirm.js: consent and STOP honoured, 9 PM–7 AM queued for the first run from 7:00, never a retry), and where
+   that stands rides on the booking row as `confirmation`, mirrored to the KV record, GET /admin/quote/<id> and /api/jobs. */
 
 import { getRecord, putRecord, addEvent } from './store.js';
 import { sha256hex, minutesBetween, newToken } from './util.js';
 import { chicagoWall, isOpen } from './biztime.js';
 import { sendAlert } from './notify.js';
 import { acknowledge } from './alerts.js';
+import { confirmRow, confirmDue } from './confirm.js';
 
 export const CODE_LEN = 22;
 const BASE62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -545,11 +551,17 @@ export async function quoteState(env, jobId, nowIso) {
     ...(r.body.step_count != null ? { step_count: r.body.step_count } : {}),
     ...(r.body.visit_minutes != null ? { visit_minutes: r.body.visit_minutes } : {}),
     ...(r.body.their_paint != null ? { their_paint: r.body.their_paint } : {}),
+    /* CONFIRM-01: the booking's confirmation text — {state: sent|queued|failed|no_consent|no_key, at, id, sha, …}, null
+       until the version is booked */
+    confirmation: r.confirmation || null,
   });
   const all = rows.map(pub);
+  const booked = rows.find((r) => r.status === 'accepted');
   const out = {
     job_id: jobId, now: nowIso, current: all[all.length - 1], versions: all,
     booking: bookings.length ? { ...freedOf(bookings[0]), version: bookings[0].version, booked_at: bookings[0].booked_at, windows: bookedVisits(bookings, days) } : null,
+    /* CONFIRM-01: the booked version's confirmation, where the Flux polls (null while nothing is booked) */
+    confirmation: booked && booked.confirmation ? booked.confirmation : null,
   };
   /* road CO: the change orders, only when the job has one — a job with none answers exactly as before */
   if (changes && changes.length) out.changes = changes.map(changePub);
@@ -629,9 +641,12 @@ export async function bookByJob(env, jobId, version, window, nowIso) {
 
 async function finishBooking(env, r, hash, nowIso) {
   if (r.state !== 'booked') return answerOf(r, r.clash ? { taken_by_other_job: true } : {});
+  /* CONFIRM-01: the customer's confirmation text, decided and sent (or queued, or refused) BEFORE the stamp, so the one
+     KV write carries it. It never throws; a booking never fails because its text did. */
+  const confirmation = await confirmRow(env, hash, nowIso);
   await stampSafe(env, r.row.job_id, nowIso);
   if (r.row.accepted_by === 'page') await pushRow(env, hash, nowIso);
-  return answerOf(r);
+  return answerOf(r, { confirmation: confirmation || null });
 }
 
 /** "None of these times work." Once per version: the first call stamps and pushes, a second does nothing. */
@@ -784,6 +799,14 @@ export async function stampJob(env, jobId, nowIso) {
       addEvent(rec, 'quoted', { quote_amount: accepted.body.price, minutes_to_quote: rec.minutes_to_quote, from: 'accept', note: 'quoted_at set from the accepted quote v' + accepted.version + (accepted.sent_at ? ' sent_at' : ' created_at (never marked sent)') }, at);
     }
     if (fresh) acks.push(['accept', nowIso]);
+    /* CONFIRM-01: the confirmation text's state rides with the booking; one event per settled state */
+    if (accepted.confirmation) {
+      const c = accepted.confirmation;
+      rec.confirmation = { ...c, version: accepted.version };
+      if (c.state !== 'queued' && !hasEvent('confirmation', (e) => e.version === accepted.version && e.state === c.state)) {
+        addEvent(rec, 'confirmation', { version: accepted.version, state: c.state, ...(c.id ? { id: c.id } : {}), ...(c.why ? { why: c.why } : {}) }, c.at || nowIso);
+      }
+    }
   } else if (rec.accept && !rec.accept.cancelled_at) {
     const was = rows.find((r) => r.version === rec.accept.version);
     rec.accept.cancelled_at = (was && was.cancelled_at) || nowIso;
@@ -992,9 +1015,13 @@ async function pushRow(env, hash, nowIso) {
  * list), and every push still owed — held overnight, or a channel that answered 5xx — is sent.
  */
 export async function reconcile(env, nowIso) {
-  const out = { now: nowIso, stamped: [], stamp_failed: [], pushed: [] };
+  const out = { now: nowIso, stamped: [], stamp_failed: [], pushed: [], confirmed: [] };
   if (!env.BOOK) return out;
   const b = book(env);
+  /* CONFIRM-01: every confirmation text still owed — queued 9 PM–7 AM, sent with the first run from 7:00 (confirm.js
+     itself does nothing by night, and never twice). Each finish moves the row's state_version on, so the stamp loop
+     below mirrors it in this same run. */
+  out.confirmed = await confirmDue(env, nowIso);
   for (const jobId of await b.unmirroredJobs()) {
     try { await stampJob(env, jobId, nowIso); out.stamped.push(jobId); }
     catch (err) { out.stamp_failed.push(jobId); console.error('reconcile stamp failed for', jobId, String(err && err.message || err)); }

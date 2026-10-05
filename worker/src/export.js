@@ -261,6 +261,12 @@ export function renderJobMarkdown(rec, opts = {}) {
     L.push(`| **Quote version** | ${a ? mdCell('v' + a.version) : '`____`'} |`);
     L.push(`| \`accepted at\` | ${a ? mdCell(a.at) : '`____`'} |`);
     if (a && a.cancelled_at) L.push(`| **Withdrawn** | ${mdCell(a.cancelled_at)} — the booking was cancelled and its time freed |`);
+    /* CONFIRM-01: the confirmation text the website sent them (or why it did not) */
+    const c = rec.confirmation;
+    if (c) {
+      const said = { sent: 'sent by the website', queued: 'queued for 7:00 AM', failed: 'DID NOT GO — call them', no_consent: 'not sent — they did not opt in to texts, call them', no_key: 'not sent — no texting key on the website, call them' }[c.state] || c.state;
+      L.push(`| **Confirmation text** | ${mdCell(said + (c.at ? ' · ' + c.at : '') + (c.id ? ' · ' + c.id : ''))} |`);
+    }
     L.push('');
   }
 

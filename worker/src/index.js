@@ -613,6 +613,9 @@ function adminRow(rec, nowIso) {
     /* ACCEPT-PAGE-01: the quote as the book holds it (never the code), and the booking its YES made */
     accept: rec.accept || null,
     accepted_at: rec.accepted_at || null,
+    /* CONFIRM-01: the booking's confirmation text, as the website sent it — {state: sent|queued|failed|no_consent|no_key,
+       at, id, sha, version, …}; null until a booking. The Flux shows "Confirmation sent ✓ 7:46 AM" from this and nothing else. */
+    confirmation: rec.confirmation || null,
     quote: rec.quote || null,
     /* road W: the payment the receipt recorded, and when the receipt was kept (never its link or key) */
     paid: rec.paid || null,
