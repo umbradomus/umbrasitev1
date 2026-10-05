@@ -238,6 +238,7 @@ body{background:#F6F3EE;color:#0F0B1A}
 .qsteps li.done,.qsteps li.now{color:#0F0B1A}
 .q h1{font-size:clamp(1.9rem,7vw,2.4rem);line-height:1.05;margin:0 0 .3rem}
 .qhi{font-size:1.15rem;margin:0 0 1.1rem;color:#4E4960}
+.qsay{font-size:1.15rem;font-weight:600;line-height:1.35;margin:.1rem 0 .55rem;color:#0F0B1A}
 .q h2{font-size:1.1rem;letter-spacing:0;margin:1.5rem 0 .6rem}
 .qticket{background:#fff;border:1px solid #D9D2C7;border-radius:18px;box-shadow:0 10px 30px rgba(15,11,26,.07);overflow:hidden;margin:0 0 1.2rem}
 .qticket .qtt{padding:1.1rem 1.2rem .95rem}
@@ -586,6 +587,22 @@ function bookedVisits(v) {
 }
 const bookedWindow = (v) => bookedVisits(v)[0];
 
+/** SITE-FIX-03 · THE ONE LINE THE BOOKED PAGE SAYS OUT LOUD, under "You're booked.": the day, the window,
+    the price, then the promise of the text the day before — em-dash separated, in the customer's language.
+    A fact the booking does not carry is DROPPED, never left as a blank dash: a record with a day but no
+    window reads "Tue, Nov 10 — $395 — I'll text you the day before." The promise is a promise only: the
+    FLUX sends that text on its Job Sync tick (FLUX-FIX-16). This page never texts.
+    `window` is a visit ({date, start, end}); `price` is the accepted version's own price. */
+export function bookedSummary(window, price, lang) {
+  const l = lang === 'es' ? 'es' : 'en';
+  const parts = [];
+  if (window && window.date) parts.push(lineDay(window.date, l));
+  if (window && window.start && window.end) parts.push(spanOf(window, l));
+  if (price != null && price !== '' && Number.isFinite(Number(price))) parts.push(money(price));
+  parts.push(WORDS[l].booked_promise);
+  return parts.join(' — ');
+}
+
 function bookedPage(v, code) {
   const lang = v.lang === 'es' ? 'es' : 'en';
   const w = WORDS[lang];
@@ -595,6 +612,7 @@ function bookedPage(v, code) {
     stepsHtml(w, 3, -1),
     `<div class="qok" aria-hidden="true">${ICON.check}</div>`,
     `<h1>${esc(w.h_booked)}</h1>`,
+    `<p class="qsay">${esc(bookedSummary(bookedWindow(v), v.body && v.body.price, lang))}</p>`,
     `<p class="qhi">${esc(w.booked_done)}</p>`,
     '<div class="qticket">' + (visits.length ? ticketVisitsHtml(visits.length > 1 ? w.lbl_visits : w.lbl_visit, visits, lang, w, v.body) + '<div class="qtear" aria-hidden="true"></div>' : '') +
       `<div class="qtt"><p class="qtl">${esc(w.h_price)}</p><p class="qprice" style="font-size:2.1rem">${esc(money(v.body && v.body.price))}</p></div></div>`,

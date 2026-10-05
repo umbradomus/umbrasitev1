@@ -78,6 +78,9 @@ export const WORDS = {
     taken_other_pair: 'These days are still open:',
     booked_done: 'Nothing else to do.',
     booked_small: 'Need to move it, or have a question? Reply to my text.',
+    /* SITE-FIX-03: the end of the booked line. The FLUX sends that text (FLUX-FIX-16), never this page —
+       the page only promises it. road XW's one voice: Drew speaking, as "Reply to my text." above does. */
+    booked_promise: "I'll text you the day before.",
     /* road XW (2026-09-26): ONE VOICE — Drew speaking ("I", "my text") on every line of the English page; the step count
        the Flux's plan has (step_count), with the steps the list does not name counted in one line; each visit's length
        when the Flux sends it (visit_minutes); "with your paint" when they said they have it; the year their house was
@@ -158,6 +161,7 @@ export const WORDS = {
     taken_other_pair: 'Estos días siguen disponibles:',
     booked_done: 'No tiene que hacer nada más.',
     booked_small: '¿Necesita cambiarla o tiene preguntas? Responda a nuestro mensaje de texto.',
+    booked_promise: 'Le enviaremos un mensaje de texto el día anterior.',
     /* road XW (2026-09-26): the same new lines, for his reviewer. The Spanish page keeps its own voice ("nosotros"). */
     work_more_one: 'Y 1 paso menor durante el trabajo.',
     work_more: 'Y {n} pasos menores durante el trabajo.',
