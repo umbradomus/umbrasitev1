@@ -74,8 +74,8 @@ function contrast(a, b) { const la = lum(a), lb = lum(b); if (la == null || lb =
 const browser = await chromium.launch({ executablePath: EXE, headless: true, args: ['--no-sandbox'] });
 const SIZES = [{ name: '390', width: 390, height: 844 }, { name: '1280', width: 1280, height: 900 }];
 const PAGES = [
-  { route: '/', lang: 'en', form: '/services', hash: 'request', licensed: 'licensed', hourly: ['/hour', 'per hour', '/hr', 'an hour', 'hourly'] },
-  { route: '/es', lang: 'es', form: '/es/servicios', hash: 'pedir', licensed: 'licencia', hourly: ['la hora', 'por hora', '/hora', '/hr'] },
+  { route: '/', lang: 'en', form: '/services', hash: 'request', licensed: 'licensed', legal: 'Electrical and plumbing work, including appliance installation, is performed by licensed contractors we work with.', hourly: ['/hour', 'per hour', '/hr', 'an hour', 'hourly'] },
+  { route: '/es', lang: 'es', form: '/es/servicios', hash: 'pedir', licensed: 'licencia', legal: 'El trabajo eléctrico y de plomería, incluida la instalación de electrodomésticos, lo realizan contratistas con licencia con los que trabajamos.', hourly: ['la hora', 'por hora', '/hora', '/hr'] },
 ];
 const R = { root: ROOT, out: OUT, pages: {} };
 
@@ -143,8 +143,9 @@ for (const P of PAGES) {
     ok(read.tiles.length > 0 && noSvc.length === 0, 'every tile carries its service and the chooser tile it lights', noSvc.map((t) => t.key).join(','));
     const short = read.tiles.filter((t) => t.h < 44 || t.w < 44);
     ok(read.tiles.length > 0 && short.length === 0, 'every tile is a 44px tap target or bigger', short.map((t) => t.key + ':' + Math.round(t.h)).join(','));
-    const licCount = (low.match(new RegExp(P.licensed, 'g')) || []).length;
-    ok(licCount === 0, `"${P.licensed}" appears 0 times`, licCount);
+    const outside = low.split(P.legal.toLowerCase()).join(' ');
+    const licCount = (outside.match(new RegExp(P.licensed, 'g')) || []).length;
+    ok(licCount === 0, `"${P.licensed}" appears 0 times outside the contractor line`, licCount);
     const hourly = P.hourly.filter((h) => low.indexOf(h) > -1);
     ok(hourly.length === 0, 'no hourly figure on the page', hourly.join(', '));
     ok(read.sms.some((h) => /^sms:\+19565566438\?body=/.test(h)), 'the sms: link is there, with its body', read.sms.join(' '));

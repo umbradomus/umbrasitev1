@@ -32,6 +32,7 @@
   var WORDS = {
     en: {
       from: 'from', each: 'each', piece: 'per piece',
+      byText: 'Price by text',
       dayHead: 'Your whole list, one visit',
       dayLead: 'Hand us everything at once. Most lists fit in a half day.',
       half: 'Half day', full: 'Full day', hours4: '4 hours', hours8: '8 hours',
@@ -40,6 +41,7 @@
     },
     es: {
       from: 'desde', each: 'c/u', piece: 'por pieza',
+      byText: 'Precio por texto',
       dayHead: 'Toda su lista, una visita',
       dayLead: 'Entréguenos todo de una vez. La mayoría de las listas caben en medio día.',
       half: 'Medio día', full: 'Día completo', hours4: '4 horas', hours8: '8 horas',
@@ -83,6 +85,12 @@
       { key: 'windowunit', tile: 'else', service: 'Not sure', price: { amt: 69 },
         en: { name: 'Window unit put in or taken out', inc: 'Set, sealed and secured' },
         es: { name: 'Aparato de ventana puesto o quitado', inc: 'Colocado, sellado y asegurado' } },
+      { key: 'appliance', tile: 'else', service: 'Not sure', price: { byText: true },
+        en: { name: 'Appliance installation', inc: 'Set in place, connected and tested' },
+        es: { name: 'Instalación de electrodomésticos', inc: 'Colocado, conectado y probado' } },
+      { key: 'fans', tile: 'else', service: 'Not sure', price: { byText: true },
+        en: { name: 'Ceiling fans', inc: 'A new fan, or the old one changed out' },
+        es: { name: 'Ventiladores de techo', inc: 'Uno nuevo, o cambio del que hay' } },
       { key: 'dryervent', tile: 'else', service: 'Not sure', price: { amt: 99 },
         en: { name: 'Dryer vent cleaned', inc: 'Cleaned end to end, cover checked' },
         es: { name: 'Ducto de la secadora limpio', inc: 'Limpio de punta a punta, tapa revisada' } },
@@ -199,6 +207,9 @@
   }
   function priceOf(item) {
     var p = el('span', 'mprice');
+    /* a job his two prices have not landed on yet: the price slot carries the site's own
+       words instead of a figure, never a number we made up (SITE-LICENCE-FLIP-01) */
+    if (item.price.byText) { p.appendChild(el('span', 'mamt', W.byText)); return p; }
     if (item.price.from) p.appendChild(el('span', 'mfrom', W.from));
     p.appendChild(el('span', 'mamt', money(item.price.amt)));
     if (item.price.unit) p.appendChild(el('span', 'munit', W[item.price.unit]));
