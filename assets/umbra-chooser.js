@@ -418,6 +418,9 @@
     addressStep.appendChild(need);
     addr = window.UmbraAddress.attach({
       input: field, host: holder,
+      /* SITE-FIX-12 clause 3 - the box is about to speak, so this alert goes quiet first:
+         the screen says exactly one thing at a time. */
+      onQuiet: function () { need.hidden = true; },
       onChange: function (s) {
         if (s && s.confirmed) need.hidden = true;
         syncFields(); drawReview();
@@ -428,7 +431,10 @@
     window.UMBRA_ADDRESS_GATE = function () {
       if (!window.UmbraAddress.plausible(field.value)) {
         need.textContent = addr.needMore;
-        need.hidden = false;
+        /* SITE-FIX-12 clause 3 - if the box is already saying something of its own, that
+           is the one message; this alert stays down. The gate still refuses, same words,
+           same decision - only the doubling is gone. */
+        need.hidden = addr.speaking();
         try { field.focus(); } catch (e) { }
         return false;
       }
@@ -443,7 +449,7 @@
          page can be submitted around this screen. */
       if (!addr.state().confirmed) {
         need.textContent = addr.notYet;
-        need.hidden = false;
+        need.hidden = addr.speaking();
         return false;
       }
       need.hidden = true;
