@@ -44,6 +44,28 @@
   var SERVICE  = 'Drywall & Paint';
   var PROBLEM  = 'Holes to patch';
 
+  /* THE FOUR SENTENCES THIS FILE PUTS ON THE PAGE (SITE-FIX-13).
+     The posted names and values above are the contract and stay English in every
+     language. These four are not posted - they are read by the customer, and
+     /es/casas and /es/contacto carry this block too, so a Spanish customer must
+     not be handed them in English. The page says which language it is in and this
+     file never guesses from the path: the same test, for the same reason, as
+     assets/umbra-status.js (SITE-FIX-11 clause 2). The Spanish is the usted voice
+     of /es and /es/servicios. The English half below is the English this file has
+     always written, word for word, so an English page reads exactly as before. */
+  var ES = (document.documentElement.getAttribute('lang') || '').toLowerCase().indexOf('es') === 0;
+  var W = ES ? {
+    gateKnown:   'Ya tenemos todos los números que necesitamos, así que de esto se puede sacar un precio — sin adivinar.',
+    gateMissing: 'Falta un conteo o nos lo dejó a nosotros, así que esto queda SIN COTIZAR hasta que lo veamos — esa es la respuesta honesta, no un precio adivinado.',
+    whatLabel:   '¿Algo más que debamos saber?',
+    whatHint:    'Opcional — lo que tocó arriba ya nos dijo casi todo.'
+  } : {
+    gateKnown:   'Every number we need is here, so a price can be generated from this — no guessing.',
+    gateMissing: 'A count is missing or left to us, so this stays NOT QUOTABLE until we look — which is the honest answer, not a guessed price.',
+    whatLabel:   'Anything else we should know?',
+    whatHint:    'Optional — the taps above told us most of it.'
+  };
+
   var serviceInputs = form.querySelectorAll('input[name="service"]');
   var problemInputs = problemStep.querySelectorAll('input[name="problem"]');
   var whereInputs   = holesStep.querySelectorAll('input[name="problem_area"]');
@@ -106,9 +128,7 @@
     });
     gateLine.hidden = false;
     gateLine.className = known ? 'gate' : 'gate warn';
-    gateLine.textContent = known
-      ? 'Every number we need is here, so a price can be generated from this — no guessing.'
-      : 'A count is missing or left to us, so this stays NOT QUOTABLE until we look — which is the honest answer, not a guessed price.';
+    gateLine.textContent = known ? W.gateKnown : W.gateMissing;
   }
 
   /* `what` stops being the only description once the taps carry it (R17/R17e).
@@ -117,8 +137,8 @@
   function demoteWhat(live) {
     if (!whatField) return;
     whatField.required = live ? false : whatWas.required;
-    if (whatLabel) whatLabel.textContent = live ? 'Anything else we should know?' : whatWas.label;
-    if (whatHint) whatHint.textContent = live ? 'Optional — the taps above told us most of it.' : whatWas.hint;
+    if (whatLabel) whatLabel.textContent = live ? W.whatLabel : whatWas.label;
+    if (whatHint) whatHint.textContent = live ? W.whatHint : whatWas.hint;
   }
 
   /* One function recomputes the whole block from the answers, every time.

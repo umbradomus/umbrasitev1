@@ -15,6 +15,7 @@
 
 import { chicagoWall } from '../src/biztime.js';
 import crypto from 'node:crypto';
+import { readShown } from '../src/shown.js';
 
 export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, json, sleep }) {
   const R = {};
@@ -42,10 +43,23 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     fd.set('email', 'customer@example.com');
     fd.set('service', 'Drywall & Paint');
     fd.set('what', extra.what || `${name} here: two holes in the hallway ceiling. Call me at 956-555-0142 or see https://example.com/pics`);
+    /* WORKER-SHOWN-01: what the tile showed, posted as four more parts of the same form */
+    if (extra.shown) for (const [k, v] of Object.entries(extra.shown)) {
+      if (Array.isArray(v)) for (const one of v) fd.append(k, one); else fd.set(k, v);
+    }
     const r = await fetch(`${W}/intake`, { method: 'POST', body: fd, redirect: 'manual', headers: { 'x-umbra-test-now': iso } });
-    const loc = new URL(r.headers.get('location'));
+    const body = await r.text();
+    /* a regression that drops the Location must FAIL a reading, not crash the suite */
+    const locHeader = r.headers.get('location');
+    const loc = locHeader ? new URL(locHeader) : null;
+    let masked = "(no Location)";
+    if (loc) {
+      const u = new URL(loc);
+      for (const k of ['id', 't']) if (u.searchParams.has(k)) u.searchParams.set(k, '<new>');
+      masked = u.origin + u.pathname + '?' + u.searchParams.toString();
+    }
     serial++;
-    return { status: r.status, id: loc.searchParams.get('id'), token: loc.searchParams.get('t') };
+    return { status: r.status, body, masked, id: loc && loc.searchParams.get('id'), token: loc && loc.searchParams.get('t') };
   }
   const runAt = (iso) => json(`${W}/__run-alerts?k=${ADMIN_KEY}&now=${encodeURIComponent(iso)}`, { method: 'POST' }).then((r) => r.body);
   async function row(id) {
@@ -523,5 +537,124 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     R['12'].push({ received: '9:00 AM (Larry)', quoted_at: CT(...DAY_A, 11, 1), register: lateCell });
   }
 
+  /* ============================================================ (13) and (14) · WORKER-SHOWN-01 */
+  /* EDGE 7, THE WORKER HALF (WORKER-SHOWN-01, 2026-10-06). The booking form may carry what the
+     customer was SHOWN on the tile they tapped — shown_key, shown_label, shown_price, shown_lang.
+     The Worker keeps it beside `service` as `shown` = {key,label,price,lang} and passes it to Job
+     Sync on the /api/jobs row. The price is the TEXT the tile showed, kept exactly and never
+     re-priced. A missing or bad `shown` is DROPPED: the same answer to the customer as the same
+     request without those fields, and no `shown` on the record. Never a 400.
+     The round's own readings are Bridge/WORKER-SHOWN-01/R1-shown.txt and R2-bad.txt. */
+  const DAY_D = [2026, 9, 28];   /* Monday */
+
+  suite('D · (13) WORKER-SHOWN-01: readShown() keeps what the tile showed, and the record carries `shown` beside `service`');
+  {
+    /* the rule's OWN named test — the one small function, read on its own, no network */
+    const rs = (f) => JSON.stringify(readShown(f));
+    const RULE = [
+      ['the four fields as a tile sends them', { shown_key: 'tv-mount', shown_label: 'TV mounting', shown_price: '$50', shown_lang: 'en' }, '{"key":"tv-mount","label":"TV mounting","price":"$50","lang":"en"}'],
+      ['a Spanish tile, its own price text kept exactly', { shown_key: 'tv-mount', shown_label: 'Montaje de TV', shown_price: 'desde$79por pieza', shown_lang: 'es' }, '{"key":"tv-mount","label":"Montaje de TV","price":"desde$79por pieza","lang":"es"}'],
+      ['the longest price text a tile shows in English', { shown_key: 'furniture-assembly', shown_price: 'from$79per piece' }, '{"key":"furniture-assembly","label":"furniture-assembly","price":"from$79per piece","lang":"en"}'],
+      ['no label at all, the key stands in', { shown_key: 'tv-mount', shown_price: '$50' }, '{"key":"tv-mount","label":"tv-mount","price":"$50","lang":"en"}'],
+      ['a label of blanks, the key stands in', { shown_key: 'tv-mount', shown_label: '   ', shown_price: '$50' }, '{"key":"tv-mount","label":"tv-mount","price":"$50","lang":"en"}'],
+      ['a label carrying markup, the brackets go', { shown_key: 'tv-mount', shown_label: '<b>TV</b> mounting', shown_price: '$50' }, '{"key":"tv-mount","label":"bTV/b mounting","price":"$50","lang":"en"}'],
+      ['a label carrying control characters, they go', { shown_key: 'tv-mount', shown_label: 'TV\r\n mounting\u0000', shown_price: '$50' }, '{"key":"tv-mount","label":"TV mounting","price":"$50","lang":"en"}'],
+      ['a label of 90 characters, cut to 80', { shown_key: 'tv-mount', shown_label: 'a'.repeat(90), shown_price: '$50' }, '{"key":"tv-mount","label":"' + 'a'.repeat(80) + '","price":"$50","lang":"en"}'],
+      ['a key of 40 characters', { shown_key: 'b'.repeat(40), shown_price: '$50' }, '{"key":"' + 'b'.repeat(40) + '","label":"' + 'b'.repeat(40) + '","price":"$50","lang":"en"}'],
+      ['a price of 32 characters', { shown_key: 'tv-mount', shown_price: '$' + '9'.repeat(31) }, '{"key":"tv-mount","label":"tv-mount","price":"$' + '9'.repeat(31) + '","lang":"en"}'],
+      ['lang "fr" becomes "en"', { shown_key: 'tv-mount', shown_price: '$50', shown_lang: 'fr' }, '{"key":"tv-mount","label":"tv-mount","price":"$50","lang":"en"}'],
+      ['lang "ES" becomes "en" — only the two exact words pass', { shown_key: 'tv-mount', shown_price: '$50', shown_lang: 'ES' }, '{"key":"tv-mount","label":"tv-mount","price":"$50","lang":"en"}'],
+      ['nothing sent at all, no shown', {}, 'null'],
+      ['a key of 41 characters, no shown', { shown_key: 'c'.repeat(41), shown_price: '$50' }, 'null'],
+      ['a key with a capital, no shown', { shown_key: 'TV-mount', shown_price: '$50' }, 'null'],
+      ['a key with a space, no shown', { shown_key: 'tv mount', shown_price: '$50' }, 'null'],
+      ['a key of markup, no shown', { shown_key: '<script>', shown_price: '$50' }, 'null'],
+      ['an empty key, no shown', { shown_key: '', shown_price: '$50' }, 'null'],
+      ['no price, no shown', { shown_key: 'tv-mount', shown_label: 'TV mounting' }, 'null'],
+      ['a price with no $ and no digit, no shown', { shown_key: 'tv-mount', shown_price: 'fifty' }, 'null'],
+      ['a price with a $ and no digit, no shown', { shown_key: 'tv-mount', shown_price: '$ each' }, 'null'],
+      ['a price with a digit and no $, no shown', { shown_key: 'tv-mount', shown_price: '50 each' }, 'null'],
+      ['a price of 33 characters, no shown', { shown_key: 'tv-mount', shown_price: '$' + '9'.repeat(32) }, 'null'],
+      ['a price carrying a newline, no shown', { shown_key: 'tv-mount', shown_price: '$5\n0' }, 'null'],
+      ['a repeated part — an array, not a string — no shown', { shown_key: ['tv-mount', 'other'], shown_price: '$50' }, 'null'],
+      ['a price that is not a string, no shown', { shown_key: 'tv-mount', shown_price: 50 }, 'null'],
+    ];
+    R['13'] = { rule: [] };
+    for (const [label, input, want] of RULE) {
+      eq(rs(input), want, `readShown(): ${label}`);
+      R['13'].rule.push({ case: label, kept: rs(input) });
+    }
+
+    /* and end to end, through the front door: the four fields, EN and ES, each against the SAME
+       request without them */
+    const t = CT(...DAY_D, 9, 10);
+    const en = await submitAt(t, 'Shown Sheila', { shown: { shown_key: 'tv-mount', shown_label: 'TV mounting', shown_price: '$50', shown_lang: 'en' } });
+    const es = await submitAt(plus(t, 1), 'Shown Sofia', { shown: { shown_key: 'tv-mount', shown_label: 'Montaje de TV', shown_price: 'desde$79por pieza', shown_lang: 'es' } });
+    const ctl = await submitAt(plus(t, 2), 'Shown Carl');
+    const rEn = await row(en.id), rEs = await row(es.id), rCtl = await row(ctl.id);
+
+    /* the row Job Sync reads carries it, top-level, beside `service` */
+    eq(JSON.stringify(rEn.shown), '{"key":"tv-mount","label":"TV mounting","price":"$50","lang":"en"}', '/api/jobs carries shown {key,label,price,lang} — EN');
+    eq(JSON.stringify(rEs.shown), '{"key":"tv-mount","label":"Montaje de TV","price":"desde$79por pieza","lang":"es"}', '/api/jobs carries shown {key,label,price,lang} — ES, its own price text');
+    eq(rCtl.shown, undefined, 'the same request without the four fields carries no shown at all');
+    eq(rEn.service, 'Drywall & Paint', 'service is untouched beside it — EN');
+    eq(rEs.service, 'Drywall & Paint', 'service is untouched beside it — ES');
+    eq(rEn.fields.shown_price, '$50', 'the raw answer the form posted is still there, byte for byte');
+
+    /* the export carries it, under the category row */
+    const mdOf = async (id) => (await fetch(`${W}/api/export/${id}.md?k=${ADMIN_KEY}`)).text();
+    const shownRow = (md) => md.split('\n').find((l) => l.startsWith('| `shown` (the tile they tapped)')) || '';
+    const mdEn = await mdOf(en.id), mdEs = await mdOf(es.id), mdCtl = await mdOf(ctl.id);
+    ok(/^\| `shown` \(the tile they tapped\) \| TV mounting .+ \*\*\$50\*\* .+ `tv-mount` .+ en \|$/.test(shownRow(mdEn)), 'the export prints the tile, the price text it showed, the key and the language — EN', shownRow(mdEn));
+    ok(/^\| `shown` \(the tile they tapped\) \| Montaje de TV .+ \*\*desde\$79por pieza\*\* .+ `tv-mount` .+ es \|$/.test(shownRow(mdEs)), 'the export prints the Spanish tile and its own price text — ES', shownRow(mdEs));
+    eq(shownRow(mdCtl), '', 'the export of a request without the four fields has no such row');
+
+    /* the answer to the customer is the control's answer, character for character */
+    eq(`${en.status} ${en.masked}`, `${ctl.status} ${ctl.masked}`, 'EN: the same status and Location (id and token masked) as the request without the fields');
+    eq(`${es.status} ${es.masked}`, `${ctl.status} ${ctl.masked}`, 'ES: the same status and Location (id and token masked) as the request without the fields');
+    eq(en.body + es.body + ctl.body, '', 'and the same body — a 303 carries none');
+
+    for (const r of [en, es, ctl]) { await seen(r.id); await done(r.id); }
+    R['13'].end_to_end = {
+      en: { id: en.id, status: en.status, location: en.masked, shown: rEn.shown, service: rEn.service, export_row: shownRow(mdEn) },
+      es: { id: es.id, status: es.status, location: es.masked, shown: rEs.shown, service: rEs.service, export_row: shownRow(mdEs) },
+      control: { id: ctl.id, status: ctl.status, location: ctl.masked, shown: rCtl.shown === undefined ? 'ABSENT' : rCtl.shown, service: rCtl.service },
+    };
+  }
+
+  /* ============================================================ (14) */
+  suite('D · (14) WORKER-SHOWN-01: a bad `shown` is DROPPED — the same answer as the request without it, never a 400');
+  {
+    const PLANTS = [
+      ['a price of 300 characters', { shown_key: 'tv-mount', shown_price: '$' + '5'.repeat(299) }, 'null'],
+      ['a price of "fifty" — no $ and no digit', { shown_key: 'tv-mount', shown_price: 'fifty' }, 'null'],
+      ['a key of markup — "<script>"', { shown_key: '<script>', shown_price: '$50' }, 'null'],
+      ['a key with a capital — "TV-mount"', { shown_key: 'TV-mount', shown_price: '$50' }, 'null'],
+      ['a key with a space — "tv mount"', { shown_key: 'tv mount', shown_price: '$50' }, 'null'],
+      ['only shown_label', { shown_label: 'TV mounting' }, 'null'],
+      ['all four empty', { shown_key: '', shown_label: '', shown_price: '', shown_lang: '' }, 'null'],
+      ['lang "fr" with a good key and price — kept, lang "en"', { shown_key: 'tv-mount', shown_label: 'TV mounting', shown_price: '$50', shown_lang: 'fr' }, '{"key":"tv-mount","label":"TV mounting","price":"$50","lang":"en"}'],
+      ['a label carrying "<b>" — kept without the brackets', { shown_key: 'tv-mount', shown_label: '<b>TV</b> mounting', shown_price: '$50', shown_lang: 'en' }, '{"key":"tv-mount","label":"bTV/b mounting","price":"$50","lang":"en"}'],
+    ];
+    R['14'] = [];
+    let n = 0;
+    for (const [label, shown, want] of PLANTS) {
+      n++;
+      const at = CT(...DAY_D, 10, n * 2);
+      /* each plant carries its OWN pair: the same request, the same moment, without the four fields */
+      const bad = await submitAt(at, `Plant ${n} Pam`, { shown });
+      const pair = await submitAt(at, `Pair ${n} Paul`);
+      eq(`${bad.status} ${bad.masked}`, `${pair.status} ${pair.masked}`, `${label}: the same status and Location as the same request without the fields`);
+      eq(bad.body, pair.body, `${label}: and the same body`);
+      eq(bad.status, 303, `${label}: a 303 to the confirmation page — never a 400`);
+      const rb = await row(bad.id);
+      eq(rb.shown === undefined ? 'null' : JSON.stringify(rb.shown), want, `${label}: the record carries ${want === 'null' ? 'NO shown at all' : 'exactly ' + want}`);
+      const md = await (await fetch(`${W}/api/export/${bad.id}.md?k=${ADMIN_KEY}`)).text();
+      eq(md.includes('`shown` (the tile they tapped)'), want !== 'null', `${label}: the export ${want === 'null' ? 'has no shown row' : 'prints the cleaned shown row'}`);
+      eq((await row(pair.id)).shown, undefined, `${label}: its pair stores no shown`);
+      await seen(bad.id); await done(bad.id); await seen(pair.id); await done(pair.id);
+      R['14'].push({ plant: label, status: bad.status, pair_status: pair.status, location: bad.masked, pair_location: pair.masked, bodies_equal: bad.body === pair.body, stored: rb.shown === undefined ? 'ABSENT' : rb.shown });
+    }
+  }
   return R;
 }
