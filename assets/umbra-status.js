@@ -29,7 +29,7 @@
   var W = ES ? {
     loc: 'es-MX',
     DOW: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'],
-    PAY: { cash: 'efectivo', zelle: 'Zelle', check: 'cheque', card: 'tarjeta' },
+    PAY: { cash: 'efectivo', check: 'cheque', card: 'tarjeta' }, /* CFO s24: cheque, efectivo o tarjeta. Si el Worker manda otro metodo, la linea no lo nombra. */
     LABEL: {
       received: 'Tenemos su solicitud.',
       quoted: 'Tiene un precio y un plan, por escrito.',
@@ -62,7 +62,7 @@
   } : {
     loc: 'en-US',
     DOW: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-    PAY: { cash: 'cash', zelle: 'Zelle', check: 'check', card: 'card' },
+    PAY: { cash: 'cash', check: 'check', card: 'card' }, /* CFO s24: check, cash or card. A method not on this list is simply not named in the line. */
     LABEL: {
       received: 'We have your request.',
       quoted: 'You have a price and a plan, in writing.',
