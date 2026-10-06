@@ -749,3 +749,105 @@ textarea.field { min-height: 8rem; resize: vertical; }
   .fd-hero .cta-row { justify-content: center; }
   .fd-hero .tiny { justify-content: center; }
 }
+
+/* ============================================================================
+   SITE-FIX-12 (2026-10-06) · NOTHING A CUSTOMER READS IS UNDER 16 PX.
+   The walk-through's W6 check at 390 named 497 elements under 16 px across the
+   27 published pages, EN and ES, and 453 at 1440 — so the raise is made in the
+   base cascade, not behind a phone-only query: one size, both widths, one
+   source of truth. Every rule below is a SIZE only. No colour, no font family,
+   no weight, no letter-spacing and no word is changed anywhere: the small print
+   is still the small print by its muted colour, its uppercase, its tracking and
+   its weight — the three marks it already carried — and never by going under 16.
+   A rule here repeats its own selector exactly as the rule above it is written,
+   so it wins on source order alone; a media query adds no specificity, which is
+   why the three @media sizes further up (.mtile .minc, .ch-label, .ch-sub) are
+   beaten by the plain selectors below.
+   ========================================================================== */
+
+/* the header, the promise strip, the kicker */
+.nav-box { font-size: 1rem; }           /* the hidden menu checkbox: a control at 13.3px */
+.nav-btn { font-size: 1rem; }
+.promise { font-size: 1rem; }
+.kicker { font-size: 1rem; }
+.hero .sub { font-size: 1rem; }
+
+/* tiles, cards, lists */
+.tile p { font-size: 1rem; }
+.tile .lic { font-size: 1rem; }
+.fine { font-size: 1rem; }
+.portrait figcaption { font-size: 1rem; }
+.price small { font-size: 1rem; }
+.price .per { font-size: 1rem; }
+.cond { font-size: 1rem; }
+.inc span { font-size: 1rem; }
+.job .where { font-size: 1rem; }
+.shots h3 { font-size: 1rem; }
+.shot figcaption { font-size: 1rem; }
+.strip-empty { font-size: 1rem; }
+small { font-size: 1rem; }
+
+/* the form: the photo field, the drywall intake, the wizard */
+.field.file::file-selector-button { font-size: 1rem; }
+.pix .nm { font-size: 1rem; }
+.req .hint { font-size: 1rem; }
+.intake .area .q { font-size: 1rem; }
+.intake .exact { font-size: 1rem; }
+.req .gate { font-size: 1rem; }
+.req .guide { font-size: 1rem; }
+.intake2 .v2hint { font-size: 1rem; }
+.intake2 .v2pair { font-size: 1rem; }
+.intake2 .v2need { font-size: 1rem; }
+
+/* "When could we come?" — the days, the blocks, the picks, the consent */
+.req .wday .wdow { font-size: 1rem; }
+.req .wday .whas { font-size: 1rem; }
+.req .wblock .wbon { font-size: 1rem; }
+.wfull { font-size: 1rem; }
+.wcount { font-size: 1rem; }
+.req .wpick .wpn { font-size: 1rem; }
+.req .wpick .wpt { font-size: 1rem; }
+.req .wpick .wpx { font-size: 1rem; }
+.req .wconsent .v2opt { font-size: 1rem; }
+.req .wprivacy { font-size: 1rem; }
+.intake2 .v2contact .v2sub { font-size: 1rem; }
+.intake2 .v2contact .v2optional { font-size: 1rem; }
+/* the legal line under the consent box: the same words, at a size a thumb can read */
+.req .wconsent .wlegal { font-size: 1rem; }
+.wsum dt { font-size: 1rem; }
+.sent .sent-h { font-size: 1rem; }
+
+/* the chooser, the questions, the address card, the review */
+.req .ch-tap .ch-sub { font-size: 1rem; }
+.ch-small-q { font-size: 1rem; }
+.ch-photo-ask li { font-size: 1rem; }
+.uaddr-line { font-size: 1rem; }
+.uaddr-note { font-size: 1rem; }
+.ch-rtitle { font-size: 1rem; }
+.ch-redit { font-size: 1rem; }
+.ch-rlist li { font-size: 1rem; }
+.ch-got li { font-size: 1rem; }
+
+/* the front door */
+.fd .fine { font-size: 1rem; }
+.fd-hero .tiny { font-size: 1rem; }
+.menu-group h3 { font-size: 1rem; }
+.mtile .minc { font-size: 1rem; }
+.mtile .mfrom { font-size: 1rem; }
+.mtile .munit { font-size: 1rem; }
+.day .l { font-size: 1rem; }
+.day .h { font-size: 1rem; }
+.fd-note { font-size: 1rem; }
+
+/* the phone number in the header was shrunk below 760 only; from 760 up the rule
+   above already says `inherit`, and that is left exactly as it is. */
+@media (max-width: 759px) { .call .num { font-size: 1rem; } }
+
+/* the three sizes the chooser's own phone query shrinks. Above 480 those rules do
+   not apply at all, so they are answered inside the same query and nothing wider
+   than 480 is touched by this block. */
+@media (max-width: 480px) {
+  .ch-hint { font-size: 1rem; }
+  .req .ch-tiles .ch-label { font-size: 1rem; }
+  .req .ch-tiles .ch-sub { font-size: 1rem; }
+}
