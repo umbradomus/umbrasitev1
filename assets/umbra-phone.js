@@ -57,12 +57,15 @@
     return n;
   }
 
-  /* An empty box is not this gate's business: the form's own required message owns it. */
+  /* An EMPTY box is not this gate's business: the form's own required message owns it. But
+     only a truly empty one. HTML required is satisfied by a single space, so a box holding
+     only whitespace is NOT empty and nobody can call it - it is refused like any other
+     uncallable value. (R88 second reader, SITE-FIX-11.) */
   function judge(input, say) {
     var n = need(input);
-    var v = String(input.value == null ? '' : input.value).trim();
-    if (!v) { n.hidden = true; n.textContent = ''; return true; }
-    var good = callable(v);
+    var raw = String(input.value == null ? '' : input.value);
+    if (!raw) { n.hidden = true; n.textContent = ''; return true; }
+    var good = callable(raw);
     if (say || !good) { n.textContent = good ? '' : T.bad; n.hidden = good; }
     return good;
   }
@@ -94,7 +97,7 @@
     var list = boxes(form), bad = null;
     for (var i = 0; i < list.length; i++) {
       if (list[i].disabled) continue;
-      if (!String(list[i].value == null ? '' : list[i].value).trim()) continue;
+      if (!String(list[i].value == null ? '' : list[i].value)) continue;
       if (!judge(list[i], true)) { bad = bad || list[i]; }
     }
     if (!bad) return;
