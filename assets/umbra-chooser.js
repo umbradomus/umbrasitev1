@@ -301,14 +301,38 @@
     return false;
   }
 
+  /* ================================================================== the order of the thumb
+     SITE-FIX-12 clause 2. `lit()` answers in the tiles' declaration order, which is not
+     the order a thumb put them in, so the FIRST tile declared used to decide the job even
+     after the customer chose another. This records each tick as it happens - capture
+     phase, on the form, so it is written before the form's own change handler reads it -
+     and nothing else in the file uses it. With the record empty (a page just loaded, its
+     tiles restored from the draft) every answer below is the one the page gave before. */
+  var tapOrder = [];
+  form.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (!t || t.name !== 'tiles') return;
+    var at = tapOrder.indexOf(t.value);
+    if (at > -1) tapOrder.splice(at, 1);
+    if (t.checked) tapOrder.push(t.value);
+  }, true);
+  function lastLit() {
+    var on = lit();
+    for (var i = tapOrder.length - 1; i >= 0; i--) {
+      for (var j = 0; j < on.length; j++) if (on[j].key === tapOrder[i]) return on[j];
+    }
+    return on.length ? on[0] : null;
+  }
+
   /* ================================================================== service + problem
-     The FIRST lit tile decides `service` (it is one value and always has been).
+     The LAST tile tapped decides `service` (it is one value and always has been); with
+     nothing tapped yet it is the first lit tile, as before.
      `problem` is ticked from every lit tile that names one. Nothing is preselected:
      with no tile lit, neither is touched. */
   function driveWorkerFields() {
     var on = lit();
     if (!on.length) return;
-    var want = on[0].service;
+    var want = (lastLit() || on[0]).service;
     var sb = boxes('service');
     for (var i = 0; i < sb.length; i++) sb[i].checked = (sb[i].value === want);
     var wantProblems = [];
@@ -394,6 +418,9 @@
     addressStep.appendChild(need);
     addr = window.UmbraAddress.attach({
       input: field, host: holder,
+      /* SITE-FIX-12 clause 3 - the box is about to speak, so this alert goes quiet first:
+         the screen says exactly one thing at a time. */
+      onQuiet: function () { need.hidden = true; },
       onChange: function (s) {
         if (s && s.confirmed) need.hidden = true;
         syncFields(); drawReview();
@@ -404,7 +431,10 @@
     window.UMBRA_ADDRESS_GATE = function () {
       if (!window.UmbraAddress.plausible(field.value)) {
         need.textContent = addr.needMore;
-        need.hidden = false;
+        /* SITE-FIX-12 clause 3 - if the box is already saying something of its own, that
+           is the one message; this alert stays down. The gate still refuses, same words,
+           same decision - only the doubling is gone. */
+        need.hidden = addr.speaking();
         try { field.focus(); } catch (e) { }
         return false;
       }
@@ -419,7 +449,7 @@
          page can be submitted around this screen. */
       if (!addr.state().confirmed) {
         need.textContent = addr.notYet;
-        need.hidden = false;
+        need.hidden = addr.speaking();
         return false;
       }
       need.hidden = true;

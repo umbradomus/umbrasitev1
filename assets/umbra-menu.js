@@ -323,17 +323,62 @@
     host.setAttribute('data-menu-drawn', String(ALL.length));
   }
 
+  /* ============================================================ THE PICK BEFORE THIS ONE
+     SITE-FIX-12 clause 2. The landing remembers which job it landed last, for this tab
+     only, so that a customer who goes back and taps another tile arrives with the new
+     job and not both. Nothing is sent and nothing is added to the form: the key, the
+     tile and the line this file itself wrote. */
+  var PICK_KEY = 'umbra.menupick.v1';
+  function lastPick() {
+    try {
+      var raw = window.sessionStorage.getItem(PICK_KEY);
+      var m = raw ? JSON.parse(raw) : null;
+      return (m && m.key) ? m : null;
+    } catch (e) { return null; }
+  }
+  function rememberPick(item) {
+    try {
+      window.sessionStorage.setItem(PICK_KEY, JSON.stringify({ key: item.key, tile: item.tile, name: item[LANG].name }));
+    } catch (e) { /* private mode: the landing simply forgets, as it always did */ }
+  }
+  /* take out the one line this file wrote, and only that line: whatever the customer
+     typed themselves is on its own rows and is not touched. */
+  function stripLine(area, line) {
+    if (!area || !line) return;
+    var rows = String(area.value).split('\n');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].trim() === String(line).trim()) { rows.splice(i, 1); break; }
+    }
+    var next = rows.join('\n');
+    if (next === area.value) return;
+    area.value = next;
+    area.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   /* ================================================================== THE LANDING
      On the form page: ?menu=<key> lights the chooser tile for that job and writes
      its name in the sentence box. It goes through the form's own events, so the
      chooser ticks `service`, the stepper re-orders its screens, and the draft is
-     kept, exactly as if a thumb had done it. */
+     kept, exactly as if a thumb had done it. A job landed earlier in this tab is put
+     back down first - its tile unticked and its line taken out of the box - so the
+     tile tapped LAST is the job. */
   function apply(key) {
     var item = find(key);
     if (!item) return false;
     var form = document.querySelector('form.req');
     if (!form) return false;
     var done = { key: key, tile: false, service: false, what: false };
+    var prev = lastPick();
+    if (prev && prev.key !== key) {
+      if (prev.tile && prev.tile !== item.tile) {
+        var old = form.querySelector('input[name="tiles"][value="' + prev.tile + '"]');
+        if (old && old.checked) {
+          old.checked = false;
+          old.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      if (prev.name && prev.name !== item[LANG].name) stripLine(form.querySelector('textarea[name="what"]'), prev.name);
+    }
     var svc = form.querySelector('input[name="service"][value="' + item.service.replace(/"/g, '\\"') + '"]');
     if (svc) { svc.checked = true; done.service = true; }
     var box = form.querySelector('input[name="tiles"][value="' + item.tile + '"]');
@@ -351,6 +396,7 @@
       what.dispatchEvent(new Event('input', { bubbles: true }));
       done.what = true;
     } else if (what) done.what = true;
+    rememberPick(item);
     form.setAttribute('data-menu-pick', key);
     return done;
   }
