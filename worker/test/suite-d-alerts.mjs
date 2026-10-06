@@ -622,5 +622,39 @@ export async function suiteAlerts({ W, stub, ADMIN_KEY, FAKE, suite, ok, eq, jso
     };
   }
 
+  /* ============================================================ (14) */
+  suite('D · (14) WORKER-SHOWN-01: a bad `shown` is DROPPED — the same answer as the request without it, never a 400');
+  {
+    const PLANTS = [
+      ['a price of 300 characters', { shown_key: 'tv-mount', shown_price: '$' + '5'.repeat(299) }, 'null'],
+      ['a price of "fifty" — no $ and no digit', { shown_key: 'tv-mount', shown_price: 'fifty' }, 'null'],
+      ['a key of markup — "<script>"', { shown_key: '<script>', shown_price: '$50' }, 'null'],
+      ['a key with a capital — "TV-mount"', { shown_key: 'TV-mount', shown_price: '$50' }, 'null'],
+      ['a key with a space — "tv mount"', { shown_key: 'tv mount', shown_price: '$50' }, 'null'],
+      ['only shown_label', { shown_label: 'TV mounting' }, 'null'],
+      ['all four empty', { shown_key: '', shown_label: '', shown_price: '', shown_lang: '' }, 'null'],
+      ['lang "fr" with a good key and price — kept, lang "en"', { shown_key: 'tv-mount', shown_label: 'TV mounting', shown_price: '$50', shown_lang: 'fr' }, '{"key":"tv-mount","label":"TV mounting","price":"$50","lang":"en"}'],
+      ['a label carrying "<b>" — kept without the brackets', { shown_key: 'tv-mount', shown_label: '<b>TV</b> mounting', shown_price: '$50', shown_lang: 'en' }, '{"key":"tv-mount","label":"bTV/b mounting","price":"$50","lang":"en"}'],
+    ];
+    R['14'] = [];
+    let n = 0;
+    for (const [label, shown, want] of PLANTS) {
+      n++;
+      const at = CT(...DAY_D, 10, n * 2);
+      /* each plant carries its OWN pair: the same request, the same moment, without the four fields */
+      const bad = await submitAt(at, `Plant ${n} Pam`, { shown });
+      const pair = await submitAt(at, `Pair ${n} Paul`);
+      eq(`${bad.status} ${bad.masked}`, `${pair.status} ${pair.masked}`, `${label}: the same status and Location as the same request without the fields`);
+      eq(bad.body, pair.body, `${label}: and the same body`);
+      eq(bad.status, 303, `${label}: a 303 to the confirmation page — never a 400`);
+      const rb = await row(bad.id);
+      eq(rb.shown === undefined ? 'null' : JSON.stringify(rb.shown), want, `${label}: the record carries ${want === 'null' ? 'NO shown at all' : 'exactly ' + want}`);
+      const md = await (await fetch(`${W}/api/export/${bad.id}.md?k=${ADMIN_KEY}`)).text();
+      eq(md.includes('`shown` (the tile they tapped)'), want !== 'null', `${label}: the export ${want === 'null' ? 'has no shown row' : 'prints the cleaned shown row'}`);
+      eq((await row(pair.id)).shown, undefined, `${label}: its pair stores no shown`);
+      await seen(bad.id); await done(bad.id); await seen(pair.id); await done(pair.id);
+      R['14'].push({ plant: label, status: bad.status, pair_status: pair.status, location: bad.masked, pair_location: pair.masked, bodies_equal: bad.body === pair.body, stored: rb.shown === undefined ? 'ABSENT' : rb.shown });
+    }
+  }
   return R;
 }
