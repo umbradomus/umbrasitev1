@@ -62,6 +62,8 @@ import {
 import { renderJobMarkdown } from './export.js';
 import { bizMinutes } from './biztime.js';
 import { readAvailability, readConsent, windowsConfig } from './windows.js';
+/* WORKER-SHOWN-01: what the customer was SHOWN on the tile they tapped */
+import { readShown } from './shown.js';
 import {
   readQuoteBody, createQuote, markSent, cancelQuote, quoteState, bookByJob, repriceQuote,
   bookByCode, markNone, viewByCode, reconcile, bookDump, customerQuoteLink,
@@ -347,6 +349,16 @@ async function handleIntake(request, env, ctx) {
     consent = null;
   }
 
+  /* 3d · WORKER-SHOWN-01: the tile they tapped and the price it showed them. Absent or bad
+     → null, and the record carries no `shown` at all, so the request answers exactly what the
+     same request without those four fields answers. It never costs the request. */
+  let shown = null;
+  try {
+    shown = readShown(fields);
+  } catch (err) {
+    shown = null;
+  }
+
   /* 4 · the record. Written last so it carries the outcome of 2 and 3. */
   if (id) {
     const rec = {
@@ -359,6 +371,7 @@ async function handleIntake(request, env, ctx) {
       user_agent: request.headers.get('user-agent') || '',
       status: 'received',
       fields,
+      ...(shown ? { shown } : {}),
       availability,
       ...(consent ? { consent } : {}),
       photos: stored,
@@ -604,6 +617,10 @@ function adminRow(rec, nowIso) {
     email: (rec.fields || {}).email || '',
     address: (rec.fields || {}).address || '',
     service: (rec.fields || {}).service || '',
+    /* WORKER-SHOWN-01: beside `service` — the tile the customer tapped and the price it showed
+       them, present only when the request carried it and the rule kept it. Job Sync copies this
+       row whole into 01-RAW-SUBMISSION.json, so the Flux reads it here. */
+    ...(rec.shown ? { shown: rec.shown } : {}),
     /* contact.html names the free text `message`, the other three name it `what`. */
     what: (rec.fields || {}).what || (rec.fields || {}).message || '',
     idioma: (rec.fields || {}).idioma || '',

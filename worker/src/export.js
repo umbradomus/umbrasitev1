@@ -138,6 +138,12 @@ export function renderJobMarkdown(rec, opts = {}) {
   L.push(`| \`channel_detail\` | ${mdCell(f.channel_detail || f.heard || '')} |`);
   L.push(`| \`submitted_from\` | ${mdCell(rec.user_agent)} |`);
   L.push(`| \`category\` | ${mdCell(f.service)} |`);
+  /* WORKER-SHOWN-01: beside the category — the tile the customer tapped and the price that
+     tile showed them, in their own language. Only printed when the request carried it and the
+     rule kept it; the price is the text they saw, never a figure this file worked out. */
+  if (rec.shown) {
+    L.push(`| \`shown\` (the tile they tapped) | ${mdCell(rec.shown.label)} — **${mdCell(rec.shown.price)}** — \`${mdCell(rec.shown.key)}\` · ${mdCell(rec.shown.lang)} |`);
+  }
   L.push(`| \`name\` | ${mdCell(f.name)} |`);
   L.push(`| \`phone\` | ${mdCell(f.phone)} |`);
   /* road W: the form's contact step asks for an email beside the phone (optional); only printed when one was given */
