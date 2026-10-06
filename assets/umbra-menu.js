@@ -419,6 +419,7 @@
   /* Hidden inputs - the same mechanism umbra-chooser.js already uses for `lang`,
      `started_at` and `address_confirmed`. Never visible, never focusable, never
      labelled, so no screen reader reads them as a field of the form. */
+  var SHOWN_FIELDS = ['shown_key', 'shown_label', 'shown_price', 'shown_lang'];
   function setShownField(form, name, value) {
     var e = form.querySelector('input[type="hidden"][name="' + name + '"]');
     var v = String(value == null ? '' : value);
@@ -431,12 +432,15 @@
     }
     e.value = v;
   }
+  function clearShown(form) {
+    for (var i = 0; i < SHOWN_FIELDS.length; i++) setShownField(form, SHOWN_FIELDS[i], '');
+  }
   /* On the form page: the four fields, but ONLY for the tile this customer really
      tapped. No tap in this tab, a tap on some other tile, or a bare ?menu= link nobody
-     tapped -> nothing is written and the request is what it was. */
+     tapped -> all four come off and the request is what it was. */
   function carryShown(form, key) {
     var r = lastShown();
-    if (!r || r.key !== key || !r.label || !shownHolds(r)) { return null; }
+    if (!r || r.key !== key || !r.label || !shownHolds(r)) { clearShown(form); return null; }
     setShownField(form, 'shown_key', r.key);
     setShownField(form, 'shown_label', r.label);
     setShownField(form, 'shown_price', r.price);
