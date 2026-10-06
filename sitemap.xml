@@ -13,7 +13,7 @@
   <url><loc>https://www.umbradomus.com/homes</loc></url>
   <url><loc>https://www.umbradomus.com/about</loc></url>
   <url><loc>https://www.umbradomus.com/contact</loc></url>
-  <url><loc>https://www.umbradomus.com/status</loc></url>
+  <url><loc>https://www.umbradomus.com/status</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/status"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/estado"/></url>
   <url><loc>https://www.umbradomus.com/es</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/"/></url>
   <url><loc>https://www.umbradomus.com/es/servicios</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services"/></url>
   <url><loc>https://www.umbradomus.com/es/automatizar</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/automatizar"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/automate"/></url>
@@ -23,4 +23,5 @@
   <url><loc>https://www.umbradomus.com/es/guardia-de-agua</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/guardia-de-agua"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/water-guard"/></url>
   <url><loc>https://www.umbradomus.com/es/iluminacion-de-jardin</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/iluminacion-de-jardin"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/landscape-lighting"/></url>
   <url><loc>https://www.umbradomus.com/es/patio-inteligente</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/patio-inteligente"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/smart-yard"/></url>
+  <url><loc>https://www.umbradomus.com/es/estado</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/estado"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/status"/></url>
 </urlset>

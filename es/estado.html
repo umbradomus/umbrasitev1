@@ -3,27 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Recibido — UMBRA DOMUS</title>
-<meta name="robots" content="noindex">
-<link rel="canonical" href="https://www.umbradomus.com/es/recibido">
-<link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/recibido">
-<link rel="alternate" hreflang="en" href="https://www.umbradomus.com/request-received">
-<link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/request-received">
+<title>¿Dónde va mi solicitud? — UMBRA DOMUS</title>
+<meta name="description" content="Cómo avanza una solicitud de Umbra Domus — recibida, cotizada, programada, terminada — y cómo saber en qué paso va la suya.">
+<link rel="canonical" href="https://www.umbradomus.com/es/estado">
+<link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/estado">
+<link rel="alternate" hreflang="en" href="https://www.umbradomus.com/status">
+<link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/status">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css?v=7">
 <!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
 <script src="/assets/umbra-endpoint.js?v=3"></script>
-<!-- road W: what they gave on the form, read back from this tab's own memory (never the address, never the Worker) -->
-<!-- SITE-FIX-01 · the same list the review screen showed, said back read-only.
-     It comes from this tab's own memory, never from the address and never from the Worker. -->
-<script src="/assets/umbra-chooser-data.js?v=1" defer></script>
-<script src="/assets/umbra-chooser.js?v=1" defer></script>
-<script src="/assets/umbra-sent.js?v=1"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png?v=5">
 <meta name="theme-color" content="#0F0B1A">
+<!-- camino XW: en el teléfono el menú se acomoda en sus renglones (nada se sale de la pantalla) y el encabezado se
+     va con la página — esta página se lee, no se llena. Solo esta página; el encabezado de las demás no se toca.
+     Es el mismo bloque que lleva /status, su gemela en inglés. -->
+<style>
+@media (max-width: 759px) {
+  .top { position: static; }
+  .top .menu { flex-wrap: wrap; justify-content: center; overflow: visible; margin: 0; padding: 0 0 .35rem; gap: .1rem .15rem; }
+  .top .menu a { padding: .35rem .55rem; font-size: .95rem; }
+}
+.live-money .chain { display: block; font-weight: 400; margin-top: .15rem; }
+</style>
 </head>
 <body>
 <!-- the wordmark, inlined: an external <use href="file.svg#id"> does not render in Safari -->
@@ -43,49 +48,78 @@
       <a href="/es/servicios">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
       <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
-      <a href="/request-received" lang="en" hreflang="en">English</a>
+      <a href="/status" lang="en" hreflang="en">English</a>
     </nav>
   </div>
 </header>
 
-<main>
-  <section>
-    <div class="wrap narrow">
-      <p class="kicker">Recibido</p>
-      <h1 id="head">Ya lo tenemos.</h1>
-      <p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
-      <!-- road W: primero la línea que importa — quién les escribe, a qué número y antes de qué hora — y luego lo que
-           mandaron. El número y los horarios salen de la memoria de esta pestaña; sin ella, la línea no lleva número. -->
-      <div class="note" id="next">
-        <p class="sent-line" id="byline"><strong>Drew le enviará un mensaje de texto en menos de 2 horas, de 7 a.m. a 9 p.m.</strong></p>
-        <!-- road XW: el número DESDE el que llegan sus mensajes, para que el primero no se ignore como de un desconocido -->
-        <p class="sent-from" id="fromline">Los mensajes llegan del <span class="nw">(956) 556-6438</span>.</p>
-        <div class="sent" data-got hidden></div>
-        <div class="sent" id="sent" hidden>
-          <p class="sent-h">Lo que nos envió</p>
-          <ul id="sent-times" aria-label="Sus horarios" hidden></ul>
-          <p id="sent-flex" hidden>Cualquier horario le funciona.</p>
-          <p id="sent-photos" hidden></p>
-        </div>
-      </div>
+<p class="promise" id="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
 
-      <!-- Solo aparece cuando el Worker mandó al navegador aqui con ?id= y ?t=. Sin eso, la pagina queda igual que antes. -->
-      <!-- road XW: un botón claro para el enlace de estado (compartirlo consigo mismo, o copiarlo) -->
-      <div id="jobnote" hidden style="margin-top:1.2rem">
-        <p style="margin:0"><a class="btn wide" id="joblink" href="/es/estado">Guardar mi enlace de estado</a></p>
-        <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">Le muestra en qué paso va su solicitud, cuando quiera. Su número de solicitud es <span id="jobid"></span>.</p>
-        <p class="fine sent-copy" id="sent-copy" style="margin:.5rem 0 0"></p>
+<main>
+  <!-- LO REAL. Oculto a menos que el enlace haya traído ?id= y una llave (?t= de la página de confirmación, o el
+       ?v= privado del camino W, llegado por mensaje de texto) Y haya un Worker configurado en
+       /assets/umbra-endpoint.js. Si no, #generic de abajo es la página, igual que antes, y dice con honestidad que
+       el enlace se está construyendo.
+       UNA SOLA FUENTE: lo que llena estos huecos es /assets/umbra-status.js, el MISMO archivo que llena /status.
+       No hay una segunda copia de la lógica. Los ids de aquí abajo son los mismos de /status, a propósito; las
+       palabras salen del idioma del <html lang>. -->
+  <section id="live" hidden>
+    <div class="wrap narrow">
+      <p class="kicker" id="live-kicker">Su solicitud</p>
+      <h1 id="live-head">Su solicitud</h1>
+      <p class="lead" id="live-lead"></p>
+      <!-- camino FW: cotizado — su precio y un botón grande a su propia cotización, donde elige sus días -->
+      <div class="note live-quote" id="live-quote" hidden>
+        <p id="live-quote-price"></p>
+        <p><a class="btn wide" id="live-quote-go" href="/es/estado">Ver su cotización y elegir sus días</a></p>
       </div>
-      <ol class="track" style="margin-top:2rem" aria-label="Estado">
-        <li class="done"><div><strong>Recibido</strong><small>Tenemos su solicitud.</small></div></li>
-        <li><div><strong>Cotizado</strong><small>Precio y plan, por escrito.</small></div></li>
-        <li><div><strong>Programado</strong><small>Día y horario de llegada de 2 horas, acordados con usted.</small></div></li>
-        <li><div><strong>Terminado</strong><small>Trabajo hecho, con fotos.</small></div></li>
-      </ol>
-      <p style="margin-top:2rem">Si es urgente, no nos espere: <a href="tel:+19565566438">llame al (956) 556-6438</a>.</p>
+      <!-- camino W: un trabajo terminado y pagado — el pago y su recibo; y cada día que una cita aparta -->
+      <div class="note live-paid" id="live-paid" hidden>
+        <p id="live-paid-line"></p>
+        <p><a class="btn" id="live-receipt" href="/es/estado">Su recibo</a></p>
+      </div>
+      <div class="note live-visits" id="live-visits" hidden></div>
+      <!-- camino CO: un cambio — esperando su aprobación (un botón para ir), aprobado, o rechazado; y el nuevo total -->
+      <div class="note live-changes" id="live-changes" hidden></div>
+      <ol class="track" id="live-track" aria-label="En qué paso va su solicitud"></ol>
+      <div class="note" id="live-scope" hidden style="margin-top:1.2rem"></div>
+      <div id="live-photos-wrap" hidden style="margin-top:1.2rem">
+        <p style="font-weight:600;margin-bottom:.4rem">Las fotos que usted envió</p>
+        <ul class="pix" id="live-photos"></ul>
+      </div>
+      <p style="margin-top:2rem">¿Preguntas? <a href="sms:+19565566438">Mande un mensaje al (956) 556-6438</a>.</p>
       <p><a href="/es">Volver al inicio</a></p>
     </div>
   </section>
+
+  <div id="generic">
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker">¿Dónde va mi solicitud?</p>
+      <h1>Cuatro pasos. Siempre puede ver en cuál va.</h1>
+      <p class="lead">Cada solicitud pasa por los mismos cuatro pasos. Nada se queda en una pila, y usted nunca tiene que llamar para saber qué está pasando.</p>
+
+      <ol class="track" aria-label="Ejemplo del estado">
+        <li class="done"><div><strong>Recibido</strong><small>Ya la tenemos, y el reloj empezó. Su confirmación muestra la hora.</small></div></li>
+        <li class="now"><div><strong>Cotizado</strong><small>Recibe un precio y un plan, por escrito, antes de que alguien llegue.</small></div></li>
+        <li><div><strong>Programado</strong><small>Un día y un horario de llegada, acordados con usted. Si cambia, usted se entera primero.</small></div></li>
+        <li><div><strong>Terminado</strong><small>Terminado, con fotos, y usted dijo que está bien.</small></div></li>
+      </ol>
+      <p class="fine" style="margin-top:.6rem">Este estado es un ejemplo de cómo se ve una solicitud cuando va en el paso «cotizado».</p>
+      <p>Todo lo que firme en su casa lo puede cancelar por escrito dentro de tres días hábiles, y la cotización lo dice — en inglés o en español, el idioma en que hablamos.</p>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap narrow">
+      <h2>Su enlace de estado</h2>
+      <div class="note">
+        <p><strong>Se está construyendo.</strong> Así va a funcionar: cada confirmación lleva un enlace que puede volver a abrir cuando quiera para ver exactamente en qué paso va su solicitud.</p>
+        <p style="margin:0">Mientras se construye, la versión honesta es esta: <a href="sms:+19565566438">mande un mensaje al (956) 556-6438</a> con su nombre y le decimos sin rodeos en qué va.</p>
+      </div>
+    </div>
+  </section>
+  </div>
 </main>
 
 <footer class="foot">
@@ -106,83 +140,11 @@
       <a href="/es/automatizar">Automatizar</a>
       <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
       <a href="/es/servicios#pedir">Pedir servicio</a>
-      <a href="/request-received" lang="en" hreflang="en">English</a>
+      <a href="/status" lang="en" hreflang="en">English</a>
     </nav>
   </div>
   <div class="wrap"><p class="fine">El trabajo eléctrico y de plomería, incluida la instalación de electrodomésticos, lo realizan contratistas con licencia con los que trabajamos.</p></div>
 </footer>
-<script>
-// road W · la página de gracias dice lo que dieron. "Drew le enviará un mensaje de texto al (956) 555-0147 antes de las
-// 9:00 a.m.": el número tal como lo escribieron, de la memoria de esta pestaña (/assets/umbra-sent.js) — nunca de la
-// dirección ni del Worker. Sin memoria: "Drew le enviará un mensaje de texto antes de las 9:00 a.m.".
-// La hora es el mismo reloj de dos horas del Worker: minutos hábiles, de 7 a.m. a 9 p.m., hora de Chicago.
-(function () {
-  var $ = function (id) { return document.getElementById(id); };
-  var q = new URLSearchParams(location.search);
-  var jobId = q.get('id'), jobTok = q.get('t');
-  var okId = Boolean(jobId && /^U-\d{4,6}$/.test(jobId));
-  var S = window.UmbraSent || null;
-  var mem = S ? S.read(okId ? jobId : null) : null;
-
-  function say(el, text) { el.textContent = text; }
-  /* una línea en negrita; el número y la hora nunca se parten en dos renglones */
-  function bold(parts) {
-    var strong = document.createElement('strong');
-    parts.forEach(function (x) {
-      if (typeof x === 'string') { strong.appendChild(document.createTextNode(x)); return; }
-      var s = document.createElement('span'); s.className = 'nw'; s.textContent = x.nw; strong.appendChild(s);
-    });
-    $('byline').innerHTML = '';
-    $('byline').appendChild(strong);
-  }
-  if (S) {
-    var due = S.due(Date.now());
-    /* "a.m." ends the sentence itself: never "a.m.." */
-    var tail = [(due.tomorrow ? 'mañana ' : '') + 'antes de ', { nw: due.at }, /\.$/.test(due.at) ? '' : '.'];
-    bold(mem && mem.phone
-      ? [mem.consent === false ? 'Drew le llamará al ' : 'Drew le enviará un mensaje de texto al ', { nw: mem.phone }, ' '].concat(tail)
-      : ['Drew le enviará un mensaje de texto '].concat(tail));
-    if (mem && mem.phone && mem.consent === false) say($('fromline'), 'Sus llamadas llegan del (956) 556-6438.');
-  }
-  if (mem) {
-    if (mem.first) say($('head'), 'Ya lo tenemos, ' + mem.first + '.');
-    var ul = $('sent-times');
-    (mem.times || []).forEach(function (t, i) {
-      var li = document.createElement('li');
-      var n = document.createElement('span'); n.textContent = String(i + 1);
-      li.appendChild(n); li.appendChild(document.createTextNode(t.charAt(0).toUpperCase() + t.slice(1)));
-      ul.appendChild(li);
-    });
-    ul.hidden = !(mem.times && mem.times.length);
-    if (mem.flexible) { say($('sent-flex'), mem.times && mem.times.length ? 'O cualquier horario le funciona.' : 'Cualquier horario le funciona.'); $('sent-flex').hidden = false; }
-    if (mem.photos) { say($('sent-photos'), mem.photos + (mem.photos === 1 ? ' foto' : ' fotos')); $('sent-photos').hidden = false; }
-    say($('sent-copy'), mem.email
-      ? (mem.copy === 'yes' ? 'Le enviamos una copia a ' + mem.email + '.' : 'Su copia debe llegar pronto a ' + mem.email + '. Si no le llega, tome una captura de esta página.')
-      : 'No dio correo electrónico, así que no se envió copia. Tome una captura de esta página para guardarla.');
-    $('sent').hidden = false;
-  }
-
-  // El Worker manda el id del registro y su token privado. Sin ellos no pasa nada.
-  // SITE-FIX-11 clausula 2: ya existe la pagina de estado en espanol, /es/estado, gemela de /status.
-  if (okId && jobTok) {
-    $('jobid').textContent = jobId;
-    $('joblink').href = '/es/estado?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
-    $('jobnote').hidden = false;
-    /* road XW · "Guardar mi enlace de estado": el menú de compartir del teléfono; si no, se copia; si no, se abre */
-    $('joblink').addEventListener('click', function (e) {
-      var url = new URL($('joblink').getAttribute('href'), location.href).href;
-      if (navigator.share) {
-        e.preventDefault();
-        navigator.share({ title: 'Mi solicitud con Umbra Domus', url: url }).catch(function () {});
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        e.preventDefault();
-        navigator.clipboard.writeText(url).then(function () {
-          $('jobsaid').textContent = 'Copiado. Péguelo en sus notas o en un mensaje para usted.';
-        }, function () { location.href = url; });
-      }
-    });
-  }
-})();
-</script>
+<script src="/assets/umbra-status.js?v=1"></script>
 </body>
 </html>
