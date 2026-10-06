@@ -208,6 +208,7 @@
 
   function attach(opts) {
     var input = opts.input, host = opts.host, onChange = opts.onChange || function () { };
+    var onQuiet = opts.onQuiet || function () { };
     if (!input || !host) return null;
 
     var state = { confirmed: false, how: '', address: '', place_id: '', lat: null, lng: null };
@@ -221,7 +222,24 @@
     sugList.hidden = true;
     host.insertBefore(sugList, box);
 
+    /* SITE-FIX-12 clause 3 - ONE MESSAGE AT A TIME. The box has always held exactly one
+       status paragraph: say() empties it before it writes. The second message never came
+       from here - it came from a gate alert put up elsewhere on this same host and left up.
+       hush() takes that alert down at the moment the box itself speaks, so the newest word
+       is the only word. It is NOT called from clear(): clear() is the box going quiet, and
+       a gate alert that is the only thing on screen must stay. No wording and no decision
+       of the gate moves here. */
+    function hush() {
+      var other = host.querySelector('[data-uaddr-need]');
+      if (other) other.hidden = true;
+      onQuiet();
+    }
+    function speaking() {
+      var p = box.querySelector('.uaddr-line');
+      return !!(p && p.getClientRects().length > 0);
+    }
     function say(cls, text) {
+      hush();
       box.className = 'uaddr ' + cls;
       box.textContent = '';
       var p = document.createElement('p');
@@ -232,6 +250,7 @@
     function clear() { box.className = 'uaddr'; box.textContent = ''; }
 
     function card(address, how, extra) {
+      hush();
       /* SITE-FIX-02 · CDO 3 · THE ADDRESS AS PEOPLE WRITE IT. The card is the one place the
          address is decided: what it shows is what "Yes, that's it" puts in the field, and so
          what the review, the sent list and the Worker's record all read back. tidy() is the
@@ -397,6 +416,7 @@
       needMore: T.needMore,
       notYet: T.notYet,
       localZip: function () { var b = parse(input.value); return !!(b && isLocalZip(b.zip)); },
+      speaking: speaking,
       check: look
     };
     ATTACHED.push({ form: input.form, api: api, box: box, input: input, host: host });
@@ -465,9 +485,13 @@
       need.setAttribute('data-uaddr-need', '1');
       rec.host.appendChild(need);
     }
-    need.hidden = false;
+    /* SITE-FIX-12 clause 3 - the refusal is set FIRST, then the lookup is asked to run,
+       and only then do we decide whether this line is still needed: if the box is now
+       saying something itself (the lookup line), that is the one message and this alert
+       stays down. The decision the gate makes is untouched - the submit is still stopped. */
     need.textContent = plausible(rec.input.value) ? T.notYet : T.needMore;
     rec.api.check();
+    need.hidden = rec.api.speaking();
     try { rec.input.focus(); } catch (err) { }
   }
   document.addEventListener('submit', gate, true);
@@ -494,6 +518,10 @@
       (function (f, frm) {
         attach({
           input: f, host: host,
+          onQuiet: function () {
+            var q = host.querySelector('[data-uaddr-need]');
+            if (q) q.hidden = true;
+          },
           onChange: function (s) {
             setHidden(frm, 'address_confirmed', s.confirmed ? s.how : '');
             setHidden(frm, 'address_place_id', s.place_id || '');
