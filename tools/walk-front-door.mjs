@@ -74,8 +74,8 @@ function contrast(a, b) { const la = lum(a), lb = lum(b); if (la == null || lb =
 const browser = await chromium.launch({ executablePath: EXE, headless: true, args: ['--no-sandbox'] });
 const SIZES = [{ name: '390', width: 390, height: 844 }, { name: '1280', width: 1280, height: 900 }];
 const PAGES = [
-  { route: '/', lang: 'en', form: '/services', hash: 'request', licensed: 'licensed', legal: 'Electrical and plumbing work, including appliance installation, is performed by licensed contractors we work with.', hourly: ['/hour', 'per hour', '/hr', 'an hour', 'hourly'] },
-  { route: '/es', lang: 'es', form: '/es/servicios', hash: 'pedir', licensed: 'licencia', legal: 'El trabajo eléctrico y de plomería, incluida la instalación de electrodomésticos, lo realizan contratistas con licencia con los que trabajamos.', hourly: ['la hora', 'por hora', '/hora', '/hr'] },
+  { route: '/', lang: 'en', form: '/services', hash: 'request', licensed: 'licensed', legal: ['Electrical and plumbing work, including appliance installation, is performed by licensed contractors we work with.', 'Pesticides, baits and pest treatment are performed by licensed pest-control companies we work with. No one at Umbra applies any pest product for hire.', 'Repairs to in-ground sprinkler systems are performed by licensed irrigators we work with. An unlicensed company may not install, repair or service an in-ground system for hire.'], hourly: ['/hour', 'per hour', '/hr', 'an hour', 'hourly'] },
+  { route: '/es', lang: 'es', form: '/es/servicios', hash: 'pedir', licensed: 'licencia', legal: ['El trabajo eléctrico y de plomería, incluida la instalación de electrodomésticos, lo realizan contratistas con licencia con los que trabajamos.', 'Los pesticidas, cebos y tratamientos contra plagas los realizan compañías con licencia con las que trabajamos. Nadie en Umbra aplica productos contra plagas por paga.', 'Las reparaciones de sistemas de riego enterrados las realizan irrigadores con licencia con los que trabajamos. Una compañía sin licencia no puede instalar, reparar ni dar servicio a un sistema enterrado por paga.'], hourly: ['la hora', 'por hora', '/hora', '/hr'] },
 ];
 const R = { root: ROOT, out: OUT, pages: {} };
 
@@ -143,9 +143,13 @@ for (const P of PAGES) {
     ok(read.tiles.length > 0 && noSvc.length === 0, 'every tile carries its service and the chooser tile it lights', noSvc.map((t) => t.key).join(','));
     const short = read.tiles.filter((t) => t.h < 44 || t.w < 44);
     ok(read.tiles.length > 0 && short.length === 0, 'every tile is a 44px tap target or bigger', short.map((t) => t.key + ':' + Math.round(t.h)).join(','));
-    const outside = low.split(P.legal.toLowerCase()).join(' ');
+    /* YARD-01: `legal` is now the LIST of legal lines the page carries - the contractor
+       line SITE-LICENCE-FLIP-01 placed, plus this round's two licensed-partner lines. Each
+       is stripped before the count, and nothing else about the check changed: any other use
+       of the word on the page still fails the walk. */
+    const outside = P.legal.reduce((s, l) => s.split(l.toLowerCase()).join(' '), low);
     const licCount = (outside.match(new RegExp(P.licensed, 'g')) || []).length;
-    ok(licCount === 0, `"${P.licensed}" appears 0 times outside the contractor line`, licCount);
+    ok(licCount === 0, `"${P.licensed}" appears 0 times outside the ${P.legal.length} licensed-partner lines`, licCount);
     const hourly = P.hourly.filter((h) => low.indexOf(h) > -1);
     ok(hourly.length === 0, 'no hourly figure on the page', hourly.join(', '));
     ok(read.sms.some((h) => /^sms:\+19565566438\?body=/.test(h)), 'the sms: link is there, with its body', read.sms.join(' '));
