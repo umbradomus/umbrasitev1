@@ -706,6 +706,7 @@ textarea.field { min-height: 8rem; resize: vertical; }
 .mtile .mchev { position: absolute; right: 0.6rem; top: 0.75rem; width: 12px; height: 12px; color: var(--line); }
 .mtile:hover .mchev { color: var(--prussian); }
 @media (min-width: 600px) { .mtile { padding: 1rem 1.05rem 0.95rem; } .mtile .mname { font-size: 1.05rem; } .mtile .minc { font-size: 0.9rem; } }
+@media (max-width: 389px) { .mtile { overflow-wrap: anywhere; } }
 
 .daycard { background: var(--ink); color: var(--white); border-radius: var(--radius); padding: 1.25rem; margin-top: 1.75rem; max-width: 42rem; }
 .daycard h3 { font-size: 1.4rem; letter-spacing: -0.01em; margin-bottom: 0.25rem; }
