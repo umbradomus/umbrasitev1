@@ -323,6 +323,21 @@
     }
     return on.length ? on[0] : null;
   }
+  /* SITE-FIX-12.1, the second reader's finding 2. The record above is memory only, so a
+     customer who taps A then B and comes back to the page used to arrive with the record
+     empty - and the draft puts BOTH tiles back, so the first tile declared decided the job
+     again. The draft already remembers which job it was, in the service field, because that is what
+     the thumb wrote. This reads it back and puts that one tile in the record, so the page
+     resumes with the thumb it had. With no service restored, or none that matches a lit
+     tile, the record stays empty and the page answers exactly as it did before. */
+  function seedTapOrder() {
+    if (tapOrder.length) return;
+    var sb = boxes('service'), was = null;
+    for (var i = 0; i < sb.length; i++) if (sb[i].checked) was = sb[i].value;
+    if (!was) return;
+    var on = lit();
+    for (var j = 0; j < on.length; j++) if (on[j].service === was) { tapOrder = [on[j].key]; return; }
+  }
 
   /* ================================================================== service + problem
      The LAST tile tapped decides `service` (it is one value and always has been); with
@@ -774,6 +789,7 @@
   });
 
   loadDraft();
+  seedTapOrder();
   applyWhen();
   syncFields();
   drawPhotoAsk();
