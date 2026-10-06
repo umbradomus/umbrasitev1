@@ -230,6 +230,12 @@
          a town — said in plain words on the screen, next to the field. */
       if (step && step.getAttribute('data-gate') === 'address' &&
           typeof window.UMBRA_ADDRESS_GATE === 'function' && !window.UMBRA_ADDRESS_GATE()) return;
+      /* SITE-FIX-11 · THE PHONE GATE, the same shape as the address gate above. A number the
+         Worker cannot call ("123") used to pass this screen because the box is only required.
+         The rule is the Worker's own (worker/src/holding.js usNumber), said on the screen by
+         /assets/umbra-phone.js. What the form POSTs is untouched: the customer's own typing. */
+      if (step && step.getAttribute('data-gate') === 'phone' &&
+          typeof window.UMBRA_PHONE_GATE === 'function' && !window.UMBRA_PHONE_GATE(step)) return;
     }
     at += by;
     show(by);

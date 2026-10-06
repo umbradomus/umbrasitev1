@@ -72,7 +72,7 @@
       <!-- Solo aparece cuando el Worker mandó al navegador aqui con ?id= y ?t=. Sin eso, la pagina queda igual que antes. -->
       <!-- road XW: un botón claro para el enlace de estado (compartirlo consigo mismo, o copiarlo) -->
       <div id="jobnote" hidden style="margin-top:1.2rem">
-        <p style="margin:0"><a class="btn wide" id="joblink" href="/status">Guardar mi enlace de estado</a></p>
+        <p style="margin:0"><a class="btn wide" id="joblink" href="/es/estado">Guardar mi enlace de estado</a></p>
         <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">Le muestra en qué paso va su solicitud, cuando quiera. Su número de solicitud es <span id="jobid"></span>.</p>
         <p class="fine sent-copy" id="sent-copy" style="margin:.5rem 0 0"></p>
       </div>
@@ -163,10 +163,10 @@
   }
 
   // El Worker manda el id del registro y su token privado. Sin ellos no pasa nada.
-  // (La pagina de estado solo existe en ingles por ahora; el enlace va a /status.)
+  // SITE-FIX-11 clausula 2: ya existe la pagina de estado en espanol, /es/estado, gemela de /status.
   if (okId && jobTok) {
     $('jobid').textContent = jobId;
-    $('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
+    $('joblink').href = '/es/estado?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
     $('jobnote').hidden = false;
     /* road XW · "Guardar mi enlace de estado": el menú de compartir del teléfono; si no, se copia; si no, se abre */
     $('joblink').addEventListener('click', function (e) {

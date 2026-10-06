@@ -3,43 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Umbra Domus — Trabajos pequeños, listos esta semana · Precios de handyman en Brownsville</title>
-<meta name="description" content="Trabajos pequeños, listos esta semana, en Brownsville y el Valle. Precios por adelantado, viaje incluido: focos, pilas y filtros $89, televisión montada desde $119, parche de tablaroca desde $99, canaletas limpias desde $129, medio día para toda su lista $349. Una persona, un precio. Mande un texto al (956) 556-6438.">
-<link rel="canonical" href="https://www.umbradomus.com/es">
-<link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es">
-<link rel="alternate" hreflang="en" href="https://www.umbradomus.com/">
-<link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/">
+<title>¿Dónde va mi solicitud? — UMBRA DOMUS</title>
+<meta name="description" content="Cómo avanza una solicitud de Umbra Domus — recibida, cotizada, programada, terminada — y cómo saber en qué paso va la suya.">
+<link rel="canonical" href="https://www.umbradomus.com/es/estado">
+<link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/estado">
+<link rel="alternate" hreflang="en" href="https://www.umbradomus.com/status">
+<link rel="alternate" hreflang="x-default" href="https://www.umbradomus.com/status">
 <link rel="preload" href="/assets/fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=9">
-<!-- FRONT-DOOR-01 · el menú. Cada precio de esta página vive en este único archivo, que
-     también dibuja el mismo menú en /es/servicios. Sin JavaScript queda la línea <noscript>. -->
-<script src="/assets/umbra-menu.js?v=1" defer></script>
+<link rel="stylesheet" href="/assets/site.css?v=7">
+<!-- Where the request form posts, and where the status page looks. ONE constant, in /assets/umbra-endpoint.js. -->
+<script src="/assets/umbra-endpoint.js?v=3"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png?v=5">
 <meta name="theme-color" content="#0F0B1A">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="UMBRA DOMUS">
-<meta property="og:title" content="Umbra Domus — Trabajos pequeños, listos esta semana · Precios de handyman en Brownsville">
-<meta property="og:description" content="Precios por adelantado, viaje incluido. Focos, pilas y filtros $89, televisión montada desde $119, parche de tablaroca desde $99, canaletas desde $129, medio día para toda su lista $349. Una persona, un precio, sin esperas.">
-<meta property="og:url" content="https://www.umbradomus.com/es">
-<meta property="og:image" content="https://www.umbradomus.com/assets/og-image.png?v=3">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="UMBRA DOMUS">
-<meta property="og:locale" content="es_MX">
-<meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"HomeAndConstructionBusiness","name":"Umbra Domus LLC","alternateName":"Umbra Domus","url":"https://www.umbradomus.com/es","inLanguage":"es","telephone":"+1-956-556-6438","email":"contact@umbradomus.com","logo":"https://www.umbradomus.com/assets/icon-512.png","image":"https://www.umbradomus.com/assets/og-image.png?v=3","description":"Trabajos pequeños de reparación del hogar en Brownsville y el Valle del Río Grande, listos esta semana, con el precio por adelantado y el viaje incluido. Dueño-operador y asegurado.","address":{"@type":"PostalAddress","addressLocality":"Brownsville","addressRegion":"TX","postalCode":"78521","addressCountry":"US"},"areaServed":[{"@type":"City","name":"Brownsville"},{"@type":"City","name":"Harlingen"},{"@type":"City","name":"Los Fresnos"},{"@type":"City","name":"South Padre Island"}],"priceRange":"$45–$649","openingHours":"Mo-Su 07:00-21:00","sameAs":["https://www.facebook.com/umbradomus","https://www.instagram.com/umbradomus"]}
-</script>
-</head>
-<meta property="og:image" content="https://www.umbradomus.com/assets/og-image.png?v=3">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="UMBRA DOMUS">
-<meta property="og:locale" content="es_MX">
-<meta name="twitter:card" content="summary_large_image">
+<!-- camino XW: en el teléfono el menú se acomoda en sus renglones (nada se sale de la pantalla) y el encabezado se
+     va con la página — esta página se lee, no se llena. Solo esta página; el encabezado de las demás no se toca.
+     Es el mismo bloque que lleva /status, su gemela en inglés. -->
+<style>
+@media (max-width: 759px) {
+  .top { position: static; }
+  .top .menu { flex-wrap: wrap; justify-content: center; overflow: visible; margin: 0; padding: 0 0 .35rem; gap: .1rem .15rem; }
+  .top .menu a { padding: .35rem .55rem; font-size: .95rem; }
+}
+.live-money .chain { display: block; font-weight: 400; margin-top: .15rem; }
+</style>
 </head>
 <body>
 <!-- the wordmark, inlined: an external <use href="file.svg#id"> does not render in Safari -->
@@ -55,87 +44,82 @@
     <input type="checkbox" id="navtoggle" class="nav-box">
     <label class="nav-btn" for="navtoggle" data-menu-toggle><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menú</label>
     <nav class="menu" aria-label="Sitio">
-      <a href="/es" aria-current="page">Inicio</a>
+      <a href="/es">Inicio</a>
       <a href="/es/servicios">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
       <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
-      <a href="/" lang="en" hreflang="en">English</a>
+      <a href="/status" lang="en" hreflang="en">English</a>
     </nav>
   </div>
 </header>
-<p class="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
 
-<main class="fd">
-  <!-- FRONT-DOOR-01 · Forma 1, "El menú": un precio en dos segundos, y luego la solicitud. -->
-  <section class="fd-hero">
-    <div class="wrap">
-      <h1>Trabajos pequeños, listos esta semana.</h1>
-      <p class="lead">Desde focos hasta tablaroca. Una persona, un precio, sin esperas.</p>
-      <div class="cta-row">
-        <a class="btn paper" href="#precios">Ver precios y reservar</a>
-        <a class="btn ghost" href="sms:+19565566438?body=Hola%20Drew%2C%20esta%20es%20mi%20lista%3A%20"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4V6a2 2 0 0 1 2-2z"/></svg>Mándenos su lista por texto</a>
+<p class="promise" id="promise"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>Nuestra promesa de respuesta:</strong> Respondemos en menos de 2 horas, de 7 a.m. a 9 p.m., los siete días. Si nos atrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.</p>
+
+<main>
+  <!-- LO REAL. Oculto a menos que el enlace haya traído ?id= y una llave (?t= de la página de confirmación, o el
+       ?v= privado del camino W, llegado por mensaje de texto) Y haya un Worker configurado en
+       /assets/umbra-endpoint.js. Si no, #generic de abajo es la página, igual que antes, y dice con honestidad que
+       el enlace se está construyendo.
+       UNA SOLA FUENTE: lo que llena estos huecos es /assets/umbra-status.js, el MISMO archivo que llena /status.
+       No hay una segunda copia de la lógica. Los ids de aquí abajo son los mismos de /status, a propósito; las
+       palabras salen del idioma del <html lang>. -->
+  <section id="live" hidden>
+    <div class="wrap narrow">
+      <p class="kicker" id="live-kicker">Su solicitud</p>
+      <h1 id="live-head">Su solicitud</h1>
+      <p class="lead" id="live-lead"></p>
+      <!-- camino FW: cotizado — su precio y un botón grande a su propia cotización, donde elige sus días -->
+      <div class="note live-quote" id="live-quote" hidden>
+        <p id="live-quote-price"></p>
+        <p><a class="btn wide" id="live-quote-go" href="/es/estado">Ver su cotización y elegir sus días</a></p>
       </div>
-      <p class="tiny"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#4FB87B"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#0F0B1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Brownsville y el Valle · <a href="tel:+19565566438">(956) 556-6438</a></span></p>
-    </div>
-  </section>
-
-  <section class="fd-menu" id="precios">
-    <div class="wrap">
-      <h2>Precios.</h2>
-      <p class="lead">Viaje incluido. El precio que toca es el precio que paga, o se lo decimos antes de empezar.</p>
-      <!-- los recuadros se dibujan aquí desde /assets/umbra-menu.js — el único lugar donde vive un precio -->
-      <div data-menu><noscript><p class="no-js">La lista de precios necesita JavaScript. Mande un texto al <a href="sms:+19565566438">(956) 556-6438</a> y se la enviamos.</p></noscript></div>
-      <p class="fd-note">El trabajo eléctrico y de plomería, incluida la instalación de electrodomésticos, lo realizan contratistas con licencia con los que trabajamos.</p>
-      <p class="fd-note">Los pesticidas, cebos y tratamientos contra plagas los realizan compañías con licencia con las que trabajamos. Nadie en Umbra aplica productos contra plagas por paga.</p>
-      <p class="fd-note">Las reparaciones de sistemas de riego enterrados las realizan irrigadores con licencia con los que trabajamos. Una compañía sin licencia no puede instalar, reparar ni dar servicio a un sistema enterrado por paga.</p>
-    </div>
-  </section>
-
-  <section class="band">
-    <div class="wrap">
-      <ul class="trust">
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#4FB87B"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#0F0B1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Dueño-operador y asegurado</span></li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#4FB87B"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#0F0B1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Una persona, la misma persona cada vez</span></li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#4FB87B"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#0F0B1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Precio por texto antes de ir</span></li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#4FB87B"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#0F0B1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Si algo no quedó bien, mándeme un texto y regreso</span></li>
-      </ul>
-    </div>
-  </section>
-
-  <section id="como">
-    <div class="wrap">
-      <p class="kicker">Cómo funciona</p>
-      <h2>Tres toques, un texto.</h2>
-      <div class="grid three" style="margin-top:1.5rem">
-        <div class="step"><span class="n">1</span><h3>Toque lo que necesita</h3><p class="muted">Elija del menú o mande una lista por texto. Las fotos ayudan.</p></div>
-        <div class="step"><span class="n">2</span><h3>Elija una hora</h3><p class="muted">Mañanas, tardes, sábados. La mayoría de los trabajos quedan esta semana.</p></div>
-        <div class="step"><span class="n">3</span><h3>Confirmamos por texto</h3><p class="muted">Precio, hora y quién va, en un solo mensaje. Paga cuando esté terminado: cheque, efectivo o tarjeta.</p></div>
+      <!-- camino W: un trabajo terminado y pagado — el pago y su recibo; y cada día que una cita aparta -->
+      <div class="note live-paid" id="live-paid" hidden>
+        <p id="live-paid-line"></p>
+        <p><a class="btn" id="live-receipt" href="/es/estado">Su recibo</a></p>
       </div>
+      <div class="note live-visits" id="live-visits" hidden></div>
+      <!-- camino CO: un cambio — esperando su aprobación (un botón para ir), aprobado, o rechazado; y el nuevo total -->
+      <div class="note live-changes" id="live-changes" hidden></div>
+      <ol class="track" id="live-track" aria-label="En qué paso va su solicitud"></ol>
+      <div class="note" id="live-scope" hidden style="margin-top:1.2rem"></div>
+      <div id="live-photos-wrap" hidden style="margin-top:1.2rem">
+        <p style="font-weight:600;margin-bottom:.4rem">Las fotos que usted envió</p>
+        <ul class="pix" id="live-photos"></ul>
+      </div>
+      <p style="margin-top:2rem">¿Preguntas? <a href="sms:+19565566438">Mande un mensaje al (956) 556-6438</a>.</p>
+      <p><a href="/es">Volver al inicio</a></p>
     </div>
   </section>
 
-  <section class="fd-alt" id="quien">
-    <div class="wrap">
-      <p class="kicker">Quién va</p>
-      <div class="who">
-        <h2>Drew.</h2>
-        <p>De un pueblo chico del norte del estado de Nueva York, con carrera de ingeniería eléctrica, torres de turbinas eólicas, aviónica en SpaceX, dos años como electricista comercial, y un trabajo de servicio en campo que lo mandó a Brownsville. Se quedó y fundó Umbra Domus.</p>
-        <p><a href="/es/nosotros">Lea la historia completa →</a></p>
-      </div>
+  <div id="generic">
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker">¿Dónde va mi solicitud?</p>
+      <h1>Cuatro pasos. Siempre puede ver en cuál va.</h1>
+      <p class="lead">Cada solicitud pasa por los mismos cuatro pasos. Nada se queda en una pila, y usted nunca tiene que llamar para saber qué está pasando.</p>
+
+      <ol class="track" aria-label="Ejemplo del estado">
+        <li class="done"><div><strong>Recibido</strong><small>Ya la tenemos, y el reloj empezó. Su confirmación muestra la hora.</small></div></li>
+        <li class="now"><div><strong>Cotizado</strong><small>Recibe un precio y un plan, por escrito, antes de que alguien llegue.</small></div></li>
+        <li><div><strong>Programado</strong><small>Un día y un horario de llegada, acordados con usted. Si cambia, usted se entera primero.</small></div></li>
+        <li><div><strong>Terminado</strong><small>Terminado, con fotos, y usted dijo que está bien.</small></div></li>
+      </ol>
+      <p class="fine" style="margin-top:.6rem">Este estado es un ejemplo de cómo se ve una solicitud cuando va en el paso «cotizado».</p>
+      <p>Todo lo que firme en su casa lo puede cancelar por escrito dentro de tres días hábiles, y la cotización lo dice — en inglés o en español, el idioma en que hablamos.</p>
     </div>
   </section>
 
   <section class="band">
     <div class="wrap narrow">
-      <p class="kicker">Qué hace Umbra</p>
-      <h2>Toda casa debería dar más que un techo.</h2>
-      <p>Compramos propiedades subvaloradas, las renovamos con cuidado y les agregamos mejoras regenerativas que dan ahorros reales y una resistencia duradera. Nuestro cuidado va más allá: enseñamos a los dueños a mantener y mejorar sus casas por sí mismos. Quienes rentan pueden elegir mejoras que bajan sus recibos de inmediato.</p>
-      <div class="cta-row" style="margin-top:1.5rem">
-        <a class="btn" href="/es/servicios">Ver nuestros servicios</a>
-        <a class="btn ghost" href="/es/cuidado-de-propiedades">Cuidado de propiedades para dueños</a>
+      <h2>Su enlace de estado</h2>
+      <div class="note">
+        <p><strong>Se está construyendo.</strong> Así va a funcionar: cada confirmación lleva un enlace que puede volver a abrir cuando quiera para ver exactamente en qué paso va su solicitud.</p>
+        <p style="margin:0">Mientras se construye, la versión honesta es esta: <a href="sms:+19565566438">mande un mensaje al (956) 556-6438</a> con su nombre y le decimos sin rodeos en qué va.</p>
       </div>
     </div>
   </section>
+  </div>
 </main>
 
 <footer class="foot">
@@ -156,10 +140,11 @@
       <a href="/es/automatizar">Automatizar</a>
       <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
       <a href="/es/servicios#pedir">Pedir servicio</a>
-      <a href="/" lang="en" hreflang="en">English</a>
+      <a href="/status" lang="en" hreflang="en">English</a>
     </nav>
   </div>
   <div class="wrap"><p class="fine">El trabajo eléctrico y de plomería, incluida la instalación de electrodomésticos, lo realizan contratistas con licencia con los que trabajamos.</p></div>
 </footer>
+<script src="/assets/umbra-status.js?v=1"></script>
 </body>
 </html>

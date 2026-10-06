@@ -13,7 +13,7 @@
   <url><loc>https://www.umbradomus.com/homes</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/homes"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/casas"/></url>
   <url><loc>https://www.umbradomus.com/about</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/about"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/nosotros"/></url>
   <url><loc>https://www.umbradomus.com/contact</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/contact"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/contacto"/></url>
-  <url><loc>https://www.umbradomus.com/status</loc></url>
+  <url><loc>https://www.umbradomus.com/status</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/status"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/estado"/></url>
   <url><loc>https://www.umbradomus.com/es</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/"/></url>
   <url><loc>https://www.umbradomus.com/es/servicios</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services"/></url>
   <url><loc>https://www.umbradomus.com/es/automatizar</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/automatizar"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/automate"/></url>
@@ -27,4 +27,5 @@
   <url><loc>https://www.umbradomus.com/es/casas</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/casas"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/homes"/></url>
   <url><loc>https://www.umbradomus.com/es/nosotros</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/nosotros"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/about"/></url>
   <url><loc>https://www.umbradomus.com/es/contacto</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/contacto"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/contact"/></url>
+  <url><loc>https://www.umbradomus.com/es/estado</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/estado"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/status"/></url>
 </urlset>
