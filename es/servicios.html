@@ -22,7 +22,8 @@
 <script src="/assets/umbra-chooser-data.js?v=1" defer></script>
 <script src="/assets/umbra-address.js?v=1" defer></script>
 <script src="/assets/umbra-chooser.js?v=1" defer></script>
-<script src="/assets/umbra-intake-v2.js?v=10" defer></script>
+<script src="/assets/umbra-intake-v2.js?v=11" defer></script>
+<script src="/assets/umbra-phone.js?v=1" defer></script>
 <script src="/assets/umbra-windows.js?v=3" defer></script>
 <!-- road W: what they gave, carried to the thank-you page in this tab's own memory; before the email leg, always -->
 <script src="/assets/umbra-sent.js?v=1" defer></script>
@@ -345,7 +346,7 @@
         </section>
         <!-- road W · the contact step: phone and the optional email side by side, each saying what it is for, so
              afterwards nobody has to wonder what was given. The step keeps its name ("phone") for the stepper. -->
-        <section class="fstep" data-fstep="phone" hidden>
+        <section class="fstep" data-fstep="phone" data-gate="phone" hidden>
           <p class="v2q">¿Cómo le contactamos?</p>
           <label class="v2field v2contact"><span class="v2lab">Teléfono</span><span class="v2sub">Drew le manda mensajes de texto aquí</span><input class="field" type="tel" name="phone" autocomplete="tel" inputmode="tel" required enterkeyhint="next"></label>
           <label class="v2field v2contact"><span class="v2lab">Correo electrónico <span class="v2optional">opcional</span></span><span class="v2sub">Para recibir una copia de su solicitud</span><input class="field" type="email" name="email" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="next"></label>
