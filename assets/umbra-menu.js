@@ -81,8 +81,8 @@
         en: { name: 'Window screens fixed or replaced', inc: 'New mesh, or a new frame' },
         es: { name: 'Mosquiteros reparados o nuevos', inc: 'Malla nueva, o marco nuevo' } },
       { key: 'windowunit', tile: 'else', service: 'Not sure', price: { amt: 69 },
-        en: { name: 'Window A/C unit put in or taken out', inc: 'Set, sealed and secured' },
-        es: { name: 'Aparato de aire de ventana puesto o quitado', inc: 'Colocado, sellado y asegurado' } },
+        en: { name: 'Window unit put in or taken out', inc: 'Set, sealed and secured' },
+        es: { name: 'Aparato de ventana puesto o quitado', inc: 'Colocado, sellado y asegurado' } },
       { key: 'dryervent', tile: 'else', service: 'Not sure', price: { amt: 99 },
         en: { name: 'Dryer vent cleaned', inc: 'Cleaned end to end, cover checked' },
         es: { name: 'Ducto de la secadora limpio', inc: 'Limpio de punta a punta, tapa revisada' } },
@@ -143,6 +143,22 @@
       es: { name: 'Día completo — toda su lista, una visita', inc: '8 horas' } }
   ];
 
+  /* LANDLORDS-01 · the two care rows that carry no figure.
+     They are NOT menu items: they are never drawn, they are not in UmbraMenu.items,
+     and they hold no amount. They exist so the property care page can name its price
+     in the words the CDO cleared — and so a tap on those two rows lands in the form
+     the same way every other tile does. */
+  var CARE = [
+    { key: 'repairs', tile: 'else', service: 'Not sure',
+      word: { en: 'Menu price, or by text', es: 'Precio del menú, o por texto' },
+      en: { name: 'Repairs', inc: 'Drywall, paint, doors, trim, blinds, screens, fences and gates' },
+      es: { name: 'Reparaciones', inc: 'Tablaroca, pintura, puertas, molduras, persianas, mosquiteros, cercas y portones' } },
+    { key: 'tenantfix', tile: 'else', service: 'Not sure',
+      word: { en: 'At your direction', es: 'Según sus indicaciones' },
+      en: { name: 'Tenant repair request', inc: 'Your tenant sends the photo, you say yes, I send you the after' },
+      es: { name: 'Pedido de reparación de su inquilino', inc: 'Su inquilino manda la foto, usted dice que sí, yo le mando el después' } }
+  ];
+
   var ES = (document.documentElement.getAttribute('lang') || '').toLowerCase().indexOf('es') === 0;
   var LANG = ES ? 'es' : 'en';
   var W = WORDS[LANG];
@@ -154,6 +170,7 @@
 
   function find(key) {
     for (var i = 0; i < ALL.length; i++) if (ALL[i].key === key) return ALL[i];
+    for (var c = 0; c < CARE.length; c++) if (CARE[c].key === key) return CARE[c];
     return null;
   }
   function hrefOf(item) { return F.path + '?menu=' + encodeURIComponent(item.key) + '#' + F.hash; }
@@ -282,6 +299,23 @@
 
   var hosts = document.querySelectorAll('[data-menu]');
   for (var h = 0; h < hosts.length; h++) render(hosts[h]);
+
+  /* LANDLORDS-01 · a price slot on a page that writes its own tiles.
+     <span class="mprice" data-menu-price="homecheck"></span> is filled from this file,
+     so the property care page never holds a price of its own. */
+  var slots = document.querySelectorAll('[data-menu-price]');
+  for (var s = 0; s < slots.length; s++) {
+    var slot = slots[s];
+    var pick = find(slot.getAttribute('data-menu-price'));
+    if (!pick) continue;
+    slot.textContent = '';
+    if (pick.price) {
+      var built = priceOf(pick);
+      while (built.firstChild) slot.appendChild(built.firstChild);
+    } else if (pick.word) {
+      slot.appendChild(el('span', 'munit', pick.word[LANG]));
+    }
+  }
 
   var picked = null;
   try {
