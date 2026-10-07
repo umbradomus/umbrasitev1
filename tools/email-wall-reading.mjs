@@ -165,7 +165,9 @@ for (let i = 0; i < Math.ceil((SLOW + 12000) / 500); i++) {
   const s = await page.evaluate(() => {
     const b = document.querySelector('button[type="submit"]');
     return { url: location.pathname, btn: b ? b.textContent.trim() : '(gone)', off: b ? !!b.disabled : null,
-      body: (document.body.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90) };
+      /* R88 second reader: the page prints Drew's own number, and no file this round writes may carry a phone
+         number. It comes out HERE, in the sampler, before it can reach a reading. */
+      body: (document.body.textContent || '').replace(/\(?\d{3}\)?[ .-]?\d{3}[ .-]\d{4}/g, '(number)').replace(/\s+/g, ' ').trim().slice(0, 90) };
   }).catch(() => ({ url: '(navigating)', btn: '(navigating)', off: null, body: '' }));
   seen.push({ ms: Date.now() - T0.at, ...s });
   if (intake.length && Date.now() - T0.at > intake[0].ms + 2500) break;
@@ -195,10 +197,20 @@ const navAfter = seen.filter((s) => s.url !== '/__wall');
 ok('e21b-wall-is-30s', CAP === 30000, 'CAP_MS reads ' + CAP + ' in assets/umbra-two-channels.js');
 ok('e21b-copy-at-' + SLOW + 'ms-is-kept', !!rec && rec.keep.email_sent === 'yes',
   rec ? 'the page reported email_sent=' + rec.keep.email_sent + ' at email_copy_ms=' + rec.keep.email_copy_ms : 'no request was posted');
-ok('e21b-no-worker-fallback-needed', !!rec && rec.keep.email_sent === 'yes',
-  'on `no` the Worker forwards a second copy and FormSubmit answers it 429 - that is how U-0018 lost its email');
-ok('e21b-received-page-does-not-hold-them', navAfter.every((s) => s.url !== '/__wall') && (!rec || copyMs <= SLOW + 4000),
-  'every wait is spent BEFORE the navigation: the received page is reached only after the leg settles, and it waits for nothing');
+/* R88 second reader, 2026-10-07: this clause and the one above it had the SAME predicate, so five clauses were four
+   and this one printed a reason it had not read. It now reads the two things the one above does not: that the copy
+   actually REACHED the mail stub, and that the page measured it INSIDE the wall. On `no` the Worker forwards a second
+   copy and FormSubmit answers that one 429 - that is how U-0018 lost its email. */
+ok('e21b-the-copy-landed-inside-the-wall', !!rec && mail.length > 0 && Number.isFinite(copyMs) && copyMs < CAP,
+  rec ? 'the mail stub took ' + mail.length + ' copy(ies); the page measured ' + rec.keep.email_copy_ms + ' ms against a ' + CAP + ' ms wall' : 'no request was posted');
+/* R88 second reader, 2026-10-07: this read navAfter.every(url !== '/__wall') over a list FILTERED on that same
+   test - a tautology, true even if the customer never left the form. It passed on the base, the candidate AND the
+   plant. What it has to say is that the customer REACHES the received page, that the page is whole when they get
+   there, and that nothing on it is disabled. Each of those three can fail. */
+ok('e21b-received-page-does-not-hold-them',
+  navAfter.length > 0 && /Received|Recibido/i.test(navAfter[0].body) && navAfter.every((s) => s.off !== true),
+  navAfter.length ? 'at +' + navAfter[0].ms + ' ms the page is ' + navAfter[0].url + ', already carrying its own words ("' + navAfter[0].body.slice(0, 44) + '"), nothing on it disabled'
+    : 'THE NAVIGATION NEVER HAPPENED - the customer never reached the received page');
 ok('e21b-the-form-is-what-holds-them', seen.some((s) => s.off === true || /ending/i.test(s.btn)),
   'the button reads "Sending..." and is disabled for the whole wait - the hold is on the FORM, named in FOUND');
 

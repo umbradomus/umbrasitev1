@@ -116,7 +116,9 @@ for (const [f, re, what] of [
   ['request-received.html', /[Rr]eply to Drew's text/, 'the English received page says to reply to the text'],
   ['es/recibido.html', /Responda al mensaje/, 'the Spanish received page says to reply to the message'],
 ]) {
-  const s = fs.readFileSync(path.join(REPO, f), 'utf8');
+  /* R88 second reader: through spoken() like everything else, or a COMMENT saying "reply to Drew's text" would
+     satisfy the clause while the page said nothing of the kind. */
+  const s = spoken(fs.readFileSync(path.join(REPO, f), 'utf8'), true);
   ok('e2-reply-instead-' + f.replace(/[^a-z]/gi, '-'), re.test(s), what);
 }
 /* And the request number stays: it is what they quote when they reply. */
@@ -127,7 +129,8 @@ for (const f of ['request-received.html', 'es/recibido.html']) {
 /* The booking text the WEBSITE sends carries no link at all - read on the words themselves. */
 {
   const s = fs.readFileSync(path.join(REPO, 'worker/src/confirm.js'), 'utf8');
-  const words = (s.match(/^export const CONFIRM_[A-Z0-9_]+ = (['"])[\s\S]*?\1;$/gm) || []);
+  /* R88 second reader: a backtick form counts too - the next hand to write one must not slip past this clause. */
+  const words = (s.match(/^export const CONFIRM_[A-Z0-9_]+ = (['"`])[\s\S]*?\1;$/gm) || []);
   say('--- the confirmation text the website sends, as confirm.js writes it (' + words.length + ' forms) ---');
   for (const wd of words) say('  ' + wd.replace(/\s+/g, ' ').slice(0, 200));
   say('');

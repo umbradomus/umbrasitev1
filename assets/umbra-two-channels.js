@@ -67,7 +67,7 @@
      leg: 1413 (U-0013), 1637 (U-0014), 1366 (U-0015), 1098 (U-0016) through
      2026-10-01, then 5705 (U-0019) and 8071 (U-0018) on 2026-10-07. U-0019 ran
      on freshly re-fetched assets and still spent 5705 ms, so the slowing is in
-     the round trip, not in a stale script. 15 s is 1.86× the slowest copy ever
+     the round trip, not in a stale script. 15 s was 1.86× the slowest copy then known (SITE-FIX-17 found a slower one; see below), and
      measured, and it keeps the worst a person can wait well under the 21 s
      EMAIL-01 found was longer than a person waits. It is a measured trade, not
      a principle: a copy slower than this is still reported `no`, and the only
