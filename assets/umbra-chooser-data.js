@@ -223,8 +223,12 @@
       reviewSend: 'Send it — we reply within 2 hours.',
       replyBy: 'We’ll reply by ',
       tomorrow: ' tomorrow',
+      /* SITE-FIX-15 B - after hours only; % is the time the reply-by line names */
+      sendBy: 'Send it — we reply by %.',
       missing: 'We still need ',
       nothingYet: 'Nothing chosen yet.',
+      /* SITE-FIX-15 C - % is the tile's own words and its own price text */
+      youPicked: 'You picked: %',
       sTiles: 'What’s wrong',
       sWhile: 'While we’re there',
       sPhotos: 'Photos',
@@ -258,8 +262,12 @@
          itself, and this line used to double it — 'antes de las las 3:05 p.m.' */
       replyBy: 'Le contestamos antes de ',
       tomorrow: ' de mañana',
+      /* SITE-FIX-15 B - fuera de horario; % es la hora que nombra la línea de respuesta */
+      sendBy: 'Enviar — le contestamos antes de %',
       missing: 'Todavía nos falta ',
       nothingYet: 'Todavía no ha escogido nada.',
+      /* SITE-FIX-15 C - % son las palabras del mosaico y su propio precio */
+      youPicked: 'Usted eligió: %',
       sTiles: 'Qué está mal',
       sWhile: 'Ya que estamos ahí',
       sPhotos: 'Fotos',
@@ -271,13 +279,24 @@
       photoMany: ' fotos',
       photoTile: 'Esta foto es de',
       detailsHeading: 'Unas últimas cosas',
-      replyHow: '¿Cómo le contestamos?',
+      /* SITE-FIX-15 D4 - was '¿Cómo le contestamos?', one letter from screen 12's
+         '¿Cómo le contactamos?'. This one asks how the answer is sent. */
+      replyHow: '¿Cómo le enviamos la respuesta?',
       replyHowOpts: ['Mensaje de texto', 'Llamada'],
       howSoon: '¿Qué tan pronto?',
       howSoonOpts: ['Esta semana', 'Cuando pueda', 'Es urgente'],
       whoseHouse: '¿De quién es la casa?',
       whoseHouseOpts: ['Mia', 'Rentada', 'De familia o de un amigo'],
       notSure: 'No estoy seguro',
+      /* SITE-FIX-15 D3 - the page's own Spanish for an option's words. The key is
+         the value that is posted and never changes; the value is what he reads. */
+      optWords: {
+        'Si': 'Sí',
+        'Mia': 'Mía',
+        'Sólo un parche o una parte': 'Solo un parche o una parte',
+        'Sólo está gastada': 'Solo está gastada',
+        'No estoy seguro': 'No sé'
+      },
       micHint: 'Toque el micrófono de su teclado para hablar.',
       gotIt: 'Esto es lo que recibimos'
     }

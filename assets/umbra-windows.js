@@ -35,10 +35,11 @@
   var MAX = 3;
 
   var BLOCKS = [
-    { key: '08-11', en: 'Morning 8–11', es: 'Mañana 8–11' },
+    /* SITE-FIX-15 D5 - es: the time of day, never the bare word for tomorrow */
+    { key: '08-11', en: 'Morning 8–11', es: 'Por la mañana 8–11' },
     { key: '11-14', en: 'Midday 11–2', es: 'Mediodía 11–2' },
-    { key: '14-17', en: 'Afternoon 2–5', es: 'Tarde 2–5' },
-    { key: '17-20', en: 'Evening 5–8', es: 'Tarde-noche 5–8' }
+    { key: '14-17', en: 'Afternoon 2–5', es: 'Por la tarde 2–5' },
+    { key: '17-20', en: 'Evening 5–8', es: 'Por la tarde-noche 5–8' }
   ];
   var DOW_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];

@@ -573,5 +573,7 @@
     }
   } catch (e) { picked = null; }
 
-  window.UmbraMenu = { groups: GROUPS, days: DAYS, items: ALL, find: find, href: hrefOf, apply: apply, render: render, picked: picked, lang: LANG };
+  /* SITE-FIX-15 C - the tile he really tapped, read-only, for the review line. This
+     is the same record carryShown() reads; it does not decide what is sent. */
+  window.UmbraMenu = { groups: GROUPS, days: DAYS, items: ALL, find: find, href: hrefOf, apply: apply, render: render, picked: picked, shown: lastShown, lang: LANG };
 })();

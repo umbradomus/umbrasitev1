@@ -103,6 +103,15 @@
   /* ------------------------------------------------------------------ a tap row
      One shape for every tap on this form: a big label, the box inside it, a mark,
      the words. 44pt targets and 16px text come from site.css. */
+  /* ============================================================ SITE-FIX-15 · D3
+     THE WORDS ON THE OPTION ARE THE PAGE'S OWN SPANISH. One table, in the words
+     file, keyed by the value that is posted: the label he reads changes, the
+     value the request carries does not. English has no table and needs none. */
+  function optWords(s) {
+    var m = W.optWords, k = String(s == null ? '' : s);
+    return (m && Object.prototype.hasOwnProperty.call(m, k)) ? m[k] : k;
+  }
+
   function tapRow(name, value, label, sub, multi) {
     var li = el('li');
     var lab = el('label', 'v2opt ' + (multi ? 'v2checkbox' : 'v2radio') + ' ch-tap');
@@ -182,7 +191,7 @@
         var ul = el('ul', 'v2opts');
         var nm = 'a_' + tl.key + '_' + qq.key;
         for (var o = 0; o < qq[LANG].opts.length; o++) {
-          ul.appendChild(tapRow(nm, qq[LANG].opts[o], qq[LANG].opts[o], '', !!qq.multi));
+          ul.appendChild(tapRow(nm, qq[LANG].opts[o], optWords(qq[LANG].opts[o]), '', !!qq.multi));
         }
         block.appendChild(ul);
         block.setAttribute('data-answer-name', nm);
@@ -257,9 +266,9 @@
       b.appendChild(el('p', 'v2q ch-small-q', rows[r].q));
       var rl = el('ul', 'v2opts ch-inline');
       for (var ro = 0; ro < rows[r].opts.length; ro++) {
-        rl.appendChild(tapRow(rows[r].name, rows[r].opts[ro], rows[r].opts[ro], '', false));
+        rl.appendChild(tapRow(rows[r].name, rows[r].opts[ro], optWords(rows[r].opts[ro]), '', false));
       }
-      rl.appendChild(tapRow(rows[r].name, W.notSure, W.notSure, '', false));
+      rl.appendChild(tapRow(rows[r].name, W.notSure, optWords(W.notSure), '', false));
       b.appendChild(rl);
       detailsStep.appendChild(b);
     }
@@ -545,11 +554,26 @@
     else sendStep.appendChild(reviewHost);
   }
 
-  function replyByLine() {
-    if (!window.UmbraSent || typeof window.UmbraSent.due !== 'function') return '';
+  /* SITE-FIX-15 B - ONE reading of the reply clock per review draw: the line and the
+     Send button are two readings of the same answer, never two clocks. */
+  function dueNow() {
+    if (!window.UmbraSent || typeof window.UmbraSent.due !== 'function') return null;
     var d = window.UmbraSent.due(Date.now());
-    if (!d || !d.at) return '';
+    return (d && d.at) ? d : null;
+  }
+  function replyByLine(d) {
+    if (!d) return '';
     return W.replyBy + d.at + (d.tomorrow ? W.tomorrow : '');
+  }
+  /* The button promised two hours under a line that said tomorrow morning. When the
+     wait has been pushed past two hours the button names the line's own time; inside
+     the open hours it keeps its own words, to the letter. */
+  function drawSendButton(d) {
+    var b = form.querySelector('[data-v2send]');
+    if (!b) return;
+    if (!b.hasAttribute('data-send-words')) b.setAttribute('data-send-words', b.textContent);
+    var own = b.getAttribute('data-send-words');
+    b.textContent = (d && d.shifted && W.sendBy) ? W.sendBy.replace('%', d.at) : own;
   }
 
   function group(title, lines, editKey) {
@@ -593,12 +617,62 @@
     return miss;
   }
 
+  /* ============================================================ SITE-FIX-15 · A
+     THE REVIEW SAYS THE QUESTION THAT WAS ASKED, AND THE ANSWER HE TAPPED.
+     Three readings of the screen, and nothing else: whether a control was on the
+     screen at all, the words on the option he tapped, and the heading he saw above
+     it. The request is not touched by any of them - what is posted is still the
+     control's own value, set where it has always been set. */
+  function shownIn(node, stop) {
+    for (var n = node; n && n !== stop; n = n.parentNode) {
+      if (n.nodeType === 1 && n.hidden) return false;
+    }
+    return true;
+  }
+  function stepOfEl(e) { return e && e.closest ? e.closest('[data-fstep]') : null; }
+  /* A control on a hidden HALF of a screen was never asked - the "same texture as the
+     ceiling?" question, and the five tiles it stands in for (umbra-intake-v2.js
+     sameTexture()). A question that was never asked gets no line on the review. */
+  function wasAsked(e) { return !!e && shownIn(e, stepOfEl(e) || form); }
+  /* the words on the option he tapped - never the value that is posted */
+  function tapLabel(e) {
+    var lab = e && e.closest ? e.closest('label') : null;
+    var w = lab ? (lab.querySelector('.ch-label') || lab.querySelector('span:not(.v2mark)')) : null;
+    var t = w ? String(w.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    return t || (e ? String(e.value || '') : '');
+  }
+  function tappedLabels(name) {
+    var out = [], bs = boxes(name);
+    for (var i = 0; i < bs.length; i++) if (bs[i].checked && wasAsked(bs[i])) out.push(tapLabel(bs[i]));
+    return out;
+  }
+  function firstAsked(name) {
+    var bs = boxes(name);
+    for (var i = 0; i < bs.length; i++) if (bs[i].checked && wasAsked(bs[i])) return bs[i];
+    return null;
+  }
+  /* the question he really saw: the LAST heading above that control on its own screen
+     that was not hidden. */
+  function askedLabel(e) {
+    if (!e) return '';
+    var step = stepOfEl(e), scope = step || form;
+    var qs = scope.querySelectorAll('.v2q'), out = '';
+    for (var i = 0; i < qs.length; i++) {
+      if (!(qs[i].compareDocumentPosition(e) & 4)) continue;
+      if (!shownIn(qs[i], scope)) continue;
+      out = String(qs[i].textContent || '').replace(/\s+/g, ' ').trim();
+    }
+    return out;
+  }
+
   function drawReview() {
     if (!reviewHost) return;
     reviewHost.textContent = '';
     /* SITE-FIX-01.1 · A6.7 as the ignite cuts it: the reply-by TIME sits BESIDE THE
        PROMISE, which is the line at the head of this screen. So it goes first, not last. */
-    var by = replyByLine();
+    var dueRead = dueNow();
+    drawSendButton(dueRead);
+    var by = replyByLine(dueRead);
     if (by) {
       var pBy = el('p', 'ch-replyby', by);
       pBy.setAttribute('data-reply-by', '1');
@@ -607,29 +681,50 @@
     var on = lit();
 
     var tileLines = [];
+    /* ============================================================ SITE-FIX-15 · C
+       THE TILE AND THE PRICE HE TAPPED, SHOWN BACK TO HIM. Read from the very four
+       fields the request carries (umbra-menu.js carryShown), in the words the tile
+       showed - never a price computed a second time here. No tile tapped, no line. */
+    var pickedLabel = val('shown_label'), pickedPrice = val('shown_price');
+    /* A tile the menu prices by text sends no shown_* field at all (the Worker's own
+       shape rule). He still tapped it, so the review names it - the name alone, with
+       no price invented here - and only when THIS tab's tap is the tile the form was
+       prefilled from. No tap in this tab: data-menu-pick is absent and there is no line. */
+    if (!pickedLabel) {
+      var mShown = (window.UmbraMenu && window.UmbraMenu.shown) ? window.UmbraMenu.shown() : null;
+      var mKey = form.getAttribute('data-menu-pick');
+      if (mShown && mShown.label && mKey && mShown.key === mKey) {
+        pickedLabel = mShown.label;
+        pickedPrice = '';
+      }
+    }
+    if (pickedLabel && W.youPicked) {
+      tileLines.push(W.youPicked.replace('%', pickedLabel + (pickedPrice ? ' · ' + pickedPrice : '')));
+    }
     for (var i = 0; i < on.length; i++) {
       tileLines.push(on[i][LANG].label);
       for (var q2 = 0; q2 < on[i].questions.length; q2++) {
         var qq = on[i].questions[q2];
         if (!askedOf(on[i].key, qq)) continue;
-        var v = ticked('a_' + on[i].key + '_' + qq.key);
-        if (v.length) tileLines.push('   ' + qq[LANG].q + ' ' + v.join(' · '));
+        var nm = 'a_' + on[i].key + '_' + qq.key;
+        var v = tappedLabels(nm);
+        if (v.length) tileLines.push('   ' + (askedLabel(firstAsked(nm)) || qq[LANG].q) + ' ' + v.join(' · '));
       }
       if (on[i].legacy) {
         var legacyNames = ['problem_area', 'ceiling_count_band', 'ceiling_biggest', 'ceiling_condition',
-          'ceiling_surface', 'walls_count_band', 'walls_biggest', 'walls_condition', 'walls_surface'];
+          'ceiling_surface', 'walls_count_band', 'walls_biggest', 'walls_condition', 'walls_same', 'walls_surface',
+          /* SITE-FIX-15 D2 - answered on every drywall path, on no review line */
+          'paint_on_site'];
         for (var L = 0; L < legacyNames.length; L++) {
-          var lv = ticked(legacyNames[L]);
+          var lv = tappedLabels(legacyNames[L]);
           if (!lv.length) continue;
-          var sec = form.querySelector('[name="' + legacyNames[L] + '"]');
-          var qEl = sec && sec.closest('[data-fstep]') ? sec.closest('[data-fstep]').querySelector('.v2q') : null;
-          tileLines.push('   ' + (qEl ? qEl.textContent.trim() + ' ' : '') + lv.join(' · '));
+          tileLines.push('   ' + (askedLabel(firstAsked(legacyNames[L])) + ' ').replace(/^ $/, '') + lv.join(' · '));
         }
       }
     }
     reviewHost.appendChild(group(W.sTiles, tileLines.length ? tileLines : [W.nothingYet], 'chooser'));
 
-    var wl = ticked('while_there');
+    var wl = tappedLabels('while_there');
     if (wl.length) reviewHost.appendChild(group(W.sWhile, wl, 'chooser'));
 
     var photos = form.querySelectorAll('[data-photo-list] li');
@@ -653,9 +748,13 @@
 
     if (val('what')) reviewHost.appendChild(group(W.sSentence, [val('what')], 'notes'));
     var last = [];
-    if (ticked('reply_how')[0]) last.push(W.replyHow + ' ' + ticked('reply_how')[0]);
-    if (ticked('how_soon')[0]) last.push(W.howSoon + ' ' + ticked('how_soon')[0]);
-    if (ticked('whose_house')[0]) last.push(W.whoseHouse + ' ' + ticked('whose_house')[0]);
+    var lastLab = { reply_how: W.replyHow, how_soon: W.howSoon, whose_house: W.whoseHouse };
+    var lastNames = ['reply_how', 'how_soon', 'whose_house'];
+    for (var Z = 0; Z < lastNames.length; Z++) {
+      var zv = tappedLabels(lastNames[Z]);
+      if (!zv.length) continue;
+      last.push((askedLabel(firstAsked(lastNames[Z])) || lastLab[lastNames[Z]]) + ' ' + zv[0]);
+    }
     if (last.length) reviewHost.appendChild(group(W.detailsHeading, last, 'details'));
 
     reviewHost.appendChild(group(W.sName, [val('name') || '—'], 'name'));
