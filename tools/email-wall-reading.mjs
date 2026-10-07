@@ -167,7 +167,7 @@ for (let i = 0; i < Math.ceil((SLOW + 12000) / 500); i++) {
     return { url: location.pathname, btn: b ? b.textContent.trim() : '(gone)', off: b ? !!b.disabled : null,
       /* R88 second reader: the page prints Drew's own number, and no file this round writes may carry a phone
          number. It comes out HERE, in the sampler, before it can reach a reading. */
-      body: (document.body.textContent || '').replace(/\(?\d{3}\)?[ .-]?\d{3}[ .-]\d{4}/g, '(number)').replace(/\s+/g, ' ').trim().slice(0, 90) };
+      body: (document.body.textContent || '').replace(/\(?\d{3}\)?[ .-]?\d{3}[ .-]\d{4}/g, '(number)').replace(/\s+/g, ' ').trim().slice(0, 220) };
   }).catch(() => ({ url: '(navigating)', btn: '(navigating)', off: null, body: '' }));
   seen.push({ ms: Date.now() - T0.at, ...s });
   if (intake.length && Date.now() - T0.at > intake[0].ms + 2500) break;
@@ -194,6 +194,9 @@ say('');
 const rec = intake[0] || null;
 const copyMs = rec ? Number(rec.keep.email_copy_ms) : NaN;
 const navAfter = seen.filter((s) => s.url !== '/__wall');
+/* a sample taken DURING the navigation reads '(navigating)' with an empty body - it is not an arrival, and the clause
+   below asked the first one of those whether the page was whole. The arrival samples are the ones at the page. */
+const arrived = navAfter.filter((s) => /request-received|recibido/.test(s.url));
 ok('e21b-wall-is-30s', CAP === 30000, 'CAP_MS reads ' + CAP + ' in assets/umbra-two-channels.js');
 ok('e21b-copy-at-' + SLOW + 'ms-is-kept', !!rec && rec.keep.email_sent === 'yes',
   rec ? 'the page reported email_sent=' + rec.keep.email_sent + ' at email_copy_ms=' + rec.keep.email_copy_ms : 'no request was posted');
@@ -208,9 +211,9 @@ ok('e21b-the-copy-landed-inside-the-wall', !!rec && mail.length > 0 && Number.is
    plant. What it has to say is that the customer REACHES the received page, that the page is whole when they get
    there, and that nothing on it is disabled. Each of those three can fail. */
 ok('e21b-received-page-does-not-hold-them',
-  navAfter.length > 0 && /Received|Recibido/i.test(navAfter[0].body) && navAfter.every((s) => s.off !== true),
-  navAfter.length ? 'at +' + navAfter[0].ms + ' ms the page is ' + navAfter[0].url + ', already carrying its own words ("' + navAfter[0].body.slice(0, 44) + '"), nothing on it disabled'
-    : 'THE NAVIGATION NEVER HAPPENED - the customer never reached the received page');
+  arrived.length > 0 && /Received|Recibido/i.test(arrived[0].body) && arrived.every((s) => s.off !== true),
+  arrived.length ? 'at +' + arrived[0].ms + ' ms the page is ' + arrived[0].url + ', already carrying its own words ("' + arrived[0].body.slice(0, 44) + '"), nothing on it disabled'
+    : 'THE CUSTOMER NEVER REACHED THE RECEIVED PAGE in ' + seen.length + ' samples');
 ok('e21b-the-form-is-what-holds-them', seen.some((s) => s.off === true || /ending/i.test(s.btn)),
   'the button reads "Sending..." and is disabled for the whole wait - the hold is on the FORM, named in FOUND');
 
