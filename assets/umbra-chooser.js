@@ -672,6 +672,14 @@
     var on = lit();
 
     var tileLines = [];
+    /* ============================================================ SITE-FIX-15 · C
+       THE TILE AND THE PRICE HE TAPPED, SHOWN BACK TO HIM. Read from the very four
+       fields the request carries (umbra-menu.js carryShown), in the words the tile
+       showed - never a price computed a second time here. No tile tapped, no line. */
+    var pickedLabel = val('shown_label'), pickedPrice = val('shown_price');
+    if (pickedLabel && W.youPicked) {
+      tileLines.push(W.youPicked.replace('%', pickedLabel + (pickedPrice ? ' · ' + pickedPrice : '')));
+    }
     for (var i = 0; i < on.length; i++) {
       tileLines.push(on[i][LANG].label);
       for (var q2 = 0; q2 < on[i].questions.length; q2++) {

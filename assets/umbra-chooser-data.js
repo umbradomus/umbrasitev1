@@ -227,6 +227,8 @@
       sendBy: 'Send it — we reply by %.',
       missing: 'We still need ',
       nothingYet: 'Nothing chosen yet.',
+      /* SITE-FIX-15 C - % is the tile's own words and its own price text */
+      youPicked: 'You picked: %',
       sTiles: 'What’s wrong',
       sWhile: 'While we’re there',
       sPhotos: 'Photos',
@@ -264,6 +266,8 @@
       sendBy: 'Enviar — le contestamos antes de %',
       missing: 'Todavía nos falta ',
       nothingYet: 'Todavía no ha escogido nada.',
+      /* SITE-FIX-15 C - % son las palabras del mosaico y su propio precio */
+      youPicked: 'Usted eligió: %',
       sTiles: 'Qué está mal',
       sWhile: 'Ya que estamos ahí',
       sPhotos: 'Fotos',
