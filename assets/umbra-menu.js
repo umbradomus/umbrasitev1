@@ -379,16 +379,36 @@
     }
     return bits.join(' ');
   }
+  /* SITE-FIX-14 · the day card carries "Book a half day" at its foot: a second anchor
+     for the SAME data-menu-item key as the tile above it, which is where the figure the
+     customer read is written. The button holds no figure and no title of its own, so
+     its twin - the anchor for that same key inside that same card - answers for it.
+     That is the card's own number, not one we chose: same key, same card, same job. */
+  function twinOf(a) {
+    var key = a.getAttribute('data-menu-item');
+    var card = a.closest ? a.closest('.daycard, li, .menu-group') : null;
+    if (!key || !card) return null;
+    var kin = card.querySelectorAll('a[data-menu-item]');
+    for (var i = 0; i < kin.length; i++) {
+      if (kin[i] === a || kin[i].getAttribute('data-menu-item') !== key) continue;
+      if (kin[i].querySelector('.mprice') || kin[i].querySelector('.v')) return kin[i];
+    }
+    return null;
+  }
   function readTile(a) {
     if (!a) return null;
     var key = a.getAttribute('data-menu-item');
     if (!key) return null;
-    return {
-      key: key,
-      label: flatText(a.querySelector('.mname')) || flatText(a.querySelector('.l')),
-      price: shownPriceOf(a),
-      lang: LANG
-    };
+    var label = flatText(a.querySelector('.mname')) || flatText(a.querySelector('.l'));
+    var price = shownPriceOf(a);
+    if (!price || !label) {
+      var twin = twinOf(a);
+      if (twin) {
+        if (!price) price = shownPriceOf(twin);
+        if (!label) label = flatText(twin.querySelector('.mname')) || flatText(twin.querySelector('.l'));
+      }
+    }
+    return { key: key, label: label, price: price, lang: LANG };
   }
   /* The Worker's own rule, kept here so that we never send a field it would drop
      (WORKER-SHOWN-01 THE SHAPE): the key is /^[a-z0-9-]{1,40}$/ and the price is 1-32
