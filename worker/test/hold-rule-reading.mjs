@@ -194,13 +194,24 @@ say('--- B · BOTH CALLS: create (createQuote) and /sent (markSent, short_notice
 }
 {
   /* THE TWO-STEP ROAD ACROSS 3:00 PM, against the row the book actually keeps.
-     quotebook.js writes `cutoff` ONLY in its INSERT; `sent()` carries sent_at and hold_until and nothing else —
-     asserted below off quotebook.js's own source, so this simulation cannot drift from the real book. */
+     WORKER-HOLD-01.1: `sent()` now carries the CUTOFF as well, raising the row's own and never lowering it, and
+     markSent's clamp is gone. The SET list AND the raise arithmetic are both read out of quotebook.js BY CONTENT
+     (G88) and the raise is eval'd rather than retyped, so this simulation cannot drift from the real book. */
   const qbSrc = fs.readFileSync(path.join(SRC, 'quotebook.js'), 'utf8');
-  const sentFn = sliceFn(qbSrc, '  sent(jobId, version, sentAt, holdUntil) {') || '';
-  const sets = (sentFn.match(/_bump\(row\.token_hash, '([^']*)'/) || [])[1] || '(not found)';
-  chk('HOLD01-B-THE-BOOK-WRITES-NO-CUTOFF-AT-SENT', sets === 'sent_at = ?, hold_until = ?' && !/cutoff/.test(sentFn),
-    'quotebook.js sent() sets ' + J(sets) + ' — the row keeps the cutoff its INSERT gave it');
+  const sentFn = sliceFn(qbSrc, '  sent(jobId, version, sentAt, holdUntil, cutoff) {') || '';
+  if (!sentFn) rig('quotebook.js has no sent(jobId, version, sentAt, holdUntil, cutoff) — the cutoff does not travel');
+  const setsCut = sentFn.split("_bump(row.token_hash, '");
+  const sets = setsCut.length > 1 ? setsCut[1].split("'")[0] : '(not found)';
+  const raiseLine = (sentFn.match(/const newCutoff = [^;]+;/) || [])[0] || '';
+  if (!raiseLine) rig('quotebook.js sent() does not yield `const newCutoff = …;` by content');
+  const RAISE = new Function('row', 'cutoff', raiseLine + ' return newCutoff;');
+
+  /* RE-CUT by WORKER-HOLD-01.1 from HOLD01-B-THE-BOOK-WRITES-NO-CUTOFF-AT-SENT, which asserted the very gap this
+     round closes: it read 'sent_at = ?, hold_until = ?' and passed BECAUSE the cutoff could not travel. It was
+     always meant to flip. Same subject, opposite truth — not a deleted guard. */
+  chk('HOLD01-B-THE-BOOK-WRITES-THE-CUTOFF-AT-SENT',
+    sets === 'sent_at = ?, hold_until = ?, cutoff = ?' && sentFn.includes('[sentAt, holdUntil, newCutoff]'),
+    'quotebook.js sent() sets ' + J(sets) + ' and binds [sentAt, holdUntil, newCutoff] — the cutoff travels with the hold');
 
   const created = CT(2026, 10, 6, 14, 0), sent = CT(2026, 10, 6, 20, 7);
   const row = W.holdFor(WINDOWS, created, null);                       /* what the INSERT stores */
@@ -208,23 +219,33 @@ say('--- B · BOTH CALLS: create (createQuote) and /sent (markSent, short_notice
   const todayAtSent = BASE(WINDOWS, created, sent, row.short_notice);
   const qSrc = fs.readFileSync(path.join(SRC, 'quotes.js'), 'utf8');
   const markSent = sliceFn(qSrc, 'export async function markSent(') || '';
-  const clamped = /const holdUntil = new Date\(Math\.min\(Date\.parse\(hold\.hold_until\), Date\.parse\(cur\.cutoff\)\)\)\.toISOString\(\);/.test(markSent)
-    && /b\.sent\(jobId, version, sentIso, holdUntil\)/.test(markSent);
-  const stored = clamped ? Math.min(Date.parse(recomputed.hold_until), Date.parse(row.cutoff)) : Date.parse(recomputed.hold_until);
+  /* RE-CUT by WORKER-HOLD-01.1 from HOLD01-B-MARKSENT-BOUNDS-THE-HOLD-BY-THE-ROWS-CUTOFF, which asserted the
+     clamp W3 orders removed in this same commit. Leaving it would be a dead brake asserting its own brake. */
+  const travels = markSent.includes('b.sent(jobId, version, sentIso, hold.hold_until, hold.cutoff)')
+    && !markSent.includes('Math.min(Date.parse(hold.hold_until)');
+  chk('HOLD01-B-MARKSENT-HANDS-THE-CUTOFF-TO-THE-BOOK', travels,
+    'markSent ' + (travels
+      ? 'hands hold.hold_until AND hold.cutoff to sent(), and the clamp against cur.cutoff is gone'
+      : 'does not hand hold.cutoff to sent(), or still clamps the hold against cur.cutoff'));
+  /* what the row holds AFTER the /sent, modelled on the code just read */
+  const stored = travels ? Date.parse(recomputed.hold_until) : Math.min(Date.parse(recomputed.hold_until), Date.parse(row.cutoff));
+  const storedCut = travels ? Date.parse(RAISE(row, recomputed.cutoff)) : Date.parse(row.cutoff);
   say('  -- the two-step road across 3:00 PM: link made ' + created + ' (2:00 PM), text sent ' + sent + ' (8:07 PM)');
   say('     the row the INSERT wrote: hold_until ' + row.hold_until + ' cutoff ' + row.cutoff);
   say('     holdFor at /sent:         hold_until ' + recomputed.hold_until + ' cutoff ' + recomputed.cutoff);
-  say('     what the row then holds:  hold_until ' + new Date(stored).toISOString() + ' cutoff ' + row.cutoff + (clamped ? "  (markSent bounds the hold by the row's cutoff)" : '  (markSent hands the hold in unbounded)'));
-  chk('HOLD01-B-MARKSENT-BOUNDS-THE-HOLD-BY-THE-ROWS-CUTOFF', clamped,
-    'markSent ' + (clamped ? 'bounds the hold it hands to sent() by cur.cutoff' : 'hands hold.hold_until straight to sent(), so the row can promise past its own cutoff'));
-  chk('HOLD01-B-TWO-STEP-BOOK-NEVER-REFUSES-A-HELD-TIME', stored <= Date.parse(row.cutoff),
-    'the row says held till ' + words(stored) + ' Central and quotebook.js:375 refuses from ' + words(Date.parse(row.cutoff)) + ' Central');
+  say('     what the row then holds:  hold_until ' + new Date(stored).toISOString() + ' cutoff ' + new Date(storedCut).toISOString()
+    + (travels ? '  (the cutoff travelled: sent() raised it)' : "  (markSent bounds the hold by the row's cutoff)"));
+  /* W2's reading in this instrument: the cutoff the row ends up with was RAISED, never lowered */
+  say('     the cutoff moved ' + words(Date.parse(row.cutoff)) + ' -> ' + words(storedCut) + ' Central (it may only ever go up)');
+  chk('HOLD01-B-TWO-STEP-BOOK-NEVER-REFUSES-A-HELD-TIME', stored <= storedCut && storedCut >= Date.parse(row.cutoff),
+    'the row says held till ' + words(stored) + ' Central and the cutoff the row ends up with is ' + words(storedCut)
+    + ' Central, which the book refuses from; it was ' + words(Date.parse(row.cutoff)) + ' and may only ever go up');
   chk('HOLD01-B-TWO-STEP-NEVER-SHORTER', stored >= Date.parse(row.hold_until) && stored >= Date.parse(todayAtSent.hold_until),
     'the row held to ' + words(Date.parse(row.hold_until)) + ' and now holds to ' + words(stored) + ' Central; today (' + BASEREF + ') gives ' + words(Date.parse(todayAtSent.hold_until)) + ' Central');
   chk('HOLD01-B-TWO-STEP-TAKES-THE-SENT-TIME-RULE', same(stored, { y: 2026, mo: 10, d: 7, h: 12, mi: 0 }),
     'a quote created before 3:00 PM and SENT after it must take the SENT-time rule (' + wanted({ mo: 10, d: 7, h: 12, mi: 0 }) + '); the row takes ' + words(stored) + ' Central. ' +
     (stored < Date.parse(recomputed.hold_until)
-      ? 'holdFor gives ' + words(Date.parse(recomputed.hold_until)) + ' and the row cannot carry it: the cutoff does not travel with the hold at /sent (quotebook.js sent()), which is outside this round\'s write grant — see Bridge\\IGNITE-WORKER-HOLD-01.1-2026-10-07.txt'
+      ? 'holdFor gives ' + words(Date.parse(recomputed.hold_until)) + ' and the row cannot carry it: the cutoff does not travel with the hold at /sent (quotebook.js sent())'
       : ''));
 }
 say('');
@@ -247,7 +268,11 @@ say('--- C · NOTHING ELSE MOVED: no hold arithmetic and no customer word outsid
   const untracked = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: REPO, encoding: 'utf8' })
     .split(/\r?\n/).filter(Boolean).map((l) => l.slice(3).replace(/^"|"$/g, ''));
   const changed = [...new Set([...tracked, ...untracked])].sort();
-  const allowed = (p) => p === 'worker/src/quotes.js' || p.startsWith('worker/test/');
+  /* RE-CUT by WORKER-HOLD-01.1: the grant WIDENED by exactly one file. WORKER-HOLD-01 could not touch
+     quotebook.js, so this list was quotes.js + the test dir; the .1 ignite grants quotebook.js sent() and
+     names it THE GRANT EXTENSION. Widened to the .1 grant and no further — page.js, page-words.js and
+     biztime.js stay read-only and any stray file outside these three paths still reds this clause. */
+  const allowed = (p) => p === 'worker/src/quotes.js' || p === 'worker/src/quotebook.js' || p.startsWith('worker/test/');
   chk('HOLD01-C-ONLY-QUOTES-JS-AND-THE-TEST-DIR-MOVED', changed.length > 0 && changed.every(allowed),
     'git diff --name-only ' + BASEREF + ' + git status --porcelain -uall -> ' + (changed.length ? changed.join(' , ') : '(nothing)') + (changed.every(allowed) ? '' : ' — OUTSIDE THE GRANT: ' + changed.filter((p) => !allowed(p)).join(' , ')));
 

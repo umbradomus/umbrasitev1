@@ -438,21 +438,25 @@ export async function markSent(env, jobId, version, sentIso, nowIso) {
   const cur = (await b.job(jobId, nowIso)).rows.find((r) => r.version === version);
   if (!cur) return { status: 404, body: { error: 'not_found' } };
   const hold = holdFor(allVisits(cur), cur.created_at, sentIso, cur.short_notice);
-  /* D-CEO11-10, the door: the row's `cutoff` is written only by the INSERT (quotebook.js:333) — `sent()` carries
-     sent_at and hold_until and nothing else — so a hold lifted past the cutoff this row already holds would be a
-     promise quotebook.js:375 refuses. Until the cutoff travels with the hold at /sent, the hold this row takes is
-     bounded by the cutoff this row carries. It is never shorter than the hold the row already had, and a quote
-     created and sent in the same breath (every quote the Flux makes) takes the whole promise at create.
-     Bridge\IGNITE-WORKER-HOLD-01.1-2026-10-07.txt is the one line that closes the gap. */
-  const holdUntil = new Date(Math.min(Date.parse(hold.hold_until), Date.parse(cur.cutoff))).toISOString();
-  const r = await b.sent(jobId, version, sentIso, holdUntil);
+  /* D-CEO11-10, the door, CLOSED by WORKER-HOLD-01.1: THE CUTOFF TRAVELS WITH THE HOLD. `sent()` now takes it
+     and raises the row's own `cutoff` to it — never lowers it, and that raise is done inside sent()'s own
+     transaction off the row itself, not here, where a stale read could lower it. So a quote whose link was made
+     before 3:00 PM Central and whose text went out at or after it takes the SENT-time promise, and the book
+     still never refuses a time the page says is held.
+     The hold goes in UNBOUNDED, and that is safe without re-reading anything: holdFor already bounds it by the
+     short-notice floor, and the `cutoff` it hands back is, by its own `Math.max`, never earlier than the
+     `hold_until` it hands back. The clamp against `cur.cutoff` that stood here until the cutoff could travel
+     came out in the same edit that made it travel — a brake left on after the fix hides the fix. */
+  const r = await b.sent(jobId, version, sentIso, hold.hold_until, hold.cutoff);
   if (r.error === 'not_found') return { status: 404, body: { error: 'not_found' } };
   if (r.error) return { status: 409, body: { error: r.error, ...(r.newest ? { newest: r.newest } : {}) } };
   const rec = await stampSafe(env, jobId, nowIso);
   return {
     status: 200,
     body: {
-      ok: true, version, sent_at: sentIso, hold_until: holdUntil, cutoff: cur.cutoff,
+      /* W4 · the row took a NEW cutoff, so reporting `cur.cutoff` here would be a lie the API tells. Both of
+         these are read back off the row `sent()` wrote, inside its own transaction: what was ACTUALLY stored. */
+      ok: true, version, sent_at: sentIso, hold_until: r.row.hold_until, cutoff: r.row.cutoff,
       record: rec ? { status: rec.status, quoted_at: rec.quoted_at, minutes_to_quote: rec.minutes_to_quote, quote_amount: rec.quote_amount } : null,
     },
   };
