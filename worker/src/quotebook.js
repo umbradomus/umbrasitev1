@@ -339,15 +339,26 @@ export class QuoteBook extends DurableObject {
     });
   }
 
-  /** "I sent it." The hold is recomputed by the Worker from sent_at and handed in. */
-  sent(jobId, version, sentAt, holdUntil) {
+  /** "I sent it." The hold AND THE CUTOFF are recomputed by the Worker from sent_at and handed in.
+      D-CEO11-10 · WORKER-HOLD-01.1: THE CUTOFF TRAVELS WITH THE HOLD, so a quote whose link was made before
+      3:00 PM Central and whose text went out at or after it can carry the SENT-time promise. Until this, the
+      cutoff was written once by create's INSERT and never again, so a hold lifted past it was a promise
+      `_state` then refused as too_close.
+      THE CUTOFF ONLY EVER GOES UP. The book reads it to REFUSE — too_close in `_state`, and the Accept road —
+      so a cutoff LOWERED here is a booking taken away from a customer who is still holding the link. The raise
+      is done HERE, inside the transaction, off this row's own `cutoff`, and never in the caller, where a stale
+      read could lower it. A caller that hands no cutoff (or an unparseable one) leaves the column exactly as
+      it was. No DDL: the `cutoff` column is create's own. */
+  sent(jobId, version, sentAt, holdUntil, cutoff) {
     return this.ctx.storage.transactionSync(() => {
       const row = this._rowByJob(jobId, version);
       if (!row) return { error: 'not_found' };
       if (row.status === 'withdrawn') return { error: 'withdrawn' };
       const newest = this._newest(jobId);
       if (newest.version !== version) return { error: 'not_current', newest: newest.version };
-      this._bump(row.token_hash, 'sent_at = ?, hold_until = ?', [sentAt, holdUntil]);
+      /* W2 · Max, never assign: the later of the row's own cutoff and the one handed in. */
+      const newCutoff = cutoff && Date.parse(cutoff) > Date.parse(row.cutoff) ? cutoff : row.cutoff;
+      this._bump(row.token_hash, 'sent_at = ?, hold_until = ?, cutoff = ?', [sentAt, holdUntil, newCutoff]);
       return { ok: true, row: this._row(row.token_hash) };
     });
   }
