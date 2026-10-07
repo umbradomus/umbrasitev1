@@ -103,6 +103,15 @@
   /* ------------------------------------------------------------------ a tap row
      One shape for every tap on this form: a big label, the box inside it, a mark,
      the words. 44pt targets and 16px text come from site.css. */
+  /* ============================================================ SITE-FIX-15 · D3
+     THE WORDS ON THE OPTION ARE THE PAGE'S OWN SPANISH. One table, in the words
+     file, keyed by the value that is posted: the label he reads changes, the
+     value the request carries does not. English has no table and needs none. */
+  function optWords(s) {
+    var m = W.optWords, k = String(s == null ? '' : s);
+    return (m && Object.prototype.hasOwnProperty.call(m, k)) ? m[k] : k;
+  }
+
   function tapRow(name, value, label, sub, multi) {
     var li = el('li');
     var lab = el('label', 'v2opt ' + (multi ? 'v2checkbox' : 'v2radio') + ' ch-tap');
@@ -182,7 +191,7 @@
         var ul = el('ul', 'v2opts');
         var nm = 'a_' + tl.key + '_' + qq.key;
         for (var o = 0; o < qq[LANG].opts.length; o++) {
-          ul.appendChild(tapRow(nm, qq[LANG].opts[o], qq[LANG].opts[o], '', !!qq.multi));
+          ul.appendChild(tapRow(nm, qq[LANG].opts[o], optWords(qq[LANG].opts[o]), '', !!qq.multi));
         }
         block.appendChild(ul);
         block.setAttribute('data-answer-name', nm);
@@ -257,9 +266,9 @@
       b.appendChild(el('p', 'v2q ch-small-q', rows[r].q));
       var rl = el('ul', 'v2opts ch-inline');
       for (var ro = 0; ro < rows[r].opts.length; ro++) {
-        rl.appendChild(tapRow(rows[r].name, rows[r].opts[ro], rows[r].opts[ro], '', false));
+        rl.appendChild(tapRow(rows[r].name, rows[r].opts[ro], optWords(rows[r].opts[ro]), '', false));
       }
-      rl.appendChild(tapRow(rows[r].name, W.notSure, W.notSure, '', false));
+      rl.appendChild(tapRow(rows[r].name, W.notSure, optWords(W.notSure), '', false));
       b.appendChild(rl);
       detailsStep.appendChild(b);
     }
@@ -691,7 +700,9 @@
       }
       if (on[i].legacy) {
         var legacyNames = ['problem_area', 'ceiling_count_band', 'ceiling_biggest', 'ceiling_condition',
-          'ceiling_surface', 'walls_count_band', 'walls_biggest', 'walls_condition', 'walls_same', 'walls_surface'];
+          'ceiling_surface', 'walls_count_band', 'walls_biggest', 'walls_condition', 'walls_same', 'walls_surface',
+          /* SITE-FIX-15 D2 - answered on every drywall path, on no review line */
+          'paint_on_site'];
         for (var L = 0; L < legacyNames.length; L++) {
           var lv = tappedLabels(legacyNames[L]);
           if (!lv.length) continue;

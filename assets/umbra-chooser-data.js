@@ -279,13 +279,24 @@
       photoMany: ' fotos',
       photoTile: 'Esta foto es de',
       detailsHeading: 'Unas últimas cosas',
-      replyHow: '¿Cómo le contestamos?',
+      /* SITE-FIX-15 D4 - was '¿Cómo le contestamos?', one letter from screen 12's
+         '¿Cómo le contactamos?'. This one asks how the answer is sent. */
+      replyHow: '¿Cómo le enviamos la respuesta?',
       replyHowOpts: ['Mensaje de texto', 'Llamada'],
       howSoon: '¿Qué tan pronto?',
       howSoonOpts: ['Esta semana', 'Cuando pueda', 'Es urgente'],
       whoseHouse: '¿De quién es la casa?',
       whoseHouseOpts: ['Mia', 'Rentada', 'De familia o de un amigo'],
       notSure: 'No estoy seguro',
+      /* SITE-FIX-15 D3 - the page's own Spanish for an option's words. The key is
+         the value that is posted and never changes; the value is what he reads. */
+      optWords: {
+        'Si': 'Sí',
+        'Mia': 'Mía',
+        'Sólo un parche o una parte': 'Solo un parche o una parte',
+        'Sólo está gastada': 'Solo está gastada',
+        'No estoy seguro': 'No sé'
+      },
       micHint: 'Toque el micrófono de su teclado para hablar.',
       gotIt: 'Esto es lo que recibimos'
     }
