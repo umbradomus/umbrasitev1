@@ -104,10 +104,21 @@
      twin is taken down and the control the customer tapped — the one the browser posts
      FIRST — is the single carrier of its answer. The value sent does not move: the
      twin held the same string the tapped control holds. */
+  /* A LIVE CARRIER IS ONE THE BROWSER WILL ACTUALLY POST FOR *THIS* FORM. Standing inside
+     the form is not enough, and getting that wrong would be the one way this clause could
+     LOSE an answer instead of un-doubling it: the twin would be taken down for a name
+     nothing sends. Three things bar a control from the submission, and all three are
+     checked - `disabled`, a `form=` attribute pointing at another form or at none (this
+     page has one: `walls_same` carries form="v2-not-sent" on purpose), and sitting inside
+     a disabled <fieldset>, which does NOT show up in the control's own .disabled. */
   function liveCarrier(name) {
     var bs = form.querySelectorAll('[name="' + name + '"]');
     for (var i = 0; i < bs.length; i++) {
-      if (bs[i].type !== 'hidden' && !bs[i].disabled) return true;
+      var b = bs[i];
+      if (b.type === 'hidden' || b.disabled) continue;
+      if (b.form !== form) continue;
+      if (b.closest && b.closest('fieldset[disabled]')) continue;
+      return true;
     }
     return false;
   }
