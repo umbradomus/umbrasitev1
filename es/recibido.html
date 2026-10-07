@@ -70,10 +70,11 @@
       </div>
 
       <!-- Solo aparece cuando el Worker mandó al navegador aqui con ?id= y ?t=. Sin eso, la pagina queda igual que antes. -->
-      <!-- road XW: un botón claro para el enlace de estado (compartirlo consigo mismo, o copiarlo) -->
+      <!-- SITE-FIX-17 (E-2, 2026-10-07): el botón de road XW prometía un enlace a una página que contesta "se está
+           construyendo" para cualquier id. Hasta que esa página conteste por id, aquí no se promete ningún enlace:
+           queda el número de solicitud y el camino que sí funciona hoy. -->
       <div id="jobnote" hidden style="margin-top:1.2rem">
-        <p style="margin:0"><a class="btn wide" id="joblink" href="/es/estado">Guardar mi enlace de estado</a></p>
-        <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">Le muestra en qué paso va su solicitud, cuando quiera. Su número de solicitud es <span id="jobid"></span>.</p>
+        <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">Su número de solicitud es <span id="jobid"></span>. Responda al mensaje de Drew cuando quiera y le decimos en qué paso va.</p>
         <p class="fine sent-copy" id="sent-copy" style="margin:.5rem 0 0"></p>
       </div>
       <ol class="track" style="margin-top:2rem" aria-label="Estado">
@@ -165,22 +166,10 @@
   // El Worker manda el id del registro y su token privado. Sin ellos no pasa nada.
   // SITE-FIX-11 clausula 2: ya existe la pagina de estado en espanol, /es/estado, gemela de /status.
   if (okId && jobTok) {
+    /* SITE-FIX-17 (E-2): el número de solicitud, nada que guardar. El token que mandó el Worker sigue siendo lo que
+       hace aparecer este bloque, y ya no se pone en ningún enlace. */
     $('jobid').textContent = jobId;
-    $('joblink').href = '/es/estado?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
     $('jobnote').hidden = false;
-    /* road XW · "Guardar mi enlace de estado": el menú de compartir del teléfono; si no, se copia; si no, se abre */
-    $('joblink').addEventListener('click', function (e) {
-      var url = new URL($('joblink').getAttribute('href'), location.href).href;
-      if (navigator.share) {
-        e.preventDefault();
-        navigator.share({ title: 'Mi solicitud con Umbra Domus', url: url }).catch(function () {});
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        e.preventDefault();
-        navigator.clipboard.writeText(url).then(function () {
-          $('jobsaid').textContent = 'Copiado. Péguelo en sus notas o en un mensaje para usted.';
-        }, function () { location.href = url; });
-      }
-    });
   }
 })();
 </script>
