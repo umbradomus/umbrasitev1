@@ -46,11 +46,37 @@
 
   var OK_PATH = String(window.UMBRA_EMAIL_OK_PATH || '/assets/email-copy-ok.html');
   /* EMAIL-01 (2026-09-20): was 25000. U-0006 sat 21 s on this leg before the
-     real post began — longer than a person waits. 8 s is the ceiling now; a
+     real post began — longer than a person waits. 8 s was the ceiling then; a
      copy that has not redirected home by then is reported `no` and the
      Worker's fallback fires. The number spent here is posted as email_copy_ms
-     and, since EMAIL-01, kept on the record. */
-  var CAP_MS  = Number(window.UMBRA_EMAIL_CAP_MS || 8000);
+     and, since EMAIL-01, kept on the record.
+
+     WORKER-EMAIL-01 (2026-10-07): 8000 → 15000, because the deadline started
+     cutting copies that WERE delivered. U-0018 lost its email at this line and
+     nowhere else: the page reported `no` at 8071 ms, the Worker's fallback
+     fired, and FormSubmit refused that fallback `429 Rate Limit Exceeded` —
+     the answer it has given every Worker send since U-0003, because a Worker
+     leaves from Cloudflare's shared address. So the copy the page had already
+     handed over was written off in favour of a channel that cannot deliver at
+     all. Measured on a stub (Bridge/WORKER-EMAIL-01/RA-browser.txt): the walk
+     at main's tip reproduces U-0018's record field for field, 8013 ms and
+     `email_lost`, the moment the mail endpoint takes 8.1 s — and the base
+     before the 10-06 deploys loses it in exactly the same way, so no deploy
+     caused this (RA-before.txt).
+     WHY 15000 AND NOT ANOTHER NUMBER — what the records actually spent on this
+     leg: 1413 (U-0013), 1637 (U-0014), 1366 (U-0015), 1098 (U-0016) through
+     2026-10-01, then 5705 (U-0019) and 8071 (U-0018) on 2026-10-07. U-0019 ran
+     on freshly re-fetched assets and still spent 5705 ms, so the slowing is in
+     the round trip, not in a stale script. 15 s is 1.86× the slowest copy ever
+     measured, and it keeps the worst a person can wait well under the 21 s
+     EMAIL-01 found was longer than a person waits. It is a measured trade, not
+     a principle: a copy slower than this is still reported `no`, and the only
+     thing that removes the trade is a Worker mail road FormSubmit does not
+     refuse — which is Drew's call, not this file's.
+     THE NUMBER ONLY REACHES A RETURNING BROWSER IF ?v= MOVES: the assets are
+     served `Cache-Control: public, max-age=604800`, so every page that loads
+     this file asks for it at ?v=4 from this round on. */
+  var CAP_MS  = Number(window.UMBRA_EMAIL_CAP_MS || 15000);
   var OK_URL  = location.origin + OK_PATH;
 
   /* EMAIL-01 · THE REASON EVERY LIVE SUBMIT SAID `no` (measured 00:50:24Z
