@@ -1575,6 +1575,12 @@ new_sqlite_classes = ["QuoteBook"]
       const bt = textOf((await getQ(x2.code, CT(...WED, 21, 3))).text);
       ok(bt.includes('Llegada entre las 4 y las 6 p.m. · una hora') && bt.includes('Llegada entre las 4 y las 6 p.m. · unas 4 horas') && !/about|hours?\b/.test(bt), 'BOOKED · road XW: visit_len is Spanish (" · una hora", " · unas 4 horas")', bt.slice(0, 400));
       seen.visit_len = (seen.visit_len || []).concat('BOOKED · road XW');
+      /* SITE-FIX-17 · E-1: ONE time offered and the job still needs two visits - every option card says the second day
+         in Spanish ("volvemos al día siguiente") with its own length, and the sentence under the button says both
+         visits are booked. Until this round the page showed the first visit only, in both languages. */
+      const XW3 = [win('2026-12-21', '16:00', '18:00')];
+      const x3 = await quoted('Cecilia Xicotencatl', 'Mancha de agua en el techo', [XW3[0]], { extra: { ...xwExtra, step_count: 3, options: [{ windows: XW3 }] } });
+      expectIn('OPEN · road XW, one time and two visits (SITE-FIX-17 E-1)', (await getQ(x3.code, CT(...WED, 21, 4))).text, ['back_next', 'small_pair']);
     }
     const unexercised = Object.keys(E).filter((k) => !seen[k] && !['hi', 'statute_intro', 'when', 'booked_window', 'title', 'h_notices', 'booked_confirm'].includes(k));
     eq(unexercised.length, 0, 'every Spanish string was seen on a page or in the calendar file (hi and statute_intro are checked in (16) and by hand; when, booked_window, title, and since road W h_notices and booked_confirm, leave the page by design)', unexercised.join(', '));

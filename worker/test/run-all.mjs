@@ -524,8 +524,16 @@ async function runSuites({ browser, W, stub, relay, gate, photoA, photoB, shaA, 
     const shown = await page.evaluate(() => document.getElementById('jobnote') && !document.getElementById('jobnote').hidden
       ? document.getElementById('jobnote').textContent.replace(/\s+/g, ' ').trim() : null);
     ok(shown && shown.includes('Your request number is ' + id), 'the confirmation page shows the request number', shown);
-    const href = await page.evaluate(() => document.getElementById('joblink') && document.getElementById('joblink').getAttribute('href'));
-    ok(href && href.includes('/status?id=') && href.includes('t='), 'the confirmation page links to the status page with id and token', href);
+    /* SITE-FIX-17 · E-2: this clause used to REQUIRE the status link, and that link went to a page which answered every
+       id with "It's being built". The promise came off the page rather than the page being built in a hurry, so the
+       clause is now the ban itself: nothing on the confirmation page promises a status link, and it says what to do. */
+    const promise = await page.evaluate(() => {
+      const m = document.querySelector('main');
+      const n = document.getElementById('jobnote');
+      return { html: m ? m.innerHTML : '', note: n ? n.textContent.replace(/\s+/g, ' ').trim() : '' };
+    });
+    eq(/joblink|status link|\/status\?id=/i.test(promise.html), false, 'the confirmation page promises no status link (SITE-FIX-17 E-2)', promise.html.slice(0, 240));
+    ok(/Reply to Drew's text/.test(promise.note), 'it tells them to reply to the text instead', promise.note.slice(0, 160));
 
     /* the record */
     const rec = await json(`${W}/api/job/${id}?t=${encodeURIComponent(tokenA)}`);
