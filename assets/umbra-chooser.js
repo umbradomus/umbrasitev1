@@ -93,10 +93,28 @@
     }
     return e;
   }
+  /* ============================================================ SITE-FIX-16 · A
+     ONE INPUT PER NAME, SO AN ANSWER IS POSTED ONCE. A tap row already puts a real
+     checkbox or radio in this form under the answer's own name, and the browser posts
+     every control it finds there — so a hidden twin of that same name, made here,
+     posted the answer a SECOND time: tiles "hole" then "hole", reply_how "Text" then
+     "Text" (on /es "Mensaje de texto" twice), and the Worker stored ["hole","hole"]
+     for the Flux to print "hole,hole". A hidden twin is made only for a name NO live
+     control carries (answers, photo_tiles, the address fields); where one does, any
+     twin is taken down and the control the customer tapped — the one the browser posts
+     FIRST — is the single carrier of its answer. The value sent does not move: the
+     twin held the same string the tapped control holds. */
+  function liveCarrier(name) {
+    var bs = form.querySelectorAll('[name="' + name + '"]');
+    for (var i = 0; i < bs.length; i++) {
+      if (bs[i].type !== 'hidden' && !bs[i].disabled) return true;
+    }
+    return false;
+  }
   function setHidden(name, value) {
     var v = String(value == null ? '' : value);
     var e = form.querySelector('input[type="hidden"][name="' + name + '"]');
-    if (!v) { if (e && e.parentNode) e.parentNode.removeChild(e); return; }
+    if (!v || liveCarrier(name)) { if (e && e.parentNode) e.parentNode.removeChild(e); return; }
     hidden(name).value = v;
   }
 
