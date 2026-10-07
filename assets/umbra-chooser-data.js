@@ -223,6 +223,8 @@
       reviewSend: 'Send it — we reply within 2 hours.',
       replyBy: 'We’ll reply by ',
       tomorrow: ' tomorrow',
+      /* SITE-FIX-15 B - after hours only; % is the time the reply-by line names */
+      sendBy: 'Send it — we reply by %.',
       missing: 'We still need ',
       nothingYet: 'Nothing chosen yet.',
       sTiles: 'What’s wrong',
@@ -258,6 +260,8 @@
          itself, and this line used to double it — 'antes de las las 3:05 p.m.' */
       replyBy: 'Le contestamos antes de ',
       tomorrow: ' de mañana',
+      /* SITE-FIX-15 B - fuera de horario; % es la hora que nombra la línea de respuesta */
+      sendBy: 'Enviar — le contestamos antes de %',
       missing: 'Todavía nos falta ',
       nothingYet: 'Todavía no ha escogido nada.',
       sTiles: 'Qué está mal',

@@ -545,11 +545,26 @@
     else sendStep.appendChild(reviewHost);
   }
 
-  function replyByLine() {
-    if (!window.UmbraSent || typeof window.UmbraSent.due !== 'function') return '';
+  /* SITE-FIX-15 B - ONE reading of the reply clock per review draw: the line and the
+     Send button are two readings of the same answer, never two clocks. */
+  function dueNow() {
+    if (!window.UmbraSent || typeof window.UmbraSent.due !== 'function') return null;
     var d = window.UmbraSent.due(Date.now());
-    if (!d || !d.at) return '';
+    return (d && d.at) ? d : null;
+  }
+  function replyByLine(d) {
+    if (!d) return '';
     return W.replyBy + d.at + (d.tomorrow ? W.tomorrow : '');
+  }
+  /* The button promised two hours under a line that said tomorrow morning. When the
+     wait has been pushed past two hours the button names the line's own time; inside
+     the open hours it keeps its own words, to the letter. */
+  function drawSendButton(d) {
+    var b = form.querySelector('[data-v2send]');
+    if (!b) return;
+    if (!b.hasAttribute('data-send-words')) b.setAttribute('data-send-words', b.textContent);
+    var own = b.getAttribute('data-send-words');
+    b.textContent = (d && d.shifted && W.sendBy) ? W.sendBy.replace('%', d.at) : own;
   }
 
   function group(title, lines, editKey) {
@@ -646,7 +661,9 @@
     reviewHost.textContent = '';
     /* SITE-FIX-01.1 · A6.7 as the ignite cuts it: the reply-by TIME sits BESIDE THE
        PROMISE, which is the line at the head of this screen. So it goes first, not last. */
-    var by = replyByLine();
+    var dueRead = dueNow();
+    drawSendButton(dueRead);
+    var by = replyByLine(dueRead);
     if (by) {
       var pBy = el('p', 'ch-replyby', by);
       pBy.setAttribute('data-reply-by', '1');

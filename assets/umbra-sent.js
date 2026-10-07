@@ -74,12 +74,16 @@
     return ES ? (h12 === 1 ? 'la ' : 'las ') + h12 + ':' + mm + ' ' + (h < 12 ? 'a.m.' : 'p.m.')
       : h12 + ':' + mm + ' ' + (h < 12 ? 'AM' : 'PM');
   }
-  /** When the reply is due: { at: "9:00 AM" | "las 9:00 a.m.", tomorrow } — two business hours from now. */
+  /** When the reply is due: { at: "9:00 AM" | "las 9:00 a.m.", tomorrow, shifted } — two business
+      hours from now. SITE-FIX-15 B: shifted is true when that is LATER than two hours from now -
+      the shop was closed and the wait was pushed to the morning. The reply-by line and the Send
+      button both read it from this one return, so they can never name two different times. */
   function due(nowMs) {
     if (FMT) {
       try {
         var d = bizAdvance(nowMs, REPLY_MIN), a = parts(d), n = parts(nowMs);
-        return { at: words(a.h, a.mi), tomorrow: a.y !== n.y || a.mo !== n.mo || a.d !== n.d };
+        return { at: words(a.h, a.mi), tomorrow: a.y !== n.y || a.mo !== n.mo || a.d !== n.d,
+          shifted: d - nowMs > REPLY_MIN * 60000 + 60000 };
       } catch (e) { /* the phone's own clock below */ }
     }
     /* no time zones on this phone: the old clamp on its own clock */
@@ -87,7 +91,8 @@
     var close = new Date(now.getFullYear(), now.getMonth(), now.getDate(), CLOSE_H, 0, 0, 0);
     var early = now.getHours() < OPEN_H;
     if (early || by > close) by = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (early ? 0 : 1), OPEN_H, REPLY_MIN, 0, 0);
-    return { at: words(by.getHours(), by.getMinutes()), tomorrow: by.getDate() !== now.getDate() };
+    return { at: words(by.getHours(), by.getMinutes()), tomorrow: by.getDate() !== now.getDate(),
+      shifted: by.getTime() - nowMs > REPLY_MIN * 60000 + 60000 };
   }
 
   /** The memory for this request, or null. The first thank-you page that reads it ties it to its request number,
