@@ -40,30 +40,44 @@ function tree(ref) {
   return out;
 }
 
-/* the pages a visitor loads: tracked .html outside worker/ */
+/* EVERYTHING THAT ASKS THE BROWSER FOR A FILE: every tracked .html, and every tracked
+   .css too - a stylesheet's own url(...) is a fetch the browser makes and caches, and a
+   font or background whose bytes move while site.css does not would otherwise be invisible
+   here. worker/ is the Worker's own source and is not served to a browser. */
 function pages(ref, t) {
-  return [...t.keys()].filter((p) => p.endsWith('.html') && !p.startsWith('worker/'));
+  return [...t.keys()].filter((p) => (p.endsWith('.html') || p.endsWith('.css')) && !p.startsWith('worker/'));
 }
 
 /* every local URL a page ASKS THE BROWSER FOR, by the file it points at.
-   An HTML comment is taken out first - /assets/umbra-menu.js is named in a comment on
-   six pages and no browser ever fetches it - and only a quoted src=, href= or content=
-   is read, so a src=, a stylesheet href= and an og:image content= are all caught the
-   same way and prose is not. */
-const LOCAL = /^\/(?:assets\/[A-Za-z0-9._\-/]+|site\.config\.js)(?:\?[^"]*)?$/;
-const ATTR = /(?:src|href|content)\s*=\s*"([^"]*)"/gi;
+   An HTML comment is taken out first - /assets/umbra-menu.js is named in a comment on six
+   pages and no browser ever fetches it. Then every attribute that can name a file the
+   browser fetches is read, single- or double-quoted: src, href, content (og:image),
+   srcset and imagesrcset (every candidate in the list, each with its own ?v=), poster,
+   and the url(...) inside a style attribute or a <style> block. A URL counts whether it
+   is written site-relative (/assets/x.js) or absolute against this site's own origin
+   (https://umbradomus.com/assets/x.js) - the browser caches both under the same file. */
+const ORIGIN = /^https?:\/\/(?:www\.)?umbradomus\.com/i;
+const LOCAL = /^\/(?:assets\/[A-Za-z0-9._\-/]+|site\.config\.js)(?:\?[^"'\s]*)?$/;
+const ATTR = /(?:src|href|content|srcset|imagesrcset|poster)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+const CSSURL = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)'"\s]+))\s*\)/gi;
 function urlsOf(text) {
   const clean = text.replace(/<!--[\s\S]*?-->/g, ' ');
   const out = new Map();                         /* file path -> Set of full URLs */
-  let m;
-  while ((m = ATTR.exec(clean)) !== null) {
-    const u = m[1].trim();
-    if (!LOCAL.test(u)) continue;
+  const add = (raw) => {
+    let u = String(raw).trim().replace(ORIGIN, '');
+    if (!LOCAL.test(u)) return;
     const file = u.split('?')[0].slice(1);
     if (!out.has(file)) out.set(file, new Set());
     out.get(file).add(u);
+  };
+  /* a srcset is a comma-separated list of "url 2x" candidates - take every url */
+  const spread = (v) => String(v).split(',').map((c) => c.trim().split(/\s+/)[0]).filter(Boolean);
+  for (const re of [ATTR, CSSURL]) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(clean)) !== null) for (const v of spread(m[1] ?? m[2] ?? m[3] ?? '')) add(v);
+    re.lastIndex = 0;
   }
-  ATTR.lastIndex = 0;
   return out;
 }
 
@@ -98,14 +112,31 @@ for (const f of files) {
   if (shaA === shaB) { unchanged.push(f); continue; }
 
   const pagesB = askB.get(f) || new Map();
+  /* THE CACHE IS KEYED BY URL, NOT BY PAGE. A visitor who picked up /assets/site.css?v=6 on
+     any page at refA is handed those stale bytes on EVERY page that asks for that same URL
+     at refB - including a page that is brand new, or that did not load the file before. So
+     the comparison is against the union of every URL this file was asked for at refA, on
+     any page. Comparing a page only against its own past (which is the obvious thing to
+     write) silently cleared five ES pages that were added after refA and were asking for
+     a week-old stylesheet by its old URL. */
+  const urlsA = new Set([...(askA.get(f) || new Map()).values()].flatMap((s) => [...s]));
   const stale = [];
   for (const [pg, urlsB] of pagesB) {
-    const urlsA = (askA.get(f) || new Map()).get(pg);
-    if (!urlsA) continue;                        /* the page did not load it before */
     for (const u of urlsB) if (urlsA.has(u)) stale.push(pg + '  ' + u);
   }
   if (stale.length) bad.push({ f, shaA, shaB, stale, pagesB });
   else bumped.push({ f, shaA, shaB, pagesB });
+}
+
+/* ONE FILE, ONE URL AT THE TIP. site.css was asked for at ?v=6, ?v=7 AND ?v=9 at once, so
+   one file was three cached copies and which bytes a visitor ran depended on which page
+   they landed on first - and a bump on some pages but not others reads exactly like that.
+   Nothing above can see it when the bytes happen not to move inside the window, so it is
+   asked separately, of refB alone. */
+const split = [];
+for (const [f, byPage] of askB) {
+  const urls = new Set([...byPage.values()].flatMap((s) => [...s]));
+  if (urls.size > 1) split.push({ f, urls: [...urls].sort(), byPage });
 }
 
 const sh = (s) => String(s).slice(0, 8);
@@ -113,7 +144,8 @@ console.log('check-asset-versions  ' + refA.slice(0, 8) + ' (live) -> ' + refB.s
 console.log('  files a page asks for: ' + files.length
   + ' | bytes unchanged: ' + unchanged.length
   + ' | bytes changed and the URL moved: ' + bumped.length
-  + ' | bytes changed and a page still asks for the old URL: ' + bad.length);
+  + ' | bytes changed and a page still asks for the old URL: ' + bad.length
+  + ' | asked for at more than one URL at the tip: ' + split.length);
 
 for (const b of bumped) {
   console.log('  OK      ' + b.f + '  ' + sh(b.shaA) + ' -> ' + sh(b.shaB)
@@ -125,13 +157,20 @@ for (const b of bad) {
     + '  but ' + b.stale.length + ' page(s) still ask for the old URL:');
   for (const s of b.stale) console.log('            ' + s);
 }
+for (const s of split) {
+  console.log('  FAIL    ' + s.f + '  one file, ' + s.urls.length + ' URLs at the tip: ' + s.urls.join(' '));
+  for (const [pg, urls] of s.byPage) console.log('            ' + pg + '  ' + [...urls].join(' '));
+}
 
-if (bad.length) {
+if (bad.length || split.length) {
   console.log('');
-  console.log('FAIL: ' + bad.length + ' changed file(s) still served from a cached URL: '
+  if (bad.length) console.log('FAIL: ' + bad.length + ' changed file(s) still served from a cached URL: '
     + bad.map((b) => b.f).join(', '));
+  if (split.length) console.log('FAIL: ' + split.length + ' file(s) asked for at more than one URL at the tip: '
+    + split.map((s) => s.f).join(', '));
   process.exit(1);
 }
 console.log('');
-console.log('PASS: every file whose bytes changed is asked for at a new URL on every page that loads it.');
+console.log('PASS: every file whose bytes changed is asked for at a new URL on every page that loads it,');
+console.log('and every file is asked for at exactly one URL.');
 process.exit(0);
