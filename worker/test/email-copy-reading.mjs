@@ -52,6 +52,7 @@ const CUT_BROWSER = Boolean(A['cut-browser']);
 const OUT = String(A.out || path.join(REPO, 'reading.txt'));
 
 const SHIFT = Number(process.env.UMBRA_TEST_PORT_SHIFT || 0);
+const CRLF = String.fromCharCode(13, 10); /* the multipart line break, spelled out so no shell eats it */
 const PORT = {
   /* the Worker on a shifted 48xx port of its own; wrangler's inspector keeps the suites'
      own convention (9229 + a shift), because workerd dies at startup with
@@ -355,7 +356,26 @@ const DONE = LANG === 'es' ? '/es/recibido' : '/request-received';
 const page = await browser.newPage();
 await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
 const reqs = [], errs = [];
-page.on('request', (r) => reqs.push({ at: Date.now(), method: r.method(), url: r.url(), type: r.resourceType() }));
+/* the /intake body, by field NAME only: clause C has to show that nothing else in the
+   request moved, and the only honest way to show it is to read the very body the page
+   hands the Worker. Names and part sizes only - never a value. */
+let intakeBody = null;
+page.on('request', (r) => {
+  reqs.push({ at: Date.now(), method: r.method(), url: r.url(), type: r.resourceType() });
+  if (r.method() === 'POST' && r.url().indexOf('/intake') > 0 && !intakeBody) {
+    const raw = r.postData();
+    if (!raw) { intakeBody = { parts: null, note: 'Chrome did not hand the body over' }; return; }
+    const b = raw.slice(0, raw.indexOf(CRLF));
+    const names = [];
+    if (b) {
+      for (const chunk of raw.split(b)) {
+        const m = chunk.match(/name="([^"]*)"/);
+        if (m) names.push(m[1] + (/filename="[^"]+"/.test(chunk) ? ':file' : ''));
+      }
+    }
+    intakeBody = { parts: names, bytes: raw.length };
+  }
+});
 page.on('response', (r) => {
   for (let i = reqs.length - 1; i >= 0; i--) {
     if (reqs[i].url === r.url() && reqs[i].status === undefined) { reqs[i].status = r.status(); return; }
@@ -507,6 +527,12 @@ for (const c of captured) {
 
 /* ----------------------------------------------------------------- the record */
 say('');
+say('');
+say('--- the /intake body the page handed the Worker (field NAMES and total size only) ---');
+if (!intakeBody) say('  no POST to /intake was seen');
+else if (!intakeBody.parts) say('  ' + intakeBody.note);
+else { say('  ' + intakeBody.bytes + ' bytes  ' + intakeBody.parts.length + ' parts:'); say('  ' + intakeBody.parts.join(', ')); }
+say('');
 say('--- the record the Worker wrote (GET /api/jobs?k=, adminRow) ---');
 let rows = [];
 try {
@@ -543,5 +569,6 @@ fs.writeFileSync(OUT.replace(/\.txt$/, '') + '.parts.json', JSON.stringify({
   label: LABEL, lang: LANG, site: SITE_AT,
   record: rows.map((r) => ({ id: r.id, email_sent: r.email_sent, sent_by: r.sent_by, forwarded_by: r.forwarded_by, forward_failed: r.forward_failed, email_lost: r.email_lost })),
   copies: captured.map((c) => ({ leg: c.leg, parts: c.parts.map((p) => p.name + (p.file ? ':file' : '')) })),
+  intake: intakeBody,
 }, null, 1) + '\n');
 process.exit(0);
