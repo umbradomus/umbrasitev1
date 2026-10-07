@@ -593,6 +593,54 @@
     return miss;
   }
 
+  /* ============================================================ SITE-FIX-15 · A
+     THE REVIEW SAYS THE QUESTION THAT WAS ASKED, AND THE ANSWER HE TAPPED.
+     Three readings of the screen, and nothing else: whether a control was on the
+     screen at all, the words on the option he tapped, and the heading he saw above
+     it. The request is not touched by any of them - what is posted is still the
+     control's own value, set where it has always been set. */
+  function shownIn(node, stop) {
+    for (var n = node; n && n !== stop; n = n.parentNode) {
+      if (n.nodeType === 1 && n.hidden) return false;
+    }
+    return true;
+  }
+  function stepOfEl(e) { return e && e.closest ? e.closest('[data-fstep]') : null; }
+  /* A control on a hidden HALF of a screen was never asked - the "same texture as the
+     ceiling?" question, and the five tiles it stands in for (umbra-intake-v2.js
+     sameTexture()). A question that was never asked gets no line on the review. */
+  function wasAsked(e) { return !!e && shownIn(e, stepOfEl(e) || form); }
+  /* the words on the option he tapped - never the value that is posted */
+  function tapLabel(e) {
+    var lab = e && e.closest ? e.closest('label') : null;
+    var w = lab ? (lab.querySelector('.ch-label') || lab.querySelector('span:not(.v2mark)')) : null;
+    var t = w ? String(w.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    return t || (e ? String(e.value || '') : '');
+  }
+  function tappedLabels(name) {
+    var out = [], bs = boxes(name);
+    for (var i = 0; i < bs.length; i++) if (bs[i].checked && wasAsked(bs[i])) out.push(tapLabel(bs[i]));
+    return out;
+  }
+  function firstAsked(name) {
+    var bs = boxes(name);
+    for (var i = 0; i < bs.length; i++) if (bs[i].checked && wasAsked(bs[i])) return bs[i];
+    return null;
+  }
+  /* the question he really saw: the LAST heading above that control on its own screen
+     that was not hidden. */
+  function askedLabel(e) {
+    if (!e) return '';
+    var step = stepOfEl(e), scope = step || form;
+    var qs = scope.querySelectorAll('.v2q'), out = '';
+    for (var i = 0; i < qs.length; i++) {
+      if (!(qs[i].compareDocumentPosition(e) & 4)) continue;
+      if (!shownIn(qs[i], scope)) continue;
+      out = String(qs[i].textContent || '').replace(/\s+/g, ' ').trim();
+    }
+    return out;
+  }
+
   function drawReview() {
     if (!reviewHost) return;
     reviewHost.textContent = '';
@@ -612,24 +660,23 @@
       for (var q2 = 0; q2 < on[i].questions.length; q2++) {
         var qq = on[i].questions[q2];
         if (!askedOf(on[i].key, qq)) continue;
-        var v = ticked('a_' + on[i].key + '_' + qq.key);
-        if (v.length) tileLines.push('   ' + qq[LANG].q + ' ' + v.join(' · '));
+        var nm = 'a_' + on[i].key + '_' + qq.key;
+        var v = tappedLabels(nm);
+        if (v.length) tileLines.push('   ' + (askedLabel(firstAsked(nm)) || qq[LANG].q) + ' ' + v.join(' · '));
       }
       if (on[i].legacy) {
         var legacyNames = ['problem_area', 'ceiling_count_band', 'ceiling_biggest', 'ceiling_condition',
-          'ceiling_surface', 'walls_count_band', 'walls_biggest', 'walls_condition', 'walls_surface'];
+          'ceiling_surface', 'walls_count_band', 'walls_biggest', 'walls_condition', 'walls_same', 'walls_surface'];
         for (var L = 0; L < legacyNames.length; L++) {
-          var lv = ticked(legacyNames[L]);
+          var lv = tappedLabels(legacyNames[L]);
           if (!lv.length) continue;
-          var sec = form.querySelector('[name="' + legacyNames[L] + '"]');
-          var qEl = sec && sec.closest('[data-fstep]') ? sec.closest('[data-fstep]').querySelector('.v2q') : null;
-          tileLines.push('   ' + (qEl ? qEl.textContent.trim() + ' ' : '') + lv.join(' · '));
+          tileLines.push('   ' + (askedLabel(firstAsked(legacyNames[L])) + ' ').replace(/^ $/, '') + lv.join(' · '));
         }
       }
     }
     reviewHost.appendChild(group(W.sTiles, tileLines.length ? tileLines : [W.nothingYet], 'chooser'));
 
-    var wl = ticked('while_there');
+    var wl = tappedLabels('while_there');
     if (wl.length) reviewHost.appendChild(group(W.sWhile, wl, 'chooser'));
 
     var photos = form.querySelectorAll('[data-photo-list] li');
@@ -653,9 +700,13 @@
 
     if (val('what')) reviewHost.appendChild(group(W.sSentence, [val('what')], 'notes'));
     var last = [];
-    if (ticked('reply_how')[0]) last.push(W.replyHow + ' ' + ticked('reply_how')[0]);
-    if (ticked('how_soon')[0]) last.push(W.howSoon + ' ' + ticked('how_soon')[0]);
-    if (ticked('whose_house')[0]) last.push(W.whoseHouse + ' ' + ticked('whose_house')[0]);
+    var lastLab = { reply_how: W.replyHow, how_soon: W.howSoon, whose_house: W.whoseHouse };
+    var lastNames = ['reply_how', 'how_soon', 'whose_house'];
+    for (var Z = 0; Z < lastNames.length; Z++) {
+      var zv = tappedLabels(lastNames[Z]);
+      if (!zv.length) continue;
+      last.push((askedLabel(firstAsked(lastNames[Z])) || lastLab[lastNames[Z]]) + ' ' + zv[0]);
+    }
     if (last.length) reviewHost.appendChild(group(W.detailsHeading, last, 'details'));
 
     reviewHost.appendChild(group(W.sName, [val('name') || '—'], 'name'));
