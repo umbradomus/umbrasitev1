@@ -686,6 +686,18 @@
        fields the request carries (umbra-menu.js carryShown), in the words the tile
        showed - never a price computed a second time here. No tile tapped, no line. */
     var pickedLabel = val('shown_label'), pickedPrice = val('shown_price');
+    /* A tile the menu prices by text sends no shown_* field at all (the Worker's own
+       shape rule). He still tapped it, so the review names it - the name alone, with
+       no price invented here - and only when THIS tab's tap is the tile the form was
+       prefilled from. No tap in this tab: data-menu-pick is absent and there is no line. */
+    if (!pickedLabel) {
+      var mShown = (window.UmbraMenu && window.UmbraMenu.shown) ? window.UmbraMenu.shown() : null;
+      var mKey = form.getAttribute('data-menu-pick');
+      if (mShown && mShown.label && mKey && mShown.key === mKey) {
+        pickedLabel = mShown.label;
+        pickedPrice = '';
+      }
+    }
     if (pickedLabel && W.youPicked) {
       tileLines.push(W.youPicked.replace('%', pickedLabel + (pickedPrice ? ' · ' + pickedPrice : '')));
     }
