@@ -30,6 +30,21 @@
      longer held for them but is still open. A YES by text is his call and ignores both.
    Every Central wall-clock moment comes from biztime.js's Intl path; the 48 hours are UTC arithmetic.
 
+   THE PROMISE THE CUSTOMER READS IS A FLOOR (D-CEO11-10, CEO seat 11, 2026-10-07, PROVISIONAL — only Drew
+   promotes). A TEST quote sent at 8:07 PM told a customer their times were held until 9:00 PM: fifty-three
+   minutes, because the cutoff was 9:00 PM and the hold is bounded by it. So:
+     promise    = 9:00 PM Central the same day for a quote sent BEFORE 3:00 PM Central; 12:00 noon Central
+                  the NEXT day for one sent at or after 3:00 PM.
+     hold_until = the promise as a FLOOR, never a cap — where the 48-hour-and-cutoff line above already
+                  holds LONGER, the longer one stands (the defect is a hold too short; shortening one is a
+                  new defect).
+     the bound  = the hold never reaches the short-notice floor, the first held time less 12 hours, so it
+                  never outlives the START of the time it holds and the 12 hours are never spent.
+     the door   = the cutoff is lifted to hold_until wherever hold_until is later, never lowered, so the
+                  book (quotebook.js:375) never refuses a time the customer's page says is held.
+   The 48-hour span, the short-notice road's 12 hours and the 9:00 PM-two-days-before cutoff are unchanged:
+   this rule only ever lifts. ONE PLACE COMPUTES IT — holdFor below, and nothing else.
+
    CHANGE ORDERS (road CO, 2026-09-26) — "have that create a new work order that we can get signed before we buy
    anything else". POST /admin/quote/<id> with kind "change" makes one (numbered "Change 1", its own link on the same
    /q/ road, its code made from the job's secret like a quote's); /sent and /cancel take kind "change" too. The customer
@@ -44,7 +59,7 @@
 
 import { getRecord, putRecord, addEvent } from './store.js';
 import { sha256hex, minutesBetween, newToken } from './util.js';
-import { chicagoWall, isOpen } from './biztime.js';
+import { chicagoWall, chicagoParts, isOpen } from './biztime.js';
 import { sendAlert } from './notify.js';
 import { acknowledge } from './alerts.js';
 import { confirmRow, confirmDue } from './confirm.js';
@@ -54,6 +69,7 @@ const BASE62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const CODE_RE = /^[A-Za-z0-9]{22}$/;
 const HOLD_MS = 48 * 3600000;
 const SHORT_NOTICE_MS = 12 * 3600000;
+const PROMISE_HOUR = 15;      /* D-CEO11-10: the Central hour that moves the promise to the next day */
 const LINE_MAX = 400;
 const SCOPE_MAX = 20;
 
@@ -184,6 +200,12 @@ export function windowLabel(w) {
 
 /* ------------------------------------------------------------ the hold */
 
+/** D-CEO11-10's promise for a quote sent at `fromMs`: 9:00 PM Central that day before 3:00 PM, else noon the next. */
+function promisedUntil(fromMs) {
+  const c = chicagoParts(fromMs);
+  return c.h < PROMISE_HOUR ? chicagoWall(c.y, c.mo, c.d, 21, 0) : chicagoWall(c.y, c.mo, c.d + 1, 12, 0);
+}
+
 /**
  * { cutoff, hold_until, short_notice } for these windows, created at `createdIso`, sent at `sentIso`
  * (or not yet). { error } when even the short-notice cutoff has passed.
@@ -200,7 +222,13 @@ export function holdFor(windows, createdIso, sentIso, shortNotice = null) {
     if (shortNotice === null && created >= cutoff) return { error: 'too soon to hold' };
   }
   const from = Date.parse(sentIso || createdIso);
-  const hold = Math.min(from + HOLD_MS, cutoff);
+  /* D-CEO11-10: the promise is a FLOOR (see the head of this file). `Math.max` is why nothing gets shorter,
+     `ceiling` is why the 12 hours are never spent, and the lift of `cutoff` is why the book never refuses a
+     time the page says is held. */
+  const ceiling = windowStartMs(earliest) - SHORT_NOTICE_MS;
+  let hold = Math.min(from + HOLD_MS, cutoff);
+  hold = Math.max(hold, Math.min(promisedUntil(from), ceiling));
+  cutoff = Math.max(cutoff, hold);
   return { cutoff: new Date(cutoff).toISOString(), hold_until: new Date(hold).toISOString(), short_notice: short };
 }
 
@@ -410,14 +438,21 @@ export async function markSent(env, jobId, version, sentIso, nowIso) {
   const cur = (await b.job(jobId, nowIso)).rows.find((r) => r.version === version);
   if (!cur) return { status: 404, body: { error: 'not_found' } };
   const hold = holdFor(allVisits(cur), cur.created_at, sentIso, cur.short_notice);
-  const r = await b.sent(jobId, version, sentIso, hold.hold_until);
+  /* D-CEO11-10, the door: the row's `cutoff` is written only by the INSERT (quotebook.js:333) — `sent()` carries
+     sent_at and hold_until and nothing else — so a hold lifted past the cutoff this row already holds would be a
+     promise quotebook.js:375 refuses. Until the cutoff travels with the hold at /sent, the hold this row takes is
+     bounded by the cutoff this row carries. It is never shorter than the hold the row already had, and a quote
+     created and sent in the same breath (every quote the Flux makes) takes the whole promise at create.
+     Bridge\IGNITE-WORKER-HOLD-01.1-2026-10-07.txt is the one line that closes the gap. */
+  const holdUntil = new Date(Math.min(Date.parse(hold.hold_until), Date.parse(cur.cutoff))).toISOString();
+  const r = await b.sent(jobId, version, sentIso, holdUntil);
   if (r.error === 'not_found') return { status: 404, body: { error: 'not_found' } };
   if (r.error) return { status: 409, body: { error: r.error, ...(r.newest ? { newest: r.newest } : {}) } };
   const rec = await stampSafe(env, jobId, nowIso);
   return {
     status: 200,
     body: {
-      ok: true, version, sent_at: sentIso, hold_until: hold.hold_until, cutoff: cur.cutoff,
+      ok: true, version, sent_at: sentIso, hold_until: holdUntil, cutoff: cur.cutoff,
       record: rec ? { status: rec.status, quoted_at: rec.quoted_at, minutes_to_quote: rec.minutes_to_quote, quote_amount: rec.quote_amount } : null,
     },
   };
