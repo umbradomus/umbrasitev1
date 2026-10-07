@@ -165,6 +165,30 @@ function visitLenWords(b, i, lang) {
   return list ? lengthWords(list[i], lang) : '';
 }
 
+/** road SF17 (E-1, 2026-10-07) · THE VISITS THE ROW SAYS THE JOB NEEDS, PAST THE ONES A SHOWN OPTION CARRIES.
+    The Flux sends one length per visit on its plan (`visit_minutes`, visit 1 first — Bridge/SITE-FIX-17/E1-CONTRACT.txt),
+    and an option may offer a time for the first visit only. A length past that option's own visits is a REAL VISIT the
+    customer agrees to in writing, so the page names it with its length and "we come back the next day" — the words for a
+    visit whose time is not set yet. A length that is not a whole 15–720 minutes is DROPPED: never drawn, never an error
+    (create's guard refuses one today, but a row written before that guard could carry anything). `visit_minutes` holds
+    two at the most, so this is at most one extra visit. */
+function extraVisitMins(b, shown) {
+  const list = b && Array.isArray(b.visit_minutes) ? b.visit_minutes : null;
+  if (!list) return [];
+  return list.slice(shown, 2).filter((m) => Number.isInteger(m) && m >= 15 && m <= 720);
+}
+/** How many visits the page is telling them about: the ones with a time, and the ones the row carries without one. */
+const visitCount = (b, shown) => shown + extraVisitMins(b, shown).length;
+
+/** road SF17 · that visit on an option card: "then we come back the next day · about 4 hours". */
+function cardBackHtml(b, shown, lang, w) {
+  return extraVisitMins(b, shown).map((m) => {
+    const len = lengthWords(m, lang);
+    return `<span class="qvl">${esc(w.ticket_then)} ${esc(w.back_next)}` +
+      (len ? `<span class="qlen"><span class="qsep">${esc(fill(w.visit_len, { len: '' }))}</span>${esc(len)}</span>` : '') + '</span>';
+  }).join('');
+}
+
 /** One visit on an option card, the day in bold: "<b>Mon 9/28</b>, arriving 8–10 AM" · "then <b>Tue 9/29</b>, arriving 11 AM–1 PM".
     road XW: and how long it takes, when the Flux sends it, on a small line of its own under its arrival window
     ("about 4 hours") — on one line with the window it would break "11 AM–1 PM" across two lines on a phone. */
@@ -387,7 +411,13 @@ function ticketVisitsHtml(label, visits, lang, w, b) {
     : `<span class="qthen">${esc(w.ticket_then)}</span> ${esc(dayThen(x.date, lang))}`}</p>` +
     `<p class="qtwin">${esc(fill(w.ticket_arrive, { span: spanOf(x, lang) }))}${visitLenWords(b, i, lang)
       ? `<span class="qlen"><span class="qsep">${esc(fill(w.visit_len, { len: '' }))}</span>${esc(visitLenWords(b, i, lang))}</span>` : ''}</p>`).join('');
-  return `<div class="qtw">${ICON.cal}<div><p class="qtl">${esc(label)}</p>${rows}</div></div>`;
+  /* road SF17 (E-1): then the visits the row carries without a time of their own — the plan's second day, by name */
+  const back = extraVisitMins(b, visits.length).map((m) => {
+    const len = lengthWords(m, lang);
+    return `<p class="qtd"><span class="qthen">${esc(w.ticket_then)}</span> ${esc(w.back_next)}</p>` +
+      (len ? `<p class="qtwin">${esc(len)}</p>` : '');
+  }).join('');
+  return `<div class="qtw">${ICON.cal}<div><p class="qtl">${esc(label)}</p>${rows}${back}</div></div>`;
 }
 
 function frame(lang, state, inner, { bilingual = false, changeTitle = null } = {}) {
@@ -489,7 +519,8 @@ function openPage(env, v, code, nowIso, pickError, lead = false) {
   const all = optionsOf(v);
   const free = all.filter((o) => o.free);
   const taken = v.state === 'taken';
-  const pairs = all.some((o) => o.visits.length > 1);
+  /* road SF17 (E-1): a job of two visits is a pair even when only the first visit has a time */
+  const pairs = all.some((o) => visitCount(b, o.visits.length) > 1);
 
   if (taken && free.length === 0) {
     return wordsPage(200, lang, 'taken', pairs ? w.h_taken_pair : w.h_taken, w.taken_none);
@@ -544,7 +575,7 @@ function openPage(env, v, code, nowIso, pickError, lead = false) {
     form.push(`<fieldset class="qpick"${pickError ? ' aria-describedby="pick-error"' : ''}><legend>${esc(pairs ? w.pick_legend_pair : w.pick_legend)}</legend>`);
     for (const o of offer) {
       form.push(`<label class="qopt"><input type="radio" name="w" value="${esc(o.n)}" required><span class="qov">` +
-        o.visits.map((x, i) => cardVisitHtml(x, i, lang, w, b)).join('') + '</span></label>');
+        o.visits.map((x, i) => cardVisitHtml(x, i, lang, w, b)).join('') + cardBackHtml(b, o.visits.length, lang, w) + '</span></label>');
     }
     form.push('</fieldset>');
   } else if (all.length > 1) {
@@ -564,7 +595,8 @@ function openPage(env, v, code, nowIso, pickError, lead = false) {
 
   parts.push(`<form method="post" action="/q/${esc(code)}/none"><input type="hidden" name="v" value="${esc(v.version)}"><button type="submit" class="qalt">` +
     `${esc(choose ? w.none : plural ? w.none_pair : w.none_one)}</button></form>`);
-  parts.push(`<p class="qsmall">${esc(offer.every((o) => o.visits.length === 1) ? w.small : w.small_pair)}</p>`);
+  /* road SF17 (E-1): with a second visit on the row, accepting books BOTH visits — the sentence says so */
+  parts.push(`<p class="qsmall">${esc(offer.every((o) => visitCount(b, o.visits.length) === 1) ? w.small : w.small_pair)}</p>`);
 
   /* below the buttons: his promise and his insurance (each only if the quote carries it), then the notices */
   const below = [];
@@ -680,7 +712,7 @@ function bookedPage(v, code) {
     `<h1>${esc(w.h_booked)}</h1>`,
     `<p class="qsay">${esc(bookedSummary(bookedWindow(v), v.body && v.body.price, lang))}</p>`,
     `<p class="qhi">${esc(w.booked_done)}</p>`,
-    '<div class="qticket">' + (visits.length ? ticketVisitsHtml(visits.length > 1 ? w.lbl_visits : w.lbl_visit, visits, lang, w, v.body) + '<div class="qtear" aria-hidden="true"></div>' : '') +
+    '<div class="qticket">' + (visits.length ? ticketVisitsHtml(visitCount(v.body, visits.length) > 1 ? w.lbl_visits : w.lbl_visit, visits, lang, w, v.body) + '<div class="qtear" aria-hidden="true"></div>' : '') +
       `<div class="qtt"><p class="qtl">${esc(w.h_price)}</p><p class="qprice" style="font-size:2.1rem">${esc(money(v.body && v.body.price))}</p></div></div>`,
     visits.length ? `<a class="qalt" href="/q/${esc(code)}/calendar.ics">${ICON.cal}<span>${esc(w.add_calendar)}</span></a>` : '',
     `<p class="qsmall">${esc(w.booked_small)}</p>`,
