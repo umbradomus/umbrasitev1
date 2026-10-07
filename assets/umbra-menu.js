@@ -341,6 +341,132 @@
       window.sessionStorage.setItem(PICK_KEY, JSON.stringify({ key: item.key, tile: item.tile, name: item[LANG].name }));
     } catch (e) { /* private mode: the landing simply forgets, as it always did */ }
   }
+
+  /* ========================================================= WHAT THE TILE SHOWED
+     SITE-FIX-14 · ROUGH EDGE 7, the site half. Until now the number the customer
+     tapped never left the page: the request carried `service` and the job's name, and
+     his review card computed a price of its own. So the form now also carries four
+     fields - the tile's own key, its title AS THE CUSTOMER READ IT, the price text
+     CHARACTER FOR CHARACTER, and the page's language - and WORKER-SHOWN-01 keeps them
+     beside `service`.
+
+     The reading is taken off the anchor the thumb actually landed on, at the moment of
+     the tap, and not from the table above, because a page may write its own tile in its
+     own words: property-care.html says "Home Check - every three months" where the
+     table says "a quarterly visit". The clause is what the customer READ.
+
+     Nothing here invents a price, changes a word, or adds a figure of its own: it
+     copies what is already on the screen. */
+  var SHOWN_KEY = 'umbra.menushown.v1';
+
+  function flatText(node) {
+    return node ? String(node.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  }
+  /* the price exactly as the tile showed it. The slot lays its words out in separate
+     spans and CSS puts a gap between them, so the raw textContent runs them together
+     ("from$119") where the eye reads one space ("from $119"). Each span is trimmed and
+     they are joined by that one space. "from" stays lower case: the capitals on screen
+     are text-transform, which is paint, not words. */
+  function shownPriceOf(a) {
+    var slot = a.querySelector('.mprice');
+    if (!slot) return flatText(a.querySelector('.v'));   /* a day card shows its figure in .v */
+    var kids = slot.children;
+    if (!kids || !kids.length) return flatText(slot);
+    var bits = [];
+    for (var i = 0; i < kids.length; i++) {
+      var bit = flatText(kids[i]);
+      if (bit) bits.push(bit);
+    }
+    return bits.join(' ');
+  }
+  /* SITE-FIX-14 · the day card carries "Book a half day" at its foot: a second anchor
+     for the SAME data-menu-item key as the tile above it, which is where the figure the
+     customer read is written. The button holds no figure and no title of its own, so
+     its twin - the anchor for that same key inside that same card - answers for it.
+     That is the card's own number, not one we chose: same key, same card, same job. */
+  function twinOf(a) {
+    var key = a.getAttribute('data-menu-item');
+    var card = a.closest ? a.closest('.daycard, li, .menu-group') : null;
+    if (!key || !card) return null;
+    var kin = card.querySelectorAll('a[data-menu-item]');
+    for (var i = 0; i < kin.length; i++) {
+      if (kin[i] === a || kin[i].getAttribute('data-menu-item') !== key) continue;
+      if (kin[i].querySelector('.mprice') || kin[i].querySelector('.v')) return kin[i];
+    }
+    return null;
+  }
+  function readTile(a) {
+    if (!a) return null;
+    var key = a.getAttribute('data-menu-item');
+    if (!key) return null;
+    var label = flatText(a.querySelector('.mname')) || flatText(a.querySelector('.l'));
+    var price = shownPriceOf(a);
+    if (!price || !label) {
+      var twin = twinOf(a);
+      if (twin) {
+        if (!price) price = shownPriceOf(twin);
+        if (!label) label = flatText(twin.querySelector('.mname')) || flatText(twin.querySelector('.l'));
+      }
+    }
+    return { key: key, label: label, price: price, lang: LANG };
+  }
+  /* The Worker's own rule, kept here so that we never send a field it would drop
+     (WORKER-SHOWN-01 THE SHAPE): the key is /^[a-z0-9-]{1,40}$/ and the price is 1-32
+     printable characters carrying a "$" and a digit. A tile whose slot shows words
+     where a figure would go - "Price by text", "At your direction", the jobs his two
+     prices have not landed on - does not pass, and then NO shown_* field is sent at
+     all, rather than three fields and a hole. */
+  function shownHolds(r) {
+    if (!r || !/^[a-z0-9-]{1,40}$/.test(r.key)) return false;
+    var p = r.price;
+    if (!p || p.length > 32) return false;
+    if (/[\u0000-\u001f\u007f]/.test(p)) return false;
+    return p.indexOf('$') >= 0 && /[0-9]/.test(p);
+  }
+  function rememberShown(a) {
+    var r = readTile(a);
+    if (!r) return;
+    try { window.sessionStorage.setItem(SHOWN_KEY, JSON.stringify(r)); }
+    catch (e) { /* private mode: the form carries nothing, exactly as it did before */ }
+  }
+  function lastShown() {
+    try {
+      var raw = window.sessionStorage.getItem(SHOWN_KEY);
+      var m = raw ? JSON.parse(raw) : null;
+      return (m && m.key) ? m : null;
+    } catch (e) { return null; }
+  }
+  /* Hidden inputs - the same mechanism umbra-chooser.js already uses for `lang`,
+     `started_at` and `address_confirmed`. Never visible, never focusable, never
+     labelled, so no screen reader reads them as a field of the form. */
+  var SHOWN_FIELDS = ['shown_key', 'shown_label', 'shown_price', 'shown_lang'];
+  function setShownField(form, name, value) {
+    var e = form.querySelector('input[type="hidden"][name="' + name + '"]');
+    var v = String(value == null ? '' : value);
+    if (!v) { if (e && e.parentNode) e.parentNode.removeChild(e); return; }
+    if (!e) {
+      e = document.createElement('input');
+      e.type = 'hidden';
+      e.name = name;
+      form.appendChild(e);
+    }
+    e.value = v;
+  }
+  function clearShown(form) {
+    for (var i = 0; i < SHOWN_FIELDS.length; i++) setShownField(form, SHOWN_FIELDS[i], '');
+  }
+  /* On the form page: the four fields, but ONLY for the tile this customer really
+     tapped. No tap in this tab, a tap on some other tile, or a bare ?menu= link nobody
+     tapped -> all four come off and the request is what it was. */
+  function carryShown(form, key) {
+    var r = lastShown();
+    if (!r || r.key !== key || !r.label || !shownHolds(r)) { clearShown(form); return null; }
+    setShownField(form, 'shown_key', r.key);
+    setShownField(form, 'shown_label', r.label);
+    setShownField(form, 'shown_price', r.price);
+    setShownField(form, 'shown_lang', r.lang === 'es' ? 'es' : 'en');
+    return r;
+  }
   /* take out the one line this file wrote, and only that line: whatever the customer
      typed themselves is on its own rows and is not touched. */
   function stripLine(area, line) {
@@ -367,7 +493,7 @@
     if (!item) return false;
     var form = document.querySelector('form.req');
     if (!form) return false;
-    var done = { key: key, tile: false, service: false, what: false };
+    var done = { key: key, tile: false, service: false, what: false, shown: null };
     var prev = lastPick();
     if (prev && prev.key !== key) {
       if (prev.tile && prev.tile !== item.tile) {
@@ -397,9 +523,21 @@
       done.what = true;
     } else if (what) done.what = true;
     rememberPick(item);
+    /* SITE-FIX-14 · the four shown_* fields, from the tile this customer tapped */
+    done.shown = carryShown(form, key);
     form.setAttribute('data-menu-pick', key);
     return done;
   }
+
+  /* SITE-FIX-14 · THE TAP. Capture phase on the document, so the reading is taken off
+     the tile before the browser leaves the page, and one listener covers every tile
+     anchor whichever file drew it - the ones below, and the ones property-care.html
+     writes for itself. A keyboard Enter on a focused tile is a click too. */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target;
+    var a = (t && t.closest) ? t.closest('a[data-menu-item]') : null;
+    if (a) rememberShown(a);
+  }, true);
 
   var hosts = document.querySelectorAll('[data-menu]');
   for (var h = 0; h < hosts.length; h++) render(hosts[h]);
