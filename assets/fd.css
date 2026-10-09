@@ -302,3 +302,15 @@
    the page. It is kept in the layout, 1px and invisible, so the keyboard can still
    reach it. */
 .fd #fd-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+/* THE REAL FIELDS. In the drawing, .field is a picture of a box with words in it - the
+   gallery never had a working input. So the box keeps the drawing's border, padding and
+   radius, and the input inside it is the whole box and invisible on its own. */
+.fd .field { display: block; }
+.fd .field > .lbl { display: block; font-size: 13px; color: var(--ink2); margin-bottom: 2px; }
+.fd .field input, .fd .field textarea {
+  display: block; width: 100%; border: 0; background: none; outline: none;
+  font: inherit; color: inherit; padding: 0; margin: 0; resize: vertical;
+}
+.fd .field.area textarea { min-height: 60px; }
+.fd .field.search input { font-size: 16px; }
