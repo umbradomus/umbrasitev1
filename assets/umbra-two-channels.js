@@ -67,16 +67,37 @@
      leg: 1413 (U-0013), 1637 (U-0014), 1366 (U-0015), 1098 (U-0016) through
      2026-10-01, then 5705 (U-0019) and 8071 (U-0018) on 2026-10-07. U-0019 ran
      on freshly re-fetched assets and still spent 5705 ms, so the slowing is in
-     the round trip, not in a stale script. 15 s is 1.86× the slowest copy ever
+     the round trip, not in a stale script. 15 s was 1.86× the slowest copy then known (SITE-FIX-17 found a slower one; see below), and
      measured, and it keeps the worst a person can wait well under the 21 s
      EMAIL-01 found was longer than a person waits. It is a measured trade, not
      a principle: a copy slower than this is still reported `no`, and the only
      thing that removes the trade is a Worker mail road FormSubmit does not
      refuse — which is Drew's call, not this file's.
+     SITE-FIX-17 (2026-10-07): 15000 -> 30000. The walk's own request landed at
+     email_copy_ms 15004 against a 15000 ms wall - FOUR MILLISECONDS past it
+     (Bridge/FLUX-REWALK-01/70-EDGES.md E-21-b, U-0020). WORKER-EMAIL-01 set 15 s
+     at 1.86x the slowest copy then measured, 8071 ms; the very next request spent
+     15004, so the slowest copy measured is now 15004 and 15 s is no margin at all
+     - it is the wall the traffic is already standing on. 30 s is 2x that copy.
+     WHAT IT COSTS AND WHY IT IS STILL THE RIGHT TRADE: nothing for a normal
+     request - 1098 to 5705 ms on every record before 10-07, and the leg settles
+     the moment FormSubmit redirects home, so a fast copy waits exactly as long as
+     it does today. The cost falls only on the request that would have been cut:
+     it waits up to 30 s instead of 15 before the page moves on. That is paid to
+     KEEP a copy that was delivered - the alternative is the one U-0018 took, where
+     the page reports `no`, the Worker's fallback fires, FormSubmit answers it 429
+     (it has 429'd every Worker send ever made) and the email is lost outright.
+     A copy slower than 30 s is still reported `no`.
+     WHAT THE CUSTOMER SEES WHILE IT WAITS, measured on a stub and not assumed
+     (Bridge/SITE-FIX-17/R3-email-wall.txt): the submit button reads "Sending..."
+     and is disabled from the tap until the leg settles; the received page is
+     reached only afterwards and waits for nothing. THE HOLD IS ON THE FORM, and
+     at 30 s it is worth a word of its own - named in SITE-FIX-17's close for the
+     round that owns that copy, because no clause of this one may change it.
      THE NUMBER ONLY REACHES A RETURNING BROWSER IF ?v= MOVES: the assets are
      served `Cache-Control: public, max-age=604800`, so every page that loads
-     this file asks for it at ?v=4 from this round on. */
-  var CAP_MS  = Number(window.UMBRA_EMAIL_CAP_MS || 15000);
+     this file asks for it at ?v=5 from this round on. */
+  var CAP_MS  = Number(window.UMBRA_EMAIL_CAP_MS || 30000);
   var OK_URL  = location.origin + OK_PATH;
 
   /* EMAIL-01 · THE REASON EVERY LIVE SUBMIT SAID `no` (measured 00:50:24Z

@@ -823,7 +823,10 @@ function namesAny(text, terms) {
   }
 
   /* =================================================================== K (15) */
-  suite('K · (15) the thank-you page: ONE next action, and the no-email line small under it');
+  /* SITE-FIX-17 · E-2: the ONE next action WAS "Save my status link", and the page behind it answered every id with
+     "It's being built". The button came off both languages; what is left is the request number and "reply to the
+     text", which is the true next action and is not a button. This clause is now the ban on both pages. */
+  suite('K · (15) the thank-you page: no status-link action, and the no-email line small under the note');
   {
     for (const [where, route] of [['English', '/request-received'], ['espanol', '/es/recibido']]) {
       const page = await newPage();
@@ -834,17 +837,21 @@ function namesAny(text, terms) {
         const note = document.getElementById('jobnote');
         return {
           buttons: [...main.querySelectorAll('a.btn, button.btn')].map((b) => (b.id || '') + ':' + b.textContent.trim()),
+          html: main ? main.innerHTML : '',
+          note: note ? note.textContent.replace(/\s+/g, ' ').trim() : '',
           copyExists: !!copy,
           copyInBox: !!(copy && copy.closest('.note, .sent, .card')),
           copyAfterAction: !!(copy && note && (note.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING)),
           copySmall: !!(copy && copy.classList.contains('fine')),
         };
       });
-      eq(r.buttons.length, 1, `${where}: exactly one next action on the page`, JSON.stringify(r.buttons));
-      ok(/joblink/.test(r.buttons[0] || ''), `${where}: and it is "Save my status link"`, r.buttons[0]);
+      eq(r.buttons.length, 0, `${where}: no button offers a status link any more (SITE-FIX-17 E-2)`, JSON.stringify(r.buttons));
+      eq(/joblink|status link|enlace de estado|\/status\?id=|\/es\/estado\?id=/i.test(r.html), false,
+        `${where}: and nothing in the page promises one`, r.html.slice(0, 240));
+      ok(/Reply to Drew's text|Responda al mensaje/.test(r.note), `${where}: the note says to reply to the message instead`, r.note.slice(0, 160));
       ok(r.copyExists, `${where}: the no-email line is still on the page`);
       eq(r.copyInBox, false, `${where}: it is not in a box any more`);
-      ok(r.copyAfterAction, `${where}: it sits UNDER the one next action`);
+      ok(r.copyAfterAction, `${where}: it sits UNDER the request-number note`);
       ok(r.copySmall, `${where}: and it is small`);
       R['15'] = Object.assign(R['15'] || {}, { [where]: r });
       await page.close();

@@ -90,6 +90,9 @@ export const WORDS = {
     work_more_one: 'Plus 1 smaller step along the way.',
     work_more: 'Plus {n} smaller steps along the way.',
     visit_len: ' · {len}',
+    /* SITE-FIX-17 (E-1, 2026-10-07): a visit the quote carries WITHOUT a time of its own — the plan's second day. It is
+       drawn after the visits that have one, with ticket_then before it: "then we come back the next day · about 4 hours". */
+    back_next: 'we come back the next day',
     paint_theirs: 'Painted with your paint.',
     year_label: 'What year was your house built?',
     year_hint: "Optional. It tells me what's in your walls.",
@@ -168,6 +171,8 @@ export const WORDS = {
     work_more_one: 'Y 1 paso menor durante el trabajo.',
     work_more: 'Y {n} pasos menores durante el trabajo.',
     visit_len: ' · {len}',
+    /* SITE-FIX-17 (E-1): the same line for his reviewer — after ticket_then ('luego,'): 'luego, volvemos al día siguiente'. */
+    back_next: 'volvemos al día siguiente',
     paint_theirs: 'Pintado con su pintura.',
     year_label: '¿En qué año se construyó su casa?',
     year_hint: 'Opcional. Nos dice qué hay dentro de sus paredes.',

@@ -73,11 +73,11 @@
       </div>
 
       <!-- Shown only when the Worker sent the browser here with ?id= and ?t=. Without them this block stays hidden and the page is exactly as it was. -->
-      <!-- road XW: one clear button for the status link (share it to themselves, or copy it), instead of a small
-           inline link and an explainer -->
+      <!-- SITE-FIX-17 (E-2, 2026-10-07): road XW's button promised a link to a page that answers every id with "it's
+           being built" - the one promise in the whole walk the product itself contradicted. Until that page answers by
+           id, this page promises no link: it gives them their request number and the road that does work today. -->
       <div id="jobnote" hidden style="margin-top:1.2rem">
-        <p style="margin:0"><a class="btn wide" id="joblink" href="/status">Save my status link</a></p>
-        <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">It shows where your request stands, any time. Your request number is <span id="jobid"></span>.</p>
+        <p class="fine" id="jobsaid" style="margin:.5rem 0 0" aria-live="polite">Your request number is <span id="jobid"></span>. Reply to Drew's text any time and you'll get a straight answer on where it stands.</p>
         <p class="fine sent-copy" id="sent-copy" style="margin:.5rem 0 0"></p>
       </div>
 
@@ -177,23 +177,10 @@
   // The Worker sends the browser here with the new record's id and its private token.
   // Neither is present on a plain FormSubmit redirect, and then this block does nothing.
   if (okId && jobTok) {
+    /* SITE-FIX-17 (E-2): the request number, nothing to save. The token the Worker sent is still what makes this
+       block appear - it is the proof the browser came from the Worker - and it is no longer put into a link. */
     $('jobid').textContent = jobId;
-    $('joblink').href = '/status?id=' + encodeURIComponent(jobId) + '&t=' + encodeURIComponent(jobTok);
     $('jobnote').hidden = false;
-    /* road XW · "Save my status link": the phone's own share sheet (Notes, Messages, a bookmark); else copied; else the
-       link simply opens, and the browser's own bookmark keeps it */
-    $('joblink').addEventListener('click', function (e) {
-      var url = new URL($('joblink').getAttribute('href'), location.href).href;
-      if (navigator.share) {
-        e.preventDefault();
-        navigator.share({ title: 'My Umbra Domus request', url: url }).catch(function () {});
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        e.preventDefault();
-        navigator.clipboard.writeText(url).then(function () {
-          $('jobsaid').textContent = 'Copied. Paste it into your notes or a text to yourself.';
-        }, function () { location.href = url; });
-      }
-    });
   }
   if (isList) {
     $('kick').textContent = 'The waiting list';
