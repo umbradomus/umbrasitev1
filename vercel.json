@@ -2,17 +2,41 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/q/:path*", "destination": "https://umbra-intake.umbradomus.workers.dev/q/:path*" },
-    { "source": "/receipt/:path*", "destination": "https://umbra-intake.umbradomus.workers.dev/receipt/:path*" }
+    {
+      "source": "/es/solicitud/:path*",
+      "destination": "/es/solicitud/index.html"
+    },
+    {
+      "source": "/request/:path*",
+      "destination": "/request/index.html"
+    },
+    {
+      "source": "/q/:path*",
+      "destination": "https://umbra-intake.umbradomus.workers.dev/q/:path*"
+    },
+    {
+      "source": "/receipt/:path*",
+      "destination": "https://umbra-intake.umbradomus.workers.dev/receipt/:path*"
+    }
   ],
   "headers": [
     {
       "source": "/assets/fonts/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
     }
   ]
 }
