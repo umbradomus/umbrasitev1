@@ -378,3 +378,8 @@
 
 /* screen one's heading sat with its face against the colour stripe. */
 .fd .bd.s1 { padding-top: 10px; }
+
+/* the small headings on the received page ("What happens next") sat with no gap at all
+   under the line above them: the drawing set that gap on .sum, which is the gallery's
+   paper-page summary and is dropped as chrome, so the heading lost its air with it. */
+.fd h2 { margin: 18px 0 6px; }
