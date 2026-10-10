@@ -221,7 +221,7 @@
       '<label class="field search"><input type="search" id="fd-q" placeholder="' + esc(top[1]) + '" value="' + esc(S.q) + '" enterkeyhint="search" autocomplete="off"></label>' +
       '<div id="fd-menu"></div></div>';
     app.innerHTML = header(false) + '<div class="stripe full" aria-hidden="true"></div>' +
-      '<div class="sub"><button class="bk" type="button" data-act="home">&#8249; ' + esc(t('g.back')) + '</button></div>' + body;
+      '<div class="sub"><button class="bk" type="button" data-act="home"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + esc(t('g.back')) + '</span>' + '</button></div>' + body;
     drawMenu(openAt);
     var q = document.getElementById('fd-q');
     q.addEventListener('input', function () { S.q = q.value; drawMenu(null); });
@@ -264,7 +264,7 @@
   function stepShell(job, name, bodyHtml, actHtml) {
     var steps = stepsOf(job), n = steps.indexOf(name) + 1, N = steps.length;
     app.innerHTML = header(false) + stripe(n, N) +
-      '<div class="sub"><button class="bk" type="button" data-act="back">&#8249; ' + esc(t('g.back')) + '</button>' +
+      '<div class="sub"><button class="bk" type="button" data-act="back"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + esc(t('g.back')) + '</span>' + '</button>' +
       '<span class="cnt">' + esc(fill(t('g.step'), { n: n, N: N })) + '</span></div>' +
       '<div class="bd">' + bodyHtml + '</div>' +
       '<div class="act">' + actHtml + '</div>';
@@ -367,7 +367,12 @@
       '<p class="errt" id="fd-ferr" hidden></p>' +
       '<p class="q">' + esc(req ? noteQ[0] : nw[0]) + (req ? '' : ' <span class="help">' + esc(t('g.optional')) + '</span>') + '</p>' +
       '<label class="field area"><textarea rows="4" id="fd-note" maxlength="500" placeholder="' + esc(req ? '' : nw[1]) + '">' + esc(S.note) + '</textarea></label>' +
-      (req ? '' : '<p class="help">' + esc(nw[1]) + '</p>');
+      /* nw[1] is the drawing's own stand-in sentence for this box. The drawing drew the
+         field as a PICTURE with words in it and repeated those words underneath; the build
+         made the field real, so the sentence became a live placeholder AND stayed as a help
+         line - the same sentence twice on the customer's screen. It is the placeholder now,
+         and only that. FRONT-DOOR-BUILD-01.1. */
+      '';
     var ok = !req || W(S.note).trim().length > 0;
     stepShell(job, 'photos', body,
       '<button class="btn" type="button" data-act="next"' + (ok ? '' : ' disabled') + '>' +
