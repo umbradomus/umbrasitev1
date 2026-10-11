@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/assets/site.css?v=10">
 <!-- LANDLORDS-01 · the five care tiles below are the front door's own tiles, and every
      price on this page is written in by /assets/umbra-menu.js — the one place a price lives. -->
-<script src="/assets/umbra-menu.js?v=2" defer></script>
+<script src="/assets/umbra-menu.js?v=3" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
@@ -44,7 +44,7 @@
     <input type="checkbox" id="navtoggle" class="nav-box">
     <label class="nav-btn" for="navtoggle" data-menu-toggle><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menu</label>
     <nav class="menu" aria-label="Site">
-      <a href="/services">Services</a>
+      <a href="/prices">Services</a>
       <a href="/automate">Automate</a>
       <a href="/care-plans">Care Plans</a>
       <a href="/sustainability">Sustainability</a>
@@ -80,27 +80,27 @@
       <p class="lead">Tap one and the request form opens with the job already written in.</p>
       <div class="menu-group">
         <ul class="menu-tiles">
-          <li><a class="mtile" href="/services?menu=turnover#request" data-menu-item="turnover" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/request" data-menu-item="turnover" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Turnover check between tenants or guests</span><span class="minc">Walk-through, small fixes, photos for your file.</span></span>
             <span class="mprice" data-menu-price="turnover"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/services?menu=repairs#request" data-menu-item="repairs" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/request" data-menu-item="repairs" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Repairs</span><span class="minc">Drywall, paint, doors, trim, blinds, screens, fences and gates. Fixed menu prices; anything else priced by text from one photo.</span></span>
             <span class="mprice" data-menu-price="repairs"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/services?menu=homecheck#request" data-menu-item="homecheck" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/request" data-menu-item="homecheck" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Home Check — every three months</span><span class="minc">Filters, batteries, caulk, gutters, and a photo report.</span></span>
             <span class="mprice" data-menu-price="homecheck"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/services?menu=winterhome#request" data-menu-item="winterhome" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/request" data-menu-item="winterhome" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Winter-home open or close</span><span class="minc">Walk-through, everything checked, photos sent.</span></span>
             <span class="mprice" data-menu-price="winterhome"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/services?menu=tenantfix#request" data-menu-item="tenantfix" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/request" data-menu-item="tenantfix" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Tenant repair requests</span><span class="minc">Your tenant sends the photo. You say yes. I fix it and send you the after.</span></span>
             <span class="mprice" data-menu-price="tenantfix"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -129,7 +129,7 @@
           <p>Text a photo of the job to <a href="tel:+19565566438">(956) 556-6438</a>, or tap a job above and the request form opens with it already filled in.</p>
           <p><strong>A tenant's repair, at your direction.</strong> Your tenant sends the photo. You say yes. I fix it and send you the after. Your tenant never approves the work and never settles the price — you do.</p>
           <div class="cta-row">
-            <a class="btn" href="/services?menu=tenantfix#request">Send a request</a>
+            <a class="btn" href="/request">Send a request</a>
             <a class="btn ghost" href="sms:+19565566438?body=Hi%20Drew%2C%20here%27s%20my%20list%3A%20">Text a photo</a>
           </div>
         </div>
@@ -169,7 +169,7 @@
       <p><a href="https://www.facebook.com/umbradomus" rel="me">Facebook</a><br><a href="https://www.instagram.com/umbradomus" rel="me">Instagram</a></p>
     </div>
     <nav aria-label="Footer">
-      <a href="/services">Services</a>
+      <a href="/prices">Services</a>
       <a href="/automate">Automate</a>
       <a href="/care-plans">Care Plans</a>
       <a href="/sustainability">Sustainability</a>

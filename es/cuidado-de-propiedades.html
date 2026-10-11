@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/assets/site.css?v=10">
 <!-- LANDLORDS-01 · los cinco mosaicos son los mismos del frente, y cada precio de esta
      página lo escribe /assets/umbra-menu.js — el único lugar donde vive un precio. -->
-<script src="/assets/umbra-menu.js?v=2" defer></script>
+<script src="/assets/umbra-menu.js?v=3" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7">
@@ -45,7 +45,7 @@
     <label class="nav-btn" for="navtoggle" data-menu-toggle><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menú</label>
     <nav class="menu" aria-label="Sitio">
       <a href="/es">Inicio</a>
-      <a href="/es/servicios">Servicios</a>
+      <a href="/es/precios">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
       <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
       <a href="/property-care" lang="en" hreflang="en">English</a>
@@ -76,27 +76,27 @@
       <p class="lead">Toque uno y la solicitud se abre con el trabajo ya escrito.</p>
       <div class="menu-group">
         <ul class="menu-tiles">
-          <li><a class="mtile" href="/es/servicios?menu=turnover#pedir" data-menu-item="turnover" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/es/solicitud" data-menu-item="turnover" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Revisión de cambio de inquilino o huésped</span><span class="minc">Recorrido, arreglos pequeños, fotos para su expediente.</span></span>
             <span class="mprice" data-menu-price="turnover"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/es/servicios?menu=repairs#pedir" data-menu-item="repairs" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/es/solicitud" data-menu-item="repairs" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Reparaciones</span><span class="minc">Tablaroca, pintura, puertas, molduras, persianas, mosquiteros, cercas y portones. Precios fijos del menú; lo demás, con precio por texto desde una foto.</span></span>
             <span class="mprice" data-menu-price="repairs"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/es/servicios?menu=homecheck#pedir" data-menu-item="homecheck" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/es/solicitud" data-menu-item="homecheck" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Revisión del Hogar — cada tres meses</span><span class="minc">Filtros, pilas, sellador, canaletas y un reporte con fotos.</span></span>
             <span class="mprice" data-menu-price="homecheck"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/es/servicios?menu=winterhome#pedir" data-menu-item="winterhome" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/es/solicitud" data-menu-item="winterhome" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Abrir o cerrar la casa de temporada</span><span class="minc">Recorrido completo, todo revisado, fotos enviadas.</span></span>
             <span class="mprice" data-menu-price="winterhome"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a></li>
-          <li><a class="mtile" href="/es/servicios?menu=tenantfix#pedir" data-menu-item="tenantfix" data-tile="else" data-service="Not sure">
+          <li><a class="mtile" href="/es/solicitud" data-menu-item="tenantfix" data-tile="else" data-service="Not sure">
             <span class="mtop"><span class="mname">Pedidos de reparación de sus inquilinos</span><span class="minc">Su inquilino manda la foto. Usted dice que sí. Yo lo arreglo y le mando el después.</span></span>
             <span class="mprice" data-menu-price="tenantfix"></span>
             <svg class="mchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -125,7 +125,7 @@
           <p>Mande una foto del trabajo al <a href="tel:+19565566438">(956) 556-6438</a>, o toque un trabajo de arriba y la solicitud se abre ya llena.</p>
           <p><strong>La reparación de su inquilino, según sus indicaciones.</strong> Su inquilino manda la foto. Usted dice que sí. Yo lo arreglo y le mando el después. Su inquilino nunca aprueba el trabajo ni acuerda el precio — usted sí.</p>
           <div class="cta-row">
-            <a class="btn" href="/es/servicios?menu=tenantfix#pedir">Mandar una solicitud</a>
+            <a class="btn" href="/es/solicitud">Mandar una solicitud</a>
             <a class="btn ghost" href="sms:+19565566438?body=Hola%20Drew%2C%20esta%20es%20mi%20lista%3A%20">Mandar una foto</a>
           </div>
         </div>
@@ -166,10 +166,10 @@
     </div>
     <nav aria-label="Pie de página">
       <a href="/es">Inicio</a>
-      <a href="/es/servicios">Servicios</a>
+      <a href="/es/precios">Servicios</a>
       <a href="/es/automatizar">Automatizar</a>
       <a href="/es/planes-de-cuidado">Planes de Cuidado</a>
-      <a href="/es/servicios#pedir">Pedir servicio</a>
+      <a href="/es/solicitud">Pedir servicio</a>
       <a href="/property-care" lang="en" hreflang="en">English</a>
     </nav>
   </div>

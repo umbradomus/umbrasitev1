@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url><loc>https://www.umbradomus.com/</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es"/></url>
-  <url><loc>https://www.umbradomus.com/services</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios"/></url>
+  <url><loc>https://www.umbradomus.com/request</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/request"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/solicitud"/></url>
+  <url><loc>https://www.umbradomus.com/es/solicitud</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/solicitud"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/request"/></url>
+  <url><loc>https://www.umbradomus.com/prices</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/prices"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/precios"/></url>
   <url><loc>https://www.umbradomus.com/automate</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/automate"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/automatizar"/></url>
   <url><loc>https://www.umbradomus.com/property-care</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/property-care"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/cuidado-de-propiedades"/></url>
   <url><loc>https://www.umbradomus.com/connected-home</loc></url>
@@ -15,7 +17,7 @@
   <url><loc>https://www.umbradomus.com/contact</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/contact"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/contacto"/></url>
   <url><loc>https://www.umbradomus.com/status</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/status"/><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/estado"/></url>
   <url><loc>https://www.umbradomus.com/es</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/"/></url>
-  <url><loc>https://www.umbradomus.com/es/servicios</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/servicios"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/services"/></url>
+  <url><loc>https://www.umbradomus.com/es/precios</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/precios"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/prices"/></url>
   <url><loc>https://www.umbradomus.com/es/automatizar</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/automatizar"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/automate"/></url>
   <url><loc>https://www.umbradomus.com/es/planes-de-cuidado</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/planes-de-cuidado"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/care-plans"/></url>
   <url><loc>https://www.umbradomus.com/es/cuidado-de-propiedades</loc><xhtml:link rel="alternate" hreflang="es" href="https://www.umbradomus.com/es/cuidado-de-propiedades"/><xhtml:link rel="alternate" hreflang="en" href="https://www.umbradomus.com/property-care"/></url>

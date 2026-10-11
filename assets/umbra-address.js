@@ -291,7 +291,13 @@
         state.confirmed = true;
         state.how = how;
         state.address = address;
-        say('uaddr-ok', T.confirmed);
+        /* FLUX-ROUTE-01 (his row 15, 11:03 AM 10-09: "Don't need another confirmation after the
+           confirmation..... This is the bulky crap we don't need."). Tapping "Yes, that's it" WAS
+           followed by a second line saying "Address confirmed." and, on the front door, a second
+           Next. The card goes quiet instead: the address he agreed to is now written in the field,
+           which is the only acknowledgement there is. T.confirmed stays in the words table above
+           because that table is the page's words and nothing else may be read from a deleted key. */
+        clear();
         box.setAttribute('data-uaddr-confirmed', how);
         onChange(state);
       });
@@ -377,7 +383,8 @@
     }
 
     var timer = null;
-    function look() {
+    var lookedAtLen = -1;
+    function look(why) {
       var raw = String(input.value || '').trim();
       if (state.confirmed && raw === state.address) return;
       if (state.confirmed && raw !== state.address) {
@@ -388,14 +395,27 @@
       var key = String(window.UMBRA_PLACES_KEY || '').trim();
       if (key) {
         if (raw.length < 4) { sugList.hidden = true; return; }
-        loadGoogle(key, function (ok) { if (ok) askGoogle(raw); else fallback(raw); });
+        loadGoogle(key, function (ok) { if (ok) askGoogle(raw); else fallback(raw, why); });
         return;
       }
-      fallback(raw);
+      fallback(raw, why);
     }
-    function fallback(raw) {
+    function fallback(raw, why) {
       var bits = parse(raw);
-      if (!bits) { if (raw) say('uaddr-need', T.needMore); else clear(); return; }
+      if (!bits) {
+        if (!raw) { clear(); return; }
+        /* FLUX-ROUTE-01 (the NOT-BUILT half of his row 14): this red line used to appear 450 ms
+           after a keystroke, while the box still had focus and he was still typing the street. It
+           is a refusal, not a hint, so it waits until he is no longer adding to the box - he moved
+           away (blur), he shortened it, or the send gate asked. Typing forward is never scolded. */
+        if (why === 'typing' && document.activeElement === input && raw.length > lookedAtLen) {
+          lookedAtLen = raw.length;
+          return;
+        }
+        say('uaddr-need', T.needMore);
+        return;
+      }
+      lookedAtLen = raw.length;
       if (raw === lastAsked) return;
       lastAsked = raw;
       askCensus(bits);
@@ -403,11 +423,11 @@
 
     input.addEventListener('input', function () {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(look, 450);
+      timer = setTimeout(function () { look('typing'); }, 450);
     });
     input.addEventListener('blur', function () {
       if (timer) clearTimeout(timer);
-      setTimeout(look, 120);
+      setTimeout(function () { look('blur'); }, 120);
     });
 
     var api = {

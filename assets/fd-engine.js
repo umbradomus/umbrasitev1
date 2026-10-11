@@ -558,7 +558,18 @@
     var input = document.getElementById('fd-addr');
     input.addEventListener('input', function () { S.address = input.value; save(); });
     if (window.UmbraAddress) {
-      S.addrApi = window.UmbraAddress.attach({ input: input, host: document.getElementById('fd-addr-host') });
+      S.addrApi = window.UmbraAddress.attach({
+        input: input,
+        host: document.getElementById('fd-addr-host'),
+        /* FLUX-ROUTE-01 (his row 15) - "Yes, that's it" IS the Next. onChange fires with
+           confirmed true only from a tap on that button, so nothing here advances by itself. */
+        onChange: function (st) {
+          if (!st || !st.confirmed) return;
+          S.address = input.value;
+          save();
+          nextStep();
+        }
+      });
     }
   }
 
