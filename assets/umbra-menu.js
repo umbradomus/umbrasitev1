@@ -3,13 +3,13 @@
 
    Drew chose "Shape 1 — The Menu": a price first, then the ask. This file is the
    ONE place every price lives. The home page (/ and /es) and the services page
-   (/services and /es/servicios) both draw the menu from here, so a price is changed
+   (/prices and /es/precios) both draw the menu from here, so a price is changed
    in one line and is right on four pages.
 
    WHAT THIS FILE DOES
      1. Draws the menu into every element marked data-menu, grouped, two tiles to a
         row on a phone. Each tile is a plain link into the request form:
-            /services?menu=<key>#request        /es/servicios?menu=<key>#pedir
+            /request                            /es/solicitud   (FLUX-ROUTE-01)
         With JavaScript off the host is empty and its <noscript> line stands; the
         pages' own words, the form and the footer are untouched.
      2. On the form page, reads ?menu=<key> and lands the customer with that job
@@ -27,7 +27,10 @@
 (function () {
   'use strict';
 
-  var FORM = { en: { path: '/services', hash: 'request' }, es: { path: '/es/servicios', hash: 'pedir' } };
+  /* FLUX-ROUTE-01 - every price tile opens the new front door. The door takes a job by its own
+     path and no mapping from these menu keys to its job ids exists, so the ?menu= preselect is not
+     carried any more; an empty hash is what tells hrefOf to write the plain door address. */
+  var FORM = { en: { path: '/request', hash: '' }, es: { path: '/es/solicitud', hash: '' } };
 
   var WORDS = {
     en: {
@@ -228,7 +231,7 @@
     for (var c = 0; c < CARE.length; c++) if (CARE[c].key === key) return CARE[c];
     return null;
   }
-  function hrefOf(item) { return F.path + '?menu=' + encodeURIComponent(item.key) + '#' + F.hash; }
+  function hrefOf(item) { return F.hash ? F.path + '?menu=' + encodeURIComponent(item.key) + '#' + F.hash : F.path; }
   function money(n) { return '$' + String(n); }
 
   function el(tag, cls, text) {
@@ -568,7 +571,7 @@
       if (picked) {
         /* the pick is now in the form; the address need not carry it any more, so a
            reload or a shared link does not light it twice */
-        try { history.replaceState(history.state, '', location.pathname + (location.hash || '#' + F.hash)); } catch (e) { }
+        try { history.replaceState(history.state, '', location.pathname + (location.hash || (F.hash ? '#' + F.hash : ''))); } catch (e) { }
       }
     }
   } catch (e) { picked = null; }
