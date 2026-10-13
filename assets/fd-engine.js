@@ -835,8 +835,11 @@
       btn.disabled = which !== 'idle';
       btn.textContent = t(which === 'idle' ? 's9.send' : which === 'checking' ? 's9.checking' : 's9.sending');
       /* NO SECOND BUTTON UNTIL IT IS KNOWN: the only way back to a live Send button is
-         'idle', and only a definite no reaches it. */
-      btn.hidden = which === 'unknown';
+         'idle', and only a definite no reaches it.
+         `style.display`, NOT `hidden`: the action bar's own rule sets display on this
+         button, and a `[hidden]` attribute loses to it — looked at on the preview at
+         390 wide, where the unknown state still showed a button reading "Sending…". */
+      btn.style.display = which === 'unknown' ? 'none' : '';
     }
     if (e) {
       if (words) { e.textContent = words; e.hidden = false; e.scrollIntoView({ block: 'center' }); }
