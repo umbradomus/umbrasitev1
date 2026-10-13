@@ -584,10 +584,13 @@
   }
 
   /* ------------------------------------------------------------ step: the address */
-  /* S6 · ADDRESS SUGGESTIONS AS YOU TYPE ARE NOT IN THIS ROUND: they need a provider
-     account, which is his hand (site.config.js). This step is TODAY'S address check,
-     the same /assets/umbra-address.js the live form uses, with its own "Is this the
-     place?" card, and it says so on the page. */
+  /* SITE-ADDRESS-SUGGEST-01 (2026-10-13) · ADDRESS SUGGESTIONS AS YOU TYPE ARE IN NOW,
+     and they needed no account after all: /assets/umbra-address.js suggests from the
+     page's own street list (Census TIGER/Line, public domain, no key, no charge) and
+     asks nothing of any service while the customer types. S6's old note said they need
+     a provider account; that was true only of Google, which is still the better road
+     the day he puts a key in site.config.js. This step is unchanged otherwise — the
+     same module, the same "Is this the place?" card, the same words. */
   function stepAddress(job) {
     var top = t('s8.top').split(' / ');
     var html = '<h1>' + esc(top[0]) + '</h1>' +
