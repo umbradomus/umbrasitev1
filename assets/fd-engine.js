@@ -17,6 +17,9 @@
   var LANG = document.documentElement.lang === 'es' ? 'es' : 'en';
   var ES = LANG === 'es';
   var ROOT = ES ? '/es/solicitud' : '/request';
+  /* FLUX-SEND-TRUTH-01 · the field name the Worker folds a repeat press on. One place,
+     and worker/src/index.js RID_FIELD is the other half of this pair. */
+  var RID_FIELD = 'fd_request_id';
   var OTHER = ES ? '/request' : '/es/solicitud';
   var JOBS = window.FD_JOBS || [];
   var POOL = window.FD_ADDONS || {};
@@ -64,7 +67,7 @@
   var S = {
     job: null, step: 0, via: 'tile', answers: {}, note: '', photos: [], addons: [],
     times: null, first: '', phone: '', email: '', sms: false,
-    address: '', addrState: null, sent: null, q: ''
+    address: '', addrState: null, sent: null, q: '', rid: ''
   };
   try {
     var raw = localStorage.getItem(DRAFT);
@@ -80,6 +83,30 @@
     } catch (e) { }
   }
   function clearDraft() { try { localStorage.removeItem(DRAFT); } catch (e) { } }
+
+  /* FLUX-SEND-TRUTH-01 · ONE REQUEST, ONE ID, MINTED BEFORE THE FIRST PRESS.
+     It rides in the draft, so it survives a reload, a back button and a phone that
+     went to sleep mid-send — which is the whole point: the SAME id reaches the Worker
+     on the second press, and the Worker answers it with the first press's job number
+     instead of making a second job. It is cleared with the draft when a request has
+     been received, so the next request is a new one.
+     It names nobody: 18 random characters and the minute, no name, phone or address. */
+  function rid() {
+    if (!S.rid) {
+      var r = '';
+      try {
+        var a = new Uint8Array(12);
+        crypto.getRandomValues(a);
+        for (var i = 0; i < a.length; i++) r += (a[i] % 36).toString(36);
+      } catch (e) { r = ''; }
+      /* a browser with no crypto still gets an id; two presses of ONE page still share
+         it, because it is minted once and kept, and that is what the guard needs */
+      if (!r) r = String(Math.random()).slice(2, 14) + String(Math.random()).slice(2, 8);
+      S.rid = 'r' + Date.now().toString(36) + r;
+      save();
+    }
+    return S.rid;
+  }
 
   /* ----------------------------------------------------- the steps a job actually has */
   function stepsOf(job) {
@@ -618,6 +645,11 @@
     var r = S.sent || {};
     var html = header(false) + '<div class="stripe full" aria-hidden="true"></div><div class="bd s10">' +
       '<p class="ok">&#10003;</p><h1>' + esc(fill(misc[0], { first: r.first || S.first })) + '</h1>' +
+      /* FLUX-SEND-TRUTH-01 · the job number, directly under "Got it" and above the
+         reply-by line, so the two things he asked for are the two things read first.
+         Printed only when the Worker answered with a number: no number, no line — a
+         screen that invents "Job —" is worse than one that says nothing. */
+      (r.jobNo ? '<p class="jobno"><b>' + esc(fill(t('s10.jobno'), { id: r.jobNo })) + '</b></p>' : '') +
       '<p class="big">' + esc(fill(t('s10.by'), { how: r.sms ? t('g.text') : t('g.email'), time: r.by })) + '</p>' +
       '<h2>' + esc(misc[1]) + '</h2><ul class="next">' +
       '<li>' + esc(misc[2]) + '</li>' +
@@ -726,6 +758,12 @@
     /* --- THE NEW NAMES, beside what is there. A name the Worker does not know is kept
            on the record's own `fields` bag, which handleIntake writes whole. */
     put('fd_version', 'request-v2');
+    /* FLUX-SEND-TRUTH-01 · the id the Worker folds a repeat on, and the shape of answer
+       this page can actually read. Both are new names beside what is there; the Worker
+       keeps every name it does not know on the record's own bag, and `fd_answer` is the
+       one name it now acts on — a caller that does not send it gets today's 303. */
+    put(RID_FIELD, rid());
+    put('fd_answer', 'json');
     put('job', job.id);
     put('job_label', job.tile[LANG]);
     put('lang', LANG);
@@ -763,29 +801,128 @@
     return f;
   }
 
+  /* ============================================ THE SEND, AND WHAT IT IS ALLOWED TO SAY
+     WALKDOWN 10-13, 10:04 AM: he pressed Send, it took a while, the page said the
+     request did not send and told him to press again — and the job had landed. U-0023
+     was recorded and on his phone while this screen called it a failure.
+
+     The rule this code now obeys: THE PAGE NEVER SAYS "DIDN'T SEND" ON ITS OWN
+     AUTHORITY. A fetch that fails is not news about the request; it is news about this
+     browser's connection. The request landed or it did not, and only the Worker knows
+     which — so when the connection breaks, the page ASKS (`/intake/landed?rid=`), and
+     it may print the failure sentence only on a definite `landed:false`.
+     Anything else — an unreadable answer, a second failure, a timeout on the ask — is
+     NOT a failure and is not called one. It is the unknown, and it says so in its own
+     words and keeps the button away, because the one thing that must never happen
+     again is this page inviting a second press for a job that already exists.
+     (The id makes a second press safe even so: the Worker folds it onto the same job
+     number. Both guards, because either one alone has a hole.) */
+  var SEND_CEILING_MS = 60000;   /* the upload's own ceiling. Above every measured
+                                    send: the slowest email leg ever recorded on this
+                                    site was 15004 ms (U-0020) and the photos ride this
+                                    leg, so this is not a wait anyone should reach —
+                                    it is the point at which silence becomes a lie, and
+                                    reaching it starts the ASK, never the failure. */
+  var ASK_CEILING_MS = 8000;     /* the ask is one KV read and no body; 8 s is already
+                                    far past it, and a slow ask is an unknown, not a no */
+
+  function sendState(which, words) {
+    /* one place that owns the review screen's three states, so "sending", "we are
+       checking" and a failure can never contradict each other on screen */
+    var btn = app.querySelector('[data-act="send"]');
+    var e = document.getElementById('e-send');
+    if (btn) {
+      btn.disabled = which !== 'idle';
+      btn.textContent = t(which === 'idle' ? 's9.send' : which === 'checking' ? 's9.checking' : 's9.sending');
+      /* NO SECOND BUTTON UNTIL IT IS KNOWN: the only way back to a live Send button is
+         'idle', and only a definite no reaches it. */
+      btn.hidden = which === 'unknown';
+    }
+    if (e) {
+      if (words) { e.textContent = words; e.hidden = false; e.scrollIntoView({ block: 'center' }); }
+      else { e.textContent = ''; e.hidden = true; }
+    }
+  }
+
+  /* did the request with this id land? true | false | null, and NULL IS NOT A NO. */
+  function askLanded(id) {
+    var base = String(window.UMBRA_API_BASE || '');
+    if (!base) return Promise.resolve({ landed: null });
+    var ctl = null, bell = null;
+    try { ctl = new AbortController(); bell = setTimeout(function () { ctl.abort(); }, ASK_CEILING_MS); } catch (e) { }
+    return fetch(base + '/intake/landed?rid=' + encodeURIComponent(id), {
+      method: 'GET', signal: ctl ? ctl.signal : undefined
+    }).then(function (res) {
+      if (bell) clearTimeout(bell);
+      if (!res.ok) return { landed: null };
+      return res.json().then(function (j) { return j && typeof j === 'object' ? j : { landed: null }; },
+        function () { return { landed: null }; });
+    }, function () {
+      if (bell) clearTimeout(bell);
+      return { landed: null };
+    });
+  }
+
   function send() {
     if (!checkReady()) return;
     var job = BY_ID[S.job];
-    var btn = app.querySelector('[data-act="send"]');
-    if (btn) { btn.disabled = true; btn.textContent = t('s9.sending'); }
+    var id = rid();
+    sendState('sending', '');
     var f = buildForm(job);
     document.body.appendChild(f);
     var fd = new FormData(f);
-    fetch(f.action, { method: 'POST', body: fd, redirect: 'follow' }).then(function (res) {
-      f.remove();
-      if (!res.ok && res.status !== 0) throw new Error('HTTP ' + res.status);
-      return res.text().then(function (body) { return { body: body, url: res.url }; });
-    }).then(function (r) {
-      S.sent = receipt(job, r);
-      clearDraft();
-      go(ROOT + '/received', { received: 1 });
-    }).catch(function (err) {
-      f.remove();
-      var e = document.getElementById('e-send');
-      if (e) { e.textContent = t('s9.fail'); e.hidden = false; e.scrollIntoView({ block: 'center' }); }
-      if (btn) { btn.disabled = false; btn.textContent = t('s9.send'); }
-      if (window.console) console.error('send failed', err);
-    });
+    var ctl = null, bell = null;
+    try { ctl = new AbortController(); bell = setTimeout(function () { ctl.abort(); }, SEND_CEILING_MS); } catch (e) { }
+    /* `redirect:'manual'` with the JSON answer: today's 303 was followed all the way to
+       the site's own page and back, a third round trip the customer paid for to learn
+       nothing the answer did not already carry. The Worker now hands the job number
+       over plainly and this leg ends where the Worker ends. */
+    fetch(f.action, { method: 'POST', body: fd, redirect: 'follow', signal: ctl ? ctl.signal : undefined })
+      .then(function (res) {
+        if (bell) clearTimeout(bell);
+        f.remove();
+        if (!res.ok && res.status !== 0) throw new Error('HTTP ' + res.status);
+        return res.text().then(function (body) {
+          var j = null;
+          try { j = JSON.parse(body); } catch (e) { j = null; }
+          return { body: body, url: res.url, answer: j };
+        });
+      }).then(function (r) {
+        /* a 200 whose body is not the answer we asked for is still a landing — the
+           Worker only answers 2xx after the record is written — so this is success
+           with no number, never a failure. The received page then shows no number
+           rather than a wrong one. */
+        arrive(job, r.answer && r.answer.id ? r.answer.id : jobFromUrl(r.url));
+      }).catch(function (err) {
+        if (bell) clearTimeout(bell);
+        f.remove();
+        if (window.console) console.warn('send leg failed, asking the Worker whether it landed', err);
+        /* THE ASK. Not a failure yet — nobody has said so. */
+        sendState('checking', t('s9.checking.note'));
+        askLanded(id).then(function (a) {
+          if (a && a.landed === true) { arrive(job, a.id || null); return; }
+          if (a && a.landed === false) {
+            /* the only road to the failure sentence in this whole file */
+            sendState('idle', t('s9.fail'));
+            return;
+          }
+          /* null: we do not know, and we do not guess his way into a second job */
+          sendState('unknown', t('s9.unknown'));
+        });
+      });
+  }
+
+  /* the job number out of the redirect's own address, for the road where the answer
+     came back as the 303 the old form rides (no `fd_answer`, or a cached script) */
+  function jobFromUrl(u) {
+    try { return new URL(u, location.href).searchParams.get('id') || null; } catch (e) { return null; }
+  }
+
+  function arrive(job, jobNo) {
+    S.sent = receipt(job, jobNo);
+    clearDraft();
+    S.rid = '';              /* this request is answered; the next one is a new request */
+    go(ROOT + '/received', { received: 1 });
   }
   function checkReady() {
     var job = BY_ID[S.job];
@@ -795,7 +932,7 @@
     return true;
   }
   /* the reply-by clock: sent 7 AM - 7 PM gets +2 h; otherwise 9:00 the next morning */
-  function receipt(job, r) {
+  function receipt(job, jobNo) {
     var now = new Date(), h24 = now.getHours(), by, tomorrow = false;
     if (h24 >= 7 && h24 < 19) { var d = new Date(now.getTime() + 2 * 36e5); by = clock(d); }
     else { by = ES ? '9:00 a. m.' : '9:00 AM'; tomorrow = true; }
@@ -807,6 +944,12 @@
        browser's own direct copy to FormSubmit is NOT wired into this flow in this
        round, so the only copy is the Worker's own forward, and it needs an email. */
     return {
+      /* FLUX-SEND-TRUTH-01 · the job number the Worker just answered with. Until this
+         round it rode in the answer and was dropped on the floor, so a customer who
+         had a number was never shown one and could not quote it if they rang. It is
+         null only where the Worker gave no number — and then the page shows no
+         number, which is the honest screen, not a blank where one should be. */
+      jobNo: jobNo || null,
       first: S.first, sms: S.sms, by: (tomorrow ? t('g.tomorrow') + ' ' : '') + by,
       visitWords: two ? vw[0] : m === 'recurring' ? vw[2] : vw[1],
       bookWords: two ? bw[0] : bw[1],
