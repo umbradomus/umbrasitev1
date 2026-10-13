@@ -382,15 +382,28 @@
     var top = t('s4.top').split(' / '), btns = t('s4.btns').split(' / '), nw = t('s4.note').split(' / ');
     var th = '';
     for (var i = 0; i < S.photos.length; i++) {
-      th += '<div class="th"><img src="' + S.photos[i].url + '" alt=""><i data-act="rmphoto" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(btns[3]) + '">&#215;</i></div>';
+      th += '<div class="th"><img class="pic" style="object-fit:cover" src="' + S.photos[i].url + '" alt=""><i data-act="rmphoto" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(btns[3]) + '">&#215;</i></div>';
     }
-    if (S.photos.length < 6) th += '<div class="th add" data-act="pick" role="button" tabindex="0">+</div>';
+    /* the "+" box is gone: the two ways in are the two buttons below the thumbs, so a phone
+       can open its camera from this step instead of only its photo library. The words for both
+       buttons were already in this site's own string table, English and Spanish, unused:
+       s4.btns[0] and s4.btns[1]. SITE-CAMERA-PHOTO-01, 2026-10-13. */
     var req = job.id === 'else';
     var noteQ = req ? t('s3.else').split(' / ') : nw;
     var body = '<h1>' + esc(req ? noteQ[0] : top[0]) + '</h1><p class="lede">' + esc(req ? noteQ[1] : top[1]) + '</p>' +
       (req ? '' : '') +
       '<div class="thumbs">' + th + '</div>' +
+      (S.photos.length < 6 ? '<div class="two">' +
+        '<button class="btn ghost" type="button" data-act="cam">' + esc(btns[0]) + '</button>' +
+        '<button class="btn ghost" type="button" data-act="pick">' + esc(btns[1]) + '</button>' +
+        '</div>' : '') +
       '<input type="file" id="fd-file" accept="image/*" multiple>' +
+      /* the camera. capture tells a phone to open its back camera straight away; a browser that
+         does not honour capture ignores the attribute and opens the picker, which is where the
+         other button goes anyway, so neither button is ever a dead end. It is hidden exactly the
+         way fd.css hides #fd-file, inline, so that this round moves no stylesheet and no asset
+         but this one file. */
+      '<input type="file" id="fd-cam" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0">' +
       '<p class="errt" id="fd-ferr" hidden></p>' +
       '<p class="q">' + esc(req ? noteQ[0] : nw[0]) + (req ? '' : ' <span class="help">' + esc(t('g.optional')) + '</span>') + '</p>' +
       '<label class="field area"><textarea rows="4" id="fd-note" maxlength="500" placeholder="' + esc(req ? '' : nw[1]) + '">' + esc(S.note) + '</textarea></label>' +
@@ -407,6 +420,8 @@
       (req || S.photos.length ? '' : '<button class="btn text" type="button" data-act="next">' + esc(btns[4]) + '</button>'));
     var f = document.getElementById('fd-file');
     f.addEventListener('change', function () { takePhotos(f.files); });
+    var cam = document.getElementById('fd-cam');
+    cam.addEventListener('change', function () { takePhotos(cam.files); });
     document.getElementById('fd-note').addEventListener('input', function () {
       S.note = this.value; save();
       var b = app.querySelector('[data-act="next"]');
@@ -1102,6 +1117,7 @@
     if (act === 'send') return send();
     if (act === 'sms') { S.sms = !S.sms; save(); return render(); }
     if (act === 'pick') return document.getElementById('fd-file').click();
+    if (act === 'cam') return document.getElementById('fd-cam').click();
     if (act === 'rmphoto') { S.photos.splice(+el.getAttribute('data-i'), 1); return render(); }
     if (act === 'unpick') { S.times.picks.splice(+el.getAttribute('data-i'), 1); save(); return render(); }
     if (act === 'redo1') { S.times.v1 = null; S.times.v2 = null; S.cal = {}; save(); return render(); }
