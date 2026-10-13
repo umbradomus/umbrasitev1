@@ -92,6 +92,20 @@ const PHOTO_FIELD = /^attachment(\d*)$/;
    EMAIL-SUBJECT-01: so is `_subject`, which the page now stamps with the first name and the minute
    it was sent, so that Gmail gives every job its own conversation (and its own ring). */
 const DEDUP_WINDOW_MS = 10 * 60000;
+
+/* FLUX-SEND-TRUTH-01 · ONE REQUEST, ONE JOB — BY AN ID, NOT BY A GUESS.
+   The content fingerprint below folds a byte-identical repeat for ten minutes and
+   stays exactly as it was. It is not enough on its own, and the walkdown of
+   2026-10-13 is why: his send said "didn't send" while U-0023 had landed, so the
+   page told him to press again. A customer who presses again after fixing one
+   character of their note has a DIFFERENT fingerprint and gets a second job for one
+   house. So the page now mints an id before the first press and carries it in
+   `fd_request_id`; this is the key the Worker answers on, ahead of the fingerprint.
+   A DAY, not ten minutes: the charter's floor, and it is what makes "press again
+   tomorrow" safe. The id is the page's own random string and names nobody. */
+const RID_FIELD = 'fd_request_id';
+const RID_TTL_S = 24 * 60 * 60;
+const RID_SHAPE = /^[A-Za-z0-9_-]{8,64}$/;
 /* road W: `_autoresponse` too — the customer's own copy of what they sent, written by the page from the other fields */
 const DEDUP_IGNORE = /^(email_sent|email_copy_id|email_copy_ms|_next|_subject|_autoresponse)$/;
 
@@ -132,6 +146,27 @@ function confirmationUrl(env, nextValue, id, token) {
   if (id) q.set('id', id);
   if (token) q.set('t', token);
   return base + path + (q.toString() ? '?' + q.toString() : '');
+}
+
+/* FLUX-SEND-TRUTH-01 · THE ONE PLACE INTAKE ANSWERS FROM.
+   Until this round the only answer was a 303, and the job number rode in its query
+   string — where the page that asked could not read it without following the redirect
+   to the site and parsing its own URL back. The page threw it away, so a customer who
+   HAD a job number was never shown one. `json` hands the number over plainly; the
+   redirect stays the default and stays byte for byte what it was, because the old form
+   and a no-JavaScript submit still ride it.
+   `duplicate` is the truth about this press, not about the job: `true` means this
+   press made nothing new, and the number below is the job the earlier press made. */
+function answerIntake(env, nextValue, id, token, wantsJson, duplicate) {
+  if (wantsJson) {
+    return json({
+      ok: Boolean(id),
+      id: id || null,
+      duplicate: Boolean(duplicate),
+      status_link: id ? statusUrl(env, nextValue, id, token) : '',
+    }, 200, CUSTOMER_CORS);
+  }
+  return Response.redirect(confirmationUrl(env, nextValue, id, token), 303);
 }
 
 function statusUrl(env, nextValue, id, token) {
@@ -233,6 +268,32 @@ async function handleIntake(request, env, ctx) {
   const received_at = nowFor(request, env);
   const nextValue = typeof fields._next === 'string' ? fields._next : '';
 
+  /* FLUX-SEND-TRUTH-01 · HOW THIS REQUEST WANTS TO BE ANSWERED.
+     A page that asks for `json` is told the job number in the answer itself. Every
+     other caller — the old form, a no-JavaScript submit, a bot — gets the 303 it has
+     always got, byte for byte. The default is unchanged on purpose. */
+  const wantsJson = String(fields.fd_answer || '').trim().toLowerCase() === 'json';
+  const rid = typeof fields[RID_FIELD] === 'string' && RID_SHAPE.test(fields[RID_FIELD].trim())
+    ? fields[RID_FIELD].trim() : null;
+
+  /* 0a · THE REQUEST ID. A repeat of an id already answered gets THE SAME JOB NUMBER
+     and makes no second job. This runs before the id is allocated, so a fold costs
+     one KV read and allocates nothing. */
+  if (rid) {
+    try {
+      const seen = await env.RECORDS.get('rid:' + rid);
+      if (seen) {
+        const s = JSON.parse(seen);
+        if (s.id && s.token) {
+          console.log('repeat of request id folded into', s.id);
+          return answerIntake(env, nextValue, s.id, s.token, wantsJson, true);
+        }
+      }
+    } catch (err) {
+      /* KV unreachable: carry on — a possible second job beats a lost request */
+    }
+  }
+
   /* 0 · the same request twice inside ten minutes is the first one: same confirmation, nothing new. */
   let dupKey = null;
   try {
@@ -243,7 +304,7 @@ async function handleIntake(request, env, ctx) {
       const age = Date.parse(received_at) - Date.parse(s.at);
       if (s.id && s.token && age >= 0 && age <= DEDUP_WINDOW_MS) {
         console.log('duplicate submission folded into', s.id, 'after', Math.round(age / 1000), 's');
-        return Response.redirect(confirmationUrl(env, nextValue, s.id, s.token), 303);
+        return answerIntake(env, nextValue, s.id, s.token, wantsJson, true);
       }
     }
   } catch (err) {
@@ -263,6 +324,18 @@ async function handleIntake(request, env, ctx) {
     try {
       await env.RECORDS.put(dupKey, JSON.stringify({ id, token, at: received_at }), { expirationTtl: DEDUP_WINDOW_MS / 1000 });
     } catch (err) { /* the record matters more than the fold */ }
+  }
+  /* FLUX-SEND-TRUTH-01 · the id's own row, written the moment the number exists, so a
+     repeat arriving while this request is still uploading its photos folds instead of
+     allocating. Kept for a day. A write that fails is logged and not swallowed
+     silently: without this row the next press makes a second job, and that is the one
+     thing this round exists to stop, so it must be readable when it happens. */
+  if (id && rid) {
+    try {
+      await env.RECORDS.put('rid:' + rid, JSON.stringify({ id, token, at: received_at }), { expirationTtl: RID_TTL_S });
+    } catch (err) {
+      console.error('request-id row NOT written for', id, '- a repeat of this press can make a second job:', String(err && err.message || err));
+    }
   }
 
   const status_link = id ? statusUrl(env, nextValue, id, token) : '';
@@ -464,7 +537,33 @@ async function handleIntake(request, env, ctx) {
     console.error('no record created (id allocation failed):', allocError, 'forward ok:', forward.ok);
   }
 
-  return Response.redirect(confirmationUrl(env, nextValue, id, token), 303);
+  return answerIntake(env, nextValue, id, token, wantsJson, false);
+}
+
+/* FLUX-SEND-TRUTH-01 · "DID MY REQUEST LAND?" — THE ASK THAT REPLACES THE GUESS.
+   On 2026-10-13 the page said "Your request didn't send" because one fetch failed,
+   while U-0023 was already recorded and already on his phone. A page that loses its
+   connection now ASKS this before it says anything, and it may only say "didn't send"
+   when the answer is a definite `landed: false`.
+   It is keyed by the page's own request id and answers nothing else: the job number
+   and whether it landed. No name, no phone, no address, no token — a request id is
+   not a secret and this answer must not make it into one. An unreadable KV is `null`,
+   never `false`, so a page is never told "no" by a shrug. */
+async function handleLanded(env, url) {
+  const rid = String(url.searchParams.get('rid') || '').trim();
+  if (!RID_SHAPE.test(rid)) return withCors(json({ landed: null, error: 'bad_rid' }, 400));
+  let seen;
+  try {
+    seen = await env.RECORDS.get('rid:' + rid);
+  } catch (err) {
+    return withCors(json({ landed: null, error: 'unreadable' }, 503));
+  }
+  if (!seen) return withCors(json({ landed: false, id: null }));
+  try {
+    const s = JSON.parse(seen);
+    if (s && s.id) return withCors(json({ landed: true, id: s.id }));
+  } catch (err) { /* a row we cannot parse is not a no */ }
+  return withCors(json({ landed: null, error: 'unreadable' }, 503));
 }
 
 /* ------------------------------------------------------------ customer view */
@@ -859,6 +958,14 @@ export default {
 
     if (path === '/api/windows' && method === 'GET') {
       return withCors(json(windowsConfig(env, nowFor(request, env))));
+    }
+
+    /* FLUX-SEND-TRUTH-01 · the page's recovery ask. GET, CORS'd like the other two
+       customer reads, above /intake so the POST-only line below never claims it. */
+    if (path === '/intake/landed') {
+      if (method === 'GET') return await handleLanded(env, url);
+      if (method === 'OPTIONS') return withCors(new Response(null, { status: 204 }));
+      return text('This endpoint answers whether a request landed. GET only.', 405, { allow: 'GET' });
     }
 
     if (path === '/intake') {

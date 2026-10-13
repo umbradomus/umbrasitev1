@@ -100,8 +100,23 @@ window.FD_WORDS = {
     's9.price.tail': 'Your exact price comes {how} before we come.',
     's9.send': 'Send request',
     's9.sending': 'Sending…',
+    /* FLUX-SEND-TRUTH-01 · s9.fail IS UNCHANGED, AND IT IS NOW TRUE.
+       Until this round it was printed whenever one fetch failed — including the
+       2026-10-13 send where the job had landed, been recorded and pushed his phone.
+       The sentence was never the defect; printing it on a guess was. fd-engine.js now
+       reaches it from exactly one place: a definite `landed:false` from the Worker.
+       The two sentences below are the states it used to be printed in wrongly. */
     's9.fail': "Your request didn't send. Check your connection and press Send request again; nothing is lost.",
+    /* the button while the page is asking the Worker whether the request landed */
+    's9.checking': 'Checking…',
+    's9.checking.note': 'Your connection dropped. We’re checking whether your request got through — don’t press send again.',
+    /* the state nobody may call a failure: the connection went and the Worker could
+       not be reached to say either way. No Send button is offered here on purpose. */
+    's9.unknown': 'We can’t reach us from this phone right now, so we can’t tell you yet whether your request got through. Nothing is lost. Give it a minute and reload this page, or text us and we’ll look it up.',
     's10.misc': 'Got it, {first}. / What happens next / We look at your photos and answers. / Done / Start another request',
+    /* FLUX-SEND-TRUTH-01 · the number he had never once seen on a screen. Shown only
+       when the Worker answered with one. */
+    's10.jobno': 'Job {id}.',
     's10.by': "We'll {how} your price by {time}.",
     's10.n2': 'By {time} we text your price and {what}, with a link.',
     's10.n3': 'Tap the link and say yes. {what}',
@@ -203,7 +218,29 @@ window.FD_WORDS = {
     's9.send': 'Enviar solicitud',
     's9.sending': 'Enviando…',
     's9.fail': 'Su solicitud no se envió. Revise su conexión y toque Enviar solicitud otra vez; no se perdió nada.',
+    /* FLUX-SEND-TRUTH-01 · SPANISH, AND WHAT IS OWED — read this before changing a word.
+       The charter forbids inventing Spanish, and no Spanish sentence for "we are
+       checking whether it got through" exists anywhere on this site. So NOTHING BELOW
+       IS A NEW SPANISH SENTENCE. Each line is built only from clauses that are already
+       in this ES table, verbatim, and is marked here as a COMPOSITION, not a
+       translation:
+         s9.checking       — 'Enviando…', today's s9.sending, unchanged. It is true:
+                             the page is still working on the send.
+         s9.checking.note  — 'Revise su conexión' + 'no se perdió nada', both lifted
+                             from today's s9.fail above.
+         s9.unknown        — the same two clauses from s9.fail.
+         s10.jobno         — 'Trabajo' is this file's own reviewed Spanish for a job
+                             (s6.why 'Este trabajo lleva dos visitas.', s8.top '¿Dónde
+                             es el trabajo?'), plus the number. A two-word label, not a
+                             sentence.
+       OWED TO HIS SPANISH READER, and named in this round's close: proper Spanish for
+       the two "we are checking / we cannot tell yet" sentences. Until he has it, a
+       Spanish customer is told only things this site has already said in Spanish. */
+    's9.checking': 'Enviando…',
+    's9.checking.note': 'Revise su conexión. No se perdió nada.',
+    's9.unknown': 'No se perdió nada. Revise su conexión.',
     's10.misc': 'Recibido, {first}. / Qué sigue / Revisamos sus fotos y respuestas. / Listo / Empezar otra solicitud',
+    's10.jobno': 'Trabajo {id}.',
     's10.by': 'Le {how} su precio antes de las {time}.',
     's10.n2': 'Antes de las {time} le enviamos su precio y {what}, con un enlace.',
     's10.n3': 'Toque el enlace y acepte. {what}',

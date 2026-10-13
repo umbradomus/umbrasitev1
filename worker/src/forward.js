@@ -15,6 +15,10 @@ export const FORMSUBMIT_ENDPOINT = 'https://formsubmit.co/07242513cc0b8b4dac5ae3
 export const RESPONSE_KEEP = 500;
 const RESPONSE_READ_MAX = 65536;
 
+/* FLUX-SEND-TRUTH-01 · the ceiling on this leg, in one place. The reasoning for the
+   number is at the fetch it guards. */
+export const FORWARD_TIMEOUT_MS = 8000;
+
 export function forwardEndpoint(env) {
   return env.FORMSUBMIT_ENDPOINT || FORMSUBMIT_ENDPOINT;
 }
@@ -73,11 +77,39 @@ export async function forwardToFormSubmit(env, entries, extra) {
   if (extra && 'job_id' in extra) fd.append('job_id', extra.job_id);
   if (extra && 'status_link' in extra) fd.append('status_link', extra.status_link);
 
-  const res = await fetch(forwardEndpoint(env), {
-    method: 'POST',
-    body: fd,
-    redirect: 'manual',
-  });
+  /* FLUX-SEND-TRUTH-01 · A CEILING ON THE ONE LEG THAT IS ON THE CUSTOMER'S CLOCK.
+     This await sits between the customer's press and their answer, and until this
+     round it had no timeout of any kind — the only AbortController in worker/src was
+     holding.js's. On 2026-10-13 his send "took a while" and then lied about failing,
+     and this is the leg with no ceiling on it.
+     WHAT IT COSTS AND WHY 8 S: the same round trip, measured on real records in
+     assets/umbra-two-channels.js, spent 1098 / 1366 / 1413 / 1637 ms through
+     2026-10-01, then 5705 (U-0019), 8071 (U-0018) and 15004 ms (U-0020). 8 s is above
+     every copy before 10-07 and is EMAIL-01's own measured reading of what is longer
+     than a person waits. The browser leg takes 30 s because it is the leg that
+     DELIVERS; this one is the fallback, and from a Worker it has been refused 429 on
+     every send ever made (U-0003 onward), so what a longer wait here buys is a 429
+     that arrives later.
+     WHAT A TIMEOUT DOES NOT DO: it does not lose anything. The caller already treats a
+     throw as a non-delivery and writes it to the record with its reason, so a cut leg
+     lands on the record as `email_lost` with the word `timeout` in it — the same place
+     and the same shape a 429 lands in, and readable afterwards. */
+  const ctl = new AbortController();
+  const bell = setTimeout(() => ctl.abort(), FORWARD_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(forwardEndpoint(env), {
+      method: 'POST',
+      body: fd,
+      redirect: 'manual',
+      signal: ctl.signal,
+    });
+  } catch (err) {
+    if (ctl.signal.aborted) return { ok: false, status: 0, error: 'timeout after ' + FORWARD_TIMEOUT_MS + ' ms' };
+    throw err;
+  } finally {
+    clearTimeout(bell);
+  }
   /* FormSubmit answers a browser post with a 302 to _next. A 3xx is a delivery.
      A 2xx is a delivery only if the page is not one of FormSubmit's own
      refusals; anything 4xx/5xx is not. Whatever it was, when it is NOT a
