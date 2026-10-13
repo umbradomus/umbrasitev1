@@ -97,6 +97,12 @@ window.FD_WORDS = {
     's9.secs': 'The job / Photos and note / While we’re there / Times / How we reach you / Address',
     's9.vals': 'No photos / Nothing added / texts on / No texts, email only / Copy to {email}',
     's9.visit': 'Visit {n}: {day}, arrive {win}',
+    /* F5 · a count's noun, singular / plural. Both forms are already this site's own
+       words (s4.btns 'Take a photo', 'Remove photo'). */
+    's9.photos': 'photo / photos',
+    /* F4 · the window's HOURS with no label, because the line that uses it says
+       'arrive' itself. s6.win keeps its label for where it stands alone. */
+    's6.win.hours': '{a}-{b}',
     's9.price.tail': 'Your exact price comes {how} before we come.',
     's9.send': 'Send request',
     's9.sending': 'Sending…',
@@ -214,6 +220,10 @@ window.FD_WORDS = {
     's9.secs': 'El trabajo / Fotos y nota / Ya que estamos ahí / Horarios / Cómo le contactamos / Dirección',
     's9.vals': 'Sin fotos / Nada agregado / mensajes de texto: sí / Sin mensajes, solo correo / Copia a {email}',
     's9.visit': 'Visita {n}: {day}, llegamos de {win}',
+    /* F5 · ya en este sitio: s4.btns 'Tomar una foto', 'Quitar foto'. */
+    's9.photos': 'foto / fotos',
+    /* F4 · las horas sin la etiqueta; s6.win la conserva donde va sola. */
+    's6.win.hours': '{a} a {b}',
     's9.price.tail': 'Su precio exacto le llega {how} antes de ir.',
     's9.send': 'Enviar solicitud',
     's9.sending': 'Enviando…',
