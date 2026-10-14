@@ -162,6 +162,13 @@
   function fromIso(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function dayWords(s) { var d = fromIso(s); return (ES ? DAY_ES : DAY_EN)[d.getDay()] + ' ' + d.getDate() + ' ' + (ES ? MON_ES : MON_EN)[d.getMonth()]; }
   function winWords(b) { var r = BLOCKS.filter(function (x) { return x[0] === b; })[0]; return r ? fill(t('s6.win'), { a: r[1], b: r[2] }) : b; }
+  /* F4 · the SOURCE of "arrive Arrive": s6.win is a whole sentence, so a line that adds
+     its own "arrive" said the word twice. winWords stays as it is - it is right where it
+     stands alone, on the picker's chips. A line with its own label takes winHours. */
+  function winHours(b) { var r = BLOCKS.filter(function (x) { return x[0] === b; })[0]; return r ? fill(t('s6.win.hours'), { a: r[1], b: r[2] }) : b; }
+  /* F5 · THE ONE COUNT HELPER. A number beside a noun agrees with it. Both forms come
+     out of the words table, one per language; nothing is pluralised by a rule here. */
+  function countWords(n, key) { var f = t(key).split(' / '); return n + ' ' + (n === 1 ? f[0] : f[1]); }
   /* 14 days from tomorrow, no Sundays. The live calendar of taken windows is the
      Worker's; this round never calls it (S4), so nothing is drawn as taken. */
   function days(from, n) {
@@ -622,35 +629,45 @@
   function stepReview(job) {
     var top = t('s9.top').split(' / '), secs = t('s9.secs').split(' / '), vals = t('s9.vals').split(' / ');
     var sh = shown(job);
+    /* F6 · his 10:10. The job used to print its answers raw - "4 to 8. No. Regular wall." -
+       and a customer could not tell what any one of them answered. Each answer now stands
+       with the question it answers, in the form's OWN words: nothing is reworded. */
     var ans = sh.filter(function (q) { return answered(q); })
-      .map(function (q) { return label(q, S.answers[q.field]); }).join('. ');
+      .map(function (q) { return '<b>' + esc(q.q[LANG]) + '</b> ' + esc(label(q, S.answers[q.field])); });
     var html = '<h1>' + esc(top[0]) + '</h1><p class="lede">' + esc(top[1]) + '</p>';
     function sec(name, step, lines) {
       return '<div class="rv"><div class="rvh"><b>' + esc(name) + '</b>' +
         (step ? '<u data-act="goto" data-step="' + step + '">' + esc(t('g.change')) + '</u>' : '') + '</div>' +
         lines.map(function (l) { return '<p>' + l + '</p>'; }).join('') + '</div>';
     }
-    html += sec(secs[0], job.id === 'else' ? null : 'questions', [esc(job.tile[LANG]) + (ans ? ': ' + esc(ans) + '.' : '')]);
-    html += sec(secs[1], 'photos', [esc(S.photos.length ? S.photos.length + (ES ? ' fotos' : ' photos') : vals[0]) + (S.note ? ' &middot; ' + esc(S.note) : '')]);
+    html += sec(secs[0], job.id === 'else' ? null : 'questions', [esc(job.tile[LANG])].concat(ans));
+    /* F3 · his 10:08: "i think thats where the added on item is down by the address. and it
+       should be under the job". The added-on item used to be named only in the loose line
+       UNDER the address; it sits here now, directly under the job, with the rest of the
+       job's own words and with its own price words. The MOVE, and only the move. */
     if (job.addons.length) {
-      html += sec(secs[2], 'addons', [S.addons.length ? S.addons.map(function (a) { return esc(POOL[a].title[LANG]); }).join('; ') : esc(vals[1])]);
+      html += sec(secs[2], 'addons', [S.addons.length ? S.addons.map(function (a) { return esc(POOL[a].title[LANG] + ' - ' + POOL[a].price[LANG]); }).join('; ') : esc(vals[1])]);
     }
+    /* F5 · "1 photos" was the live reading. One helper, both languages. */
+    html += sec(secs[1], 'photos', [esc(S.photos.length ? countWords(S.photos.length, 's9.photos') : vals[0]) + (S.note ? ' &middot; ' + esc(S.note) : '')]);
     if (timesMode(job) !== 'none') {
       var lines = [];
       var T2 = S.times || {};
       if (T2.mode === 'pairs' || T2.mode === 'dated') {
-        if (T2.v1) lines.push(esc(fill(t('s9.visit'), { n: 1, day: dayWords(T2.v1.date), win: winWords(T2.v1.win) })));
-        if (T2.v2) lines.push(esc(fill(t('s9.visit'), { n: 2, day: dayWords(T2.v2.date), win: winWords(T2.v2.win) })));
+        /* F4 · winHours, not winWords: this line says "arrive" itself. */
+        if (T2.v1) lines.push(esc(fill(t('s9.visit'), { n: 1, day: dayWords(T2.v1.date), win: winHours(T2.v1.win) })));
+        if (T2.v2) lines.push(esc(fill(t('s9.visit'), { n: 2, day: dayWords(T2.v2.date), win: winHours(T2.v2.win) })));
         if (T2.far) lines.push(esc(fill(t('s9.visit'), { n: 2, day: dayWords(T2.far), win: t('s6.bytext') })));
       } else {
-        (T2.picks || []).forEach(function (p, i) { lines.push(esc(fill(t('s9.visit'), { n: i + 1, day: dayWords(p.date), win: winWords(p.win) }))); });
+        (T2.picks || []).forEach(function (p, i) { lines.push(esc(fill(t('s9.visit'), { n: i + 1, day: dayWords(p.date), win: winHours(p.win) }))); });
       }
       html += sec(secs[3], 'times', lines.length ? lines : [esc(t('s6.none'))]);
     }
     html += sec(secs[4], 'contact', [esc(S.first + ' · ' + S.phone) + ' · ' + esc(S.sms ? vals[2] : vals[3]) + (S.email ? ' · ' + esc(fill(vals[4], { email: S.email })) : '')]);
     html += sec(secs[5], 'address', [esc(S.address)]);
-    var addonPrices = S.addons.map(function (a) { return POOL[a].title[LANG] + ' - ' + POOL[a].price[LANG]; }).join('; ');
-    html += '<p class="price"><b>' + esc(job.price[LANG]) + '</b>' + (addonPrices ? '. ' + esc(addonPrices) : '') + '. ' +
+    /* F3's other half · the add-on's words left this line because they moved up under the
+       job. The job's price and the tail are untouched: no price line added, none removed. */
+    html += '<p class="price"><b>' + esc(job.price[LANG]) + '</b>. ' +
       esc(fill(t('s9.price.tail'), { how: S.sms ? t('g.bytext') : t('g.byemail') })) + '</p>' +
       '<p class="errt" id="e-send" hidden></p>';
     stepShell(job, 'review', html,
