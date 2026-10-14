@@ -70,6 +70,14 @@
 
   /* THE BROWNSVILLE-AREA ZIPs — one place, easy to grow. */
   var LOCAL_ZIPS = ['78520', '78521', '78526', '78575', '78566', '78586'];
+  /* SITE-WALK3-LEFT-01 · HIS OWN WORDS: "I should just see my address pop up". A row of
+     "6833 Bonham Rd, 78521" is a ZIP, not a place - he reads the town first. These are the
+     six ZIPs this file already calls the service area, and every town name below is one
+     the site itself prints on its home and contact pages ("We work in Brownsville and
+     across Cameron County - Los Fresnos, Rancho Viejo, Olmito, San Benito, Port Isabel
+     and Harlingen"). No town is invented: a ZIP that is not one of these six is shown as
+     a ZIP alone, exactly as it is today. */
+  var LOCAL_TOWNS = { '78520': 'Brownsville', '78521': 'Brownsville', '78526': 'Brownsville', '78566': 'Los Fresnos', '78575': 'Rio Hondo', '78586': 'San Benito' };
   var CENSUS_HOST = 'https://geocoding.geo.census.gov';
   var JSONP_MS = 8000;
 
@@ -183,7 +191,8 @@
     });
     var out = [];
     for (var n = 0; n < hits.length && out.length < SUG_MAX; n++) {
-      out.push({ description: bits.num + ' ' + hits[n].name + ', ' + hits[n].zip, local: true });
+      var town = LOCAL_TOWNS[hits[n].zip];
+      out.push({ description: bits.num + ' ' + hits[n].name + ', ' + (town ? town + ', TX ' : '') + hits[n].zip, local: true });
     }
     return out;
   }
@@ -343,6 +352,10 @@
 
     var state = { confirmed: false, how: '', address: '', place_id: '', lat: null, lng: null };
     var lastAsked = '';
+    /* SITE-WALK3-LEFT-01 · raised the moment a finger lands on a suggestion and lowered
+       again when the tap is over, so the box losing focus cannot put a refusal up
+       underneath the very thing he is reaching for. */
+    var picking = false;
     var box = document.createElement('div');
     box.className = 'uaddr';
     host.appendChild(box);
@@ -456,13 +469,19 @@
           b.type = 'button';
           b.className = 'uaddr-pick';
           b.textContent = it.description;
-          /* THE TAP MUST NOT RACE THE BLUR. Without this, a finger landing on the list
-             blurs the box first, look('blur') refuses the half-typed address, and the
-             refusal and the card fight over the same host. Keeping focus in the box
-             costs nothing and makes the tap land every time. */
+          /* THE TAP MUST NOT RACE THE BLUR - AND THE GUARD MUST NOT EAT THE TAP.
+             SITE-WALK3-LEFT-01, read off the events at 390 wide with touch on: the old
+             guard called preventDefault() on touchstart, which cancels the browser's
+             compatibility mouse events for that touch - the click among them - so this
+             handler never ran and the list saw ZERO clicks from a finger. A mouse still
+             gets preventDefault() on mousedown, which only stops the focus moving. A
+             finger instead raises a flag the blur handler reads: focus may leave the box,
+             and nothing is refused while the tap is in the air. */
           b.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
-          b.addEventListener('touchstart', function (ev) { ev.preventDefault(); }, { passive: false });
+          b.addEventListener('touchstart', function () { picking = true; }, { passive: true });
+          b.addEventListener('touchend', function () { setTimeout(function () { picking = false; }, 700); }, { passive: true });
           b.addEventListener('click', function () {
+            picking = false;
             sugList.hidden = true;
             sugList.textContent = '';
             if (it.local) {
@@ -549,32 +568,41 @@
       fallback(raw, why);
     }
     /* --- provider (c): the page's own street list. NO KEY, NO ACCOUNT, NO CALL --- */
-    function askLocal(raw) {
-      if (!partial(raw)) { sugList.hidden = true; sugList.textContent = ''; return; }
+    function askLocal(raw, then) {
+      then = then || function () { };
+      if (!partial(raw)) { sugList.hidden = true; sugList.textContent = ''; return then(false); }
       loadStreets(function (ok) {
-        if (!ok) { sugList.hidden = true; return; }
+        if (!ok) { sugList.hidden = true; return then(false); }
         /* he may have typed on, or tapped, while the list was coming */
-        if (box.getAttribute('data-uaddr-card')) return;
+        if (box.getAttribute('data-uaddr-card')) return then(true);
         var now = partial(input.value);
-        if (!now) { sugList.hidden = true; sugList.textContent = ''; return; }
+        if (!now) { sugList.hidden = true; sugList.textContent = ''; return then(false); }
         drawSuggestions(suggest(now));
+        then(!sugList.hidden);
       });
     }
 
     function fallback(raw, why) {
       var bits = parse(raw);
       if (!bits) {
-        askLocal(raw);
         if (!raw) { sugList.hidden = true; sugList.textContent = ''; clear(); return; }
-        /* FLUX-ROUTE-01 (the NOT-BUILT half of his row 14): this red line used to appear 450 ms
-           after a keystroke, while the box still had focus and he was still typing the street. It
-           is a refusal, not a hint, so it waits until he is no longer adding to the box - he moved
-           away (blur), he shortened it, or the send gate asked. Typing forward is never scolded. */
-        if (why === 'typing' && document.activeElement === input && raw.length > lookedAtLen) {
-          lookedAtLen = raw.length;
-          return;
-        }
-        say('uaddr-need', T.needMore);
+        askLocal(raw, function (listed) {
+          /* SITE-WALK3-LEFT-01 · NEVER A REFUSAL BESIDE THE ANSWER. Read at 390 wide: from
+             the fifth character on, "We need the house number..." stood under the very list
+             that held his address, so the list read as the thing being refused. The list and
+             the refusal live on two different hosts, so both could be up at once. They
+             cannot now: while there is something to tap, the box stays quiet. */
+          if (listed) { clear(); return; }
+          /* FLUX-ROUTE-01 (the NOT-BUILT half of his row 14): this red line used to appear 450 ms
+             after a keystroke, while the box still had focus and he was still typing the street. It
+             is a refusal, not a hint, so it waits until he is no longer adding to the box - he moved
+             away (blur), he shortened it, or the send gate asked. Typing forward is never scolded. */
+          if (why === 'typing' && document.activeElement === input && raw.length > lookedAtLen) {
+            lookedAtLen = raw.length;
+            return;
+          }
+          say('uaddr-need', T.needMore);
+        });
         return;
       }
       sugList.hidden = true;
@@ -591,7 +619,7 @@
     });
     input.addEventListener('blur', function () {
       if (timer) clearTimeout(timer);
-      setTimeout(function () { look('blur'); }, 120);
+      setTimeout(function () { if (picking) return; look('blur'); }, 120);
     });
 
     var api = {

@@ -359,7 +359,7 @@
     var next = stepsOf(job)[1] === 'photos' ? t('g.next.photos') : t('g.next');
     html = '<h1>' + esc(job.tile[LANG]) + '</h1>' + html;
     stepShell(job, 'questions',
-      html + '<p class="price"><b>' + esc(job.price[LANG]) + '</b>. ' + esc(t('s3.exact')) + '</p>',
+      html + '<p class="price"><b>' + esc(priceLine(job)) + '</b>. ' + esc(t('s3.exact')) + '</p>',
       '<button class="btn" type="button" data-act="next"' + (done ? '' : ' disabled') + '>' + esc(next) + '</button>');
     /* a typed answer is kept as it is typed - the tap handler only knows data-v, so a
        question whose kind is text would otherwise lose every word of it. It re-renders
@@ -590,6 +590,34 @@
     return !bad;
   }
 
+  /* ------------------------------------------------- the price line that follows him */
+  /* SITE-WALK3-LEFT-01 · HIS WALK, item B2 (and E18): "brick or fireplace +$50" stayed on
+     the price line after he picked "Regular wall". A job's price string is one or more
+     clauses separated by "; " and the table below says which answer each clause after the
+     first depends on. A clause whose question has been ANSWERED with something outside its
+     set is not shown; a clause whose question is not answered yet still shows, because it
+     may still apply. NO PRICE AND NO WORD IS CHANGED HERE - the clauses are the ones in
+     assets/fd-jobs.js, byte for byte, and only whether one is printed moves. tv_mount is
+     the only job on the site whose price carries a second clause. */
+  var PRICE_WHEN = { tv_mount: [null, { field: 'wall', is: ['brick', 'fireplace'] }] };
+  function priceLine(job) {
+    var whole = job.price[LANG], rule = PRICE_WHEN[job.id];
+    if (!rule) return whole;
+    var parts = whole.split('; ');
+    var keep = [];
+    for (var i = 0; i < parts.length; i++) {
+      var r = rule[i];
+      if (!r) { keep.push(parts[i]); continue; }
+      var a = S.answers ? S.answers[r.field] : null;
+      if (a === undefined || a === null || a === '' || (a.length === 0)) { keep.push(parts[i]); continue; }
+      var got = [].concat(a);
+      var hit = false;
+      for (var j = 0; j < got.length; j++) if (r.is.indexOf(got[j]) > -1) hit = true;
+      if (hit) keep.push(parts[i]);
+    }
+    return keep.join('; ');
+  }
+
   /* ------------------------------------------------------------ step: the address */
   /* SITE-ADDRESS-SUGGEST-01 (2026-10-13) · ADDRESS SUGGESTIONS AS YOU TYPE ARE IN NOW,
      and they needed no account after all: /assets/umbra-address.js suggests from the
@@ -640,14 +668,13 @@
         (step ? '<u data-act="goto" data-step="' + step + '">' + esc(t('g.change')) + '</u>' : '') + '</div>' +
         lines.map(function (l) { return '<p>' + l + '</p>'; }).join('') + '</div>';
     }
-    html += sec(secs[0], job.id === 'else' ? null : 'questions', [esc(job.tile[LANG])].concat(ans));
-    /* F3 · his 10:08: "i think thats where the added on item is down by the address. and it
-       should be under the job". The added-on item used to be named only in the loose line
-       UNDER the address; it sits here now, directly under the job, with the rest of the
-       job's own words and with its own price words. The MOVE, and only the move. */
-    if (job.addons.length) {
-      html += sec(secs[2], 'addons', [S.addons.length ? S.addons.map(function (a) { return esc(POOL[a].title[LANG] + ' - ' + POOL[a].price[LANG]); }).join('; ') : esc(vals[1])]);
-    }
+    /* SITE-WALK3-LEFT-01 · HIS WORDS, 10-14 8:1x: "Address should be at the top. The job
+       should be at the bottom near the payment." The address block is now the first thing
+       under the heading and the job is the last thing before the price line, with the
+       added-on item still directly under the job (F3, seen working on walk three - kept).
+       Nothing is reworded and no block is added or dropped: this is the ORDER, and only
+       the order. */
+    html += sec(secs[5], 'address', [esc(S.address)]);
     /* F5 · "1 photos" was the live reading. One helper, both languages. */
     html += sec(secs[1], 'photos', [esc(S.photos.length ? countWords(S.photos.length, 's9.photos') : vals[0]) + (S.note ? ' &middot; ' + esc(S.note) : '')]);
     if (timesMode(job) !== 'none') {
@@ -664,14 +691,38 @@
       html += sec(secs[3], 'times', lines.length ? lines : [esc(t('s6.none'))]);
     }
     html += sec(secs[4], 'contact', [esc(S.first + ' · ' + S.phone) + ' · ' + esc(S.sms ? vals[2] : vals[3]) + (S.email ? ' · ' + esc(fill(vals[4], { email: S.email })) : '')]);
-    html += sec(secs[5], 'address', [esc(S.address)]);
+    /* the job, at the bottom, next to the payment line - and the added-on item under it */
+    html += sec(secs[0], job.id === 'else' ? null : 'questions', [esc(job.tile[LANG])].concat(ans));
+    /* F3 · his 10:08: "i think thats where the added on item is down by the address. and it
+       should be under the job". The added-on item is named directly under the job, with the
+       rest of the job's own words and with its own price words. */
+    if (job.addons.length) {
+      html += sec(secs[2], 'addons', [S.addons.length ? S.addons.map(function (a) { return esc(POOL[a].title[LANG] + ' - ' + POOL[a].price[LANG]); }).join('; ') : esc(vals[1])]);
+    }
     /* F3's other half · the add-on's words left this line because they moved up under the
        job. The job's price and the tail are untouched: no price line added, none removed. */
-    html += '<p class="price"><b>' + esc(job.price[LANG]) + '</b>. ' +
+    html += '<p class="price"><b>' + esc(priceLine(job)) + '</b>. ' +
       esc(fill(t('s9.price.tail'), { how: S.sms ? t('g.bytext') : t('g.byemail') })) + '</p>' +
       '<p class="errt" id="e-send" hidden></p>';
     stepShell(job, 'review', html,
       '<button class="btn" type="button" data-act="send">' + esc(t('s9.send')) + '</button>');
+  }
+
+  /* ------------------------------------------------- the confirmation he can keep */
+  function jobCard(r) {
+    if (!r.jobNo) return '';                      /* no number, no card - the same rule as the line above */
+    var job = BY_ID[S.job], T2 = S.times || {}, lines = [];
+    if (job) lines.push(esc(job.tile[LANG]));
+    var vis = (T2.mode === 'pairs' || T2.mode === 'dated')
+      ? [T2.v1, T2.v2].filter(Boolean).map(function (v, i) { return { n: i + 1, v: v }; })
+      : (T2.picks || []).map(function (v, i) { return { n: i + 1, v: v }; });
+    vis.forEach(function (x) { lines.push(esc(fill(t('s9.visit'), { n: x.n, day: dayWords(x.v.date), win: winHours(x.v.win) }))); });
+    lines.push(esc(fill(t('s10.by'), { how: r.sms ? t('g.text') : t('g.email'), time: r.by })));
+    return '<div class="jobcard" id="fd-jobcard">' +
+      '<p class="jc-who">' + esc(t('s11.who')) + ' &middot; ' + esc(t('s11.tel')) + '</p>' +
+      '<p class="jc-no">' + esc(fill(t('s10.jobno'), { id: r.jobNo })) + '</p>' +
+      lines.map(function (l) { return '<p class="jc-l">' + l + '</p>'; }).join('') +
+      '</div><div class="jc-act"><button class="btn ghost" type="button" data-act="print">' + esc(t('s11.print')) + '</button></div>';
   }
 
   /* ========================================================== THE RECEIVED PAGE */
@@ -684,8 +735,16 @@
          reply-by line, so the two things he asked for are the two things read first.
          Printed only when the Worker answered with a number: no number, no line — a
          screen that invents "Job —" is worse than one that says nothing. */
-      (r.jobNo ? '<p class="jobno"><b>' + esc(fill(t('s10.jobno'), { id: r.jobNo })) + '</b></p>' : '') +
       '<p class="big">' + esc(fill(t('s10.by'), { how: r.sms ? t('g.text') : t('g.email'), time: r.by })) + '</p>' +
+      /* SITE-WALK3-LEFT-01 · HIS WORDS after "Send request": "a confirmation that I can
+         print or screenshot showing my job number". The card below is that confirmation:
+         the job number large, what he asked for, the visit window he picked, the time we
+         answer by, Umbra's name and the work phone's number as every page of this site
+         already prints it. Every sentence in it is a sentence this page or the review
+         already said - nothing is promised that was not promised before it. It is one
+         block, so a screenshot of it reads whole, and the print sheet in fd.css prints
+         it and nothing else. */
+      jobCard(r) +
       '<h2>' + esc(misc[1]) + '</h2><ul class="next">' +
       '<li>' + esc(misc[2]) + '</li>' +
       '<li>' + esc(fill(t('s10.n2'), { time: r.by, what: r.visitWords })) + '</li>' +
@@ -1053,7 +1112,14 @@
       if (!W(S.address).trim()) { e.textContent = t('s8.errs').split(' / ')[0]; e.hidden = false; return; }
       if (S.addrApi && S.addrApi.state && !S.addrApi.state().confirmed) {
         if (S.addrApi.check) S.addrApi.check();
-        e.textContent = t('s8.confirm'); e.hidden = false;
+        /* SITE-WALK3-LEFT-01 · NEVER NAME A BUTTON THAT IS NOT ON THE SCREEN. s8.confirm
+           tells him to tap "Yes, that's it"; that button is drawn only by the address
+           module's "Is this the place?" card. With a suggestion list up and no card, the
+           reading was a sentence pointing at nothing. The module's own already-written
+           line - "The address still needs confirming." / "Todavia falta confirmar la
+           direccion." - is the true one there, and no word is added in either language. */
+        e.textContent = document.querySelector('[data-uaddr-yes]') ? t('s8.confirm') : (S.addrApi.notYet || t('s8.confirm'));
+        e.hidden = false;
         return;
       }
     }
@@ -1072,6 +1138,8 @@
     ev.preventDefault(); onTap(ev);
   });
   function onTap(ev) {
+    var pr = ev.target.closest('[data-act="print"]');
+    if (pr) { try { window.print(); } catch (e) { } return; }
     var el = ev.target.closest('[data-job],[data-area],[data-act],[data-f],[data-addon],[data-cal]');
     if (!el || !app.contains(el)) return;
     var job;

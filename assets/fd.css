@@ -383,3 +383,23 @@
    under the line above them: the drawing set that gap on .sum, which is the gallery's
    paper-page summary and is dropped as chrome, so the heading lost its air with it. */
 .fd h2 { margin: 18px 0 6px; }
+
+/* SITE-WALK3-LEFT-01 · THE CONFIRMATION HE CAN KEEP. One block, inside one phone screen,
+   so a screenshot of it reads whole: the job number large at the top, then what he asked
+   for, the visit window he picked and the time we answer by, under Umbra's name and the
+   work number this site prints everywhere. The print sheet below prints the card alone -
+   no header, no stripe, no buttons, no "what happens next" - so a printed page and a
+   screenshot say the same thing. Colours are the page's own tokens; no new colour. */
+.fd .jobcard{border:2px solid var(--navy);border-radius:14px;background:var(--paper);padding:14px 16px;margin:18px 0 0}
+.fd .jobcard p{margin:0}
+.fd .jobcard .jc-who{font-size:13px;color:var(--ink2);letter-spacing:.02em}
+.fd .jobcard .jc-no{font-size:30px;line-height:1.15;font-weight:700;color:var(--navy);margin:4px 0 8px}
+.fd .jobcard .jc-l{font-size:16px;line-height:1.4;margin-top:4px}
+.fd .jc-act{margin:10px 0 0}
+.fd .jc-act .btn{width:100%}
+@media print{
+  body{background:#fff}
+  .fd .top,.fd .stripe,.fd .ok,.fd .s10 h1,.fd .big,.fd h2,.fd .next,.fd .copy,.fd .fine,.fd .act,.fd .jc-act,.fd .jobno{display:none !important}
+  .fd .bd{padding:0 !important}
+  .fd .jobcard{margin:0;border-color:#000;background:#fff;page-break-inside:avoid}
+}
