@@ -131,6 +131,12 @@ window.FD_WORDS = {
     's10.n4': 'We do the first visit, finish on the second, then text the bill and a receipt. / We do the work, then text the bill and a receipt. / After each visit we text the bill and a receipt.',
     's10.copy': 'A copy of your request went to {email} and by text to {phone}.',
     's10.late': "If we're ever late, we tell you why in writing, and you go first the next morning.",
+    /* SITE-WALK3-LEFT-01 · the keepable confirmation. s11.who and s11.tel are the name and
+       the work number this site already prints on every page; s11.print is the only new
+       English on this screen and it promises nothing - it names what the button does. */
+    's11.who': 'Umbra Domus',
+    's11.tel': '(956) 556-6438',
+    's11.print': 'Print or save',
     /* S5 · TODAY'S WORDING, UNCHANGED. services.html, the wconsent block. */
     'consent.bold': 'Text me about this request.',
     'consent.small': "I agree Umbra Domus may text the number above about my request, quote, scheduling and appointment reminders, including automated messages. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help. Consent is not required to get service.",
@@ -259,6 +265,14 @@ window.FD_WORDS = {
     's10.n4': 'Hacemos la primera visita, terminamos en la segunda y luego le enviamos la factura y un recibo. / Hacemos el trabajo y luego le enviamos la factura y un recibo. / Después de cada visita le enviamos la factura y un recibo.',
     's10.copy': 'Le enviamos una copia de su solicitud a {email} y por mensaje al {phone}.',
     's10.late': 'Si alguna vez nos retrasamos, le decimos por qué por escrito y usted va primero a la mañana siguiente.',
+    /* SITE-WALK3-LEFT-01 · THERE IS NO SPANISH WORD FOR "print" ANYWHERE ON THIS SITE
+       (grep "mprim" over every .js and .html: 0 hits), so none is invented here. The
+       Spanish button is built only from Spanish this site already writes - es/recibido.html:
+       "Tome una captura de esta página para guardarla." - and so it offers the save and not
+       the print, though the same browser sheet opens. Named, not invented. */
+    's11.who': 'Umbra Domus',
+    's11.tel': '(956) 556-6438',
+    's11.print': 'Guardar esta página',
     /* S5 · TODAY'S WORDING, UNCHANGED. es/servicios.html, the wconsent block. */
     'consent.bold': 'Envíenme mensajes de texto sobre esta solicitud.',
     'consent.small': 'Acepto que Umbra Domus envíe mensajes de texto al número de arriba sobre mi solicitud, cotización, programación y recordatorios de la cita, incluidos mensajes automatizados. La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para no recibir más, HELP para obtener ayuda. El consentimiento no es necesario para recibir servicio.',
