@@ -54,23 +54,14 @@
 <main>
   <section>
     <div class="wrap about">
-      <!-- portrait slot: shot list item 16, a real on-site portrait in work clothes. Placeholder until it is taken. -->
-      <!-- DREW-PHOTO: swap the placeholder for the picture block below when assets/img/drew-640.jpg exists.
-           To make that file: put drew.jpg in assets/img/ and run  python tools/photos.py assets/img/
-           Then delete the <figure class="portrait"> below and uncomment this one in its place.
-
+      <!-- portrait slot: his own picture, downtown Brownsville, 2026-10-17. The caption says he owns
+           the company and nothing else. -->
       <figure class="portrait has-photo">
         <picture>
-          <source type="image/webp" srcset="/assets/img/drew-640.webp">
-          <img src="/assets/img/drew-640.jpg" width="640" height="800" alt="Drew, dueño de Umbra Domus, en un trabajo con ropa de trabajo" decoding="async">
+          <source type="image/webp" srcset="/assets/img/drew-640.webp?v=1 640w, /assets/img/drew-1280.webp?v=1 1280w" sizes="22rem">
+          <img src="/assets/img/drew-640.jpg?v=1" srcset="/assets/img/drew-640.jpg?v=1 640w, /assets/img/drew-1280.jpg?v=1 1280w" sizes="22rem" width="640" height="800" alt="Drew Spathelf, dueño de Umbra Domus" decoding="async">
         </picture>
-        <figcaption>Drew, en un trabajo en Brownsville.</figcaption>
-      </figure>
-
-      -->
-      <figure class="portrait">
-        <img src="/assets/mark-192.png?v=1" width="192" height="192" alt="Espacio para una foto de Drew, dueño de Umbra Domus. La foto todavía no se ha tomado.">
-        <figcaption>Viene una foto real de Drew, en el trabajo. Las fotos de trabajo terminado van a ser nuestras — las imágenes de muestra en la página de servicios no lo son.</figcaption>
+        <figcaption>Drew Spathelf, dueño de Umbra Domus.</figcaption>
       </figure>
 
       <div>
