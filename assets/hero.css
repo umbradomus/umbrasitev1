@@ -1,0 +1,19 @@
+/* HERO - the round of 10-21 (3UMBRA2, his words 9:29 / 10:22 / 10:27 / 10:28 / 10:30 / 10:32 AM): the official logo's canopy, large and
+   centred, sitting on the split - the logo's Prussian sky above, black below - the BOSS water moving faintly in both halves (grey in the
+   black), the white headline in the dark with "Covered." underlined in the green, the three checks. Loaded by index.html + es/index.html only.
+   On phones (< 760px) the canvases are off and the two flat colours stay. */
+.fd-hero.canopy { --w: min(680px, 84vw); position: relative; background: #000; color: #fff; text-align: center; padding: 0 0 clamp(2.25rem, 6vw, 3.5rem); overflow: hidden; }
+.fd-hero.canopy .sky { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--w) * 0.6143); background: #003153; overflow: hidden; }
+.fd-hero.canopy .dark { position: absolute; left: 0; right: 0; top: calc(var(--w) * 0.6143); bottom: 0; background: #000; overflow: hidden; }
+.fd-hero.canopy .sky canvas, .fd-hero.canopy .dark canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.fd-hero.canopy .dark::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 55% 70% at 50% 60%, rgba(0,0,0,.85) 0%, rgba(0,0,0,.55) 55%, rgba(0,0,0,0) 100%); }
+.fd-hero.canopy .wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+.fd-hero.canopy .brandimg { width: var(--w); height: auto; display: block; margin: 0 auto 1.2rem; }
+.fd-hero.canopy h1 { max-width: 24ch; margin: 0 auto .7rem; color: #fff; }
+.fd-hero.canopy h1 .u { display: inline-block; border-bottom: .14em solid #4FB87B; line-height: 1.02; padding-bottom: .02em; }
+.fd-hero.canopy .lead { margin: 0 auto 1.4rem; }
+.fd-hero.canopy .trust { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem 2rem; margin: 0 0 1.6rem; padding: 0; list-style: none; font-size: 1.05rem; font-weight: 500; color: rgba(255,255,255,.9); }
+.fd-hero.canopy .trust li { display: flex; align-items: center; gap: .5rem; }
+.fd-hero.canopy .trust svg { width: 20px; height: 20px; flex: none; }
+.fd-hero.canopy .cta-row { justify-content: center; }
+@media (max-width: 759px) { .fd-hero.canopy .sky canvas, .fd-hero.canopy .dark canvas, .fd-hero.canopy .dark::after { display: none; } }
