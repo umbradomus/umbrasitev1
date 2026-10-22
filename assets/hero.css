@@ -22,3 +22,14 @@
 .fd-hero.canopy .trust svg { width: 20px; height: 20px; flex: none; }
 .fd-hero.canopy .cta-row { justify-content: center; }
 @media (max-width: 759px) { .fd-hero.canopy .sky canvas, .fd-hero.canopy .dark canvas, .fd-hero.canopy .dark::after { display: none; } }
+
+/* v3 (10-22, his words 6:19 AM): no hard line - the blue fades to black under the canopy, black by the headline;
+   the whole stack (logo to the buttons) fits the first screen. Overrides the --w media queries above. */
+.fd-hero.canopy { --w: min(600px, 84vw, calc((100svh - 357px) / 0.7714)); min-height: calc(100svh - 132px); padding-bottom: clamp(1rem, 3svh, 2.5rem); box-sizing: border-box; }
+.fd-hero.canopy .sky { height: auto; bottom: 0; background: #003153; }
+.fd-hero.canopy .sky::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) calc(var(--w) * 0.30), rgba(0,0,0,.55) calc(var(--w) * 0.60), rgba(0,0,0,.92) calc(var(--w) * 0.77), #000 calc(var(--w) * 0.7714 + 1.6rem)); }
+.fd-hero.canopy .dark { display: none; }
+.fd-hero.canopy .brandimg { margin-bottom: clamp(.4rem, 1.6svh, 1rem); }
+.fd-hero.canopy h1 { font-size: clamp(2rem, 6.4svh, 3.6rem); margin-bottom: clamp(.3rem, 1.2svh, .6rem); }
+.fd-hero.canopy .lead { margin-bottom: clamp(.6rem, 2svh, 1.2rem); }
+.fd-hero.canopy .trust { margin-bottom: clamp(.7rem, 2.4svh, 1.4rem); }
