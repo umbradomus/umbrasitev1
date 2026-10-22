@@ -1217,6 +1217,15 @@
     if (act === 'done') { clearDraft(); location.href = '/'; }
   }
   window.addEventListener('popstate', render);
+  /* REQUEST-01 (10-22): /request?job=<id> - a price tile on the home or prices page - opens that job's own
+     first step. A draft for a different job keeps the contact details but drops that job's answers. */
+  (function () {
+    var m = /[?&]job=([a-z_]+)/.exec(location.search);
+    if (!m || !BY_ID[m[1]]) return;
+    if (S.job !== m[1]) { S.answers = {}; S.addons = []; S.times = null; S.cal = {}; S.note = ''; S.step = 0; }
+    S.job = m[1]; S.via = 'menu'; save();
+    history.replaceState({}, '', ROOT + '/' + m[1] + '/' + stepsOf(BY_ID[m[1]])[0]);
+  })();
   render();
   window.FD = { S: S, render: render, path: path, buildForm: buildForm, stepsOf: stepsOf, timesMode: timesMode, jobs: JOBS };
 })();

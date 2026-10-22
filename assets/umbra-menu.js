@@ -231,7 +231,20 @@
     for (var c = 0; c < CARE.length; c++) if (CARE[c].key === key) return CARE[c];
     return null;
   }
-  function hrefOf(item) { return F.hash ? F.path + '?menu=' + encodeURIComponent(item.key) + '#' + F.hash : F.path; }
+  /* REQUEST-01 (10-22, his words 7:3x AM): a price tile opens THAT job in the door, not the door's first screen.
+     menu key -> the door's job id (assets/fd-jobs.js); a key with no job here opens the door as before. */
+  var DOOR = { bulbs: 'consumables', tv: 'tv_mount', hang: 'hang', blinds: 'blinds', furniture: 'furniture',
+    drywall: 'drywall', door: 'door_stick', caulk: 'caulk', screens: 'screens', windowunit: 'window_ac',
+    appliance: 'appliance', fans: 'ceiling_fan', dryervent: 'dryer_vent', paint: 'paint_room', grabbars: 'grab_bars',
+    wifi: 'tech_help', homecheck: 'home_check', winterhome: 'winter_home', smart1: 'smart', smart3: 'smart',
+    lawnpackage: 'lawn_package', mow: 'mow', weedbeds: 'beds', dogwaste: 'dog_waste', anthills: 'ant_mounds',
+    hosetimer: 'hose_timer', hedges: 'hedges', leafcleanup: 'rake', yardtrash: 'curb_trash', gutters: 'gutters',
+    pressurewash: 'pressure_wash', fence: 'fence', lights: 'holiday_lights', turnover: 'turnover',
+    halfday: 'whole_list', fullday: 'whole_list' };
+  function hrefOf(item) {
+    if (item && DOOR[item.key]) return F.path + '?job=' + DOOR[item.key];
+    return F.hash ? F.path + '?menu=' + encodeURIComponent(item.key) + '#' + F.hash : F.path;
+  }
   function money(n) { return '$' + String(n); }
 
   function el(tag, cls, text) {

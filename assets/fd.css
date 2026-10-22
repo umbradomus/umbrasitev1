@@ -403,3 +403,6 @@
   .fd .bd{padding:0 !important}
   .fd .jobcard{margin:0;border-color:#000;background:#fff;page-break-inside:avoid}
 }
+
+/* REQUEST-01 (10-22, his words 7:3x AM): on a computer the door's tiles were two giant cards a row - four a row now, the full list five */
+@media (min-width:900px){.fd .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}.fd .jtiles{grid-template-columns:repeat(5,minmax(0,1fr))}}

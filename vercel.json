@@ -4,11 +4,11 @@
   "rewrites": [
     {
       "source": "/es/solicitud/:path*",
-      "destination": "/es/solicitud/index.html"
+      "destination": "/es/solicitud"
     },
     {
       "source": "/request/:path*",
-      "destination": "/request/index.html"
+      "destination": "/request"
     },
     {
       "source": "/q/:path*",
